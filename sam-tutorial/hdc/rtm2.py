@@ -7,9 +7,22 @@ metric input must be 1 or greater
 for values of metric between 1 and e, density of 1s will be less than .5
 for metric = e, the probability will be equal for 0s and 1s
 for metric > e, density of 1s will be greater than .5
+
+The goal: is to map [1, infinity) to [0, 1] such that e is mapped to 1/2.
+
+For inputs less than or equal to e, we can map the input x to the output (1/2)*math.log(x).
+
+For inputs greater than e, we can map the input x to the output math.log(x)/(1.0+math.log(x)).
+
 '''
 def sc(metric = math.e) :
-    density = 0.5 * (math.log(metric))
+    if metric < 1:
+        except:
+            exit(0)
+    elif metric > math.e :
+        density = math.log(metric)/(1.0 + math.log(metric))
+    else :
+        density = 0.5 * (math.log(metric))
     print(metric, density)
     return density
 
@@ -23,7 +36,7 @@ def random_tuple(length=3000, sparsity=0.5):
 
 
 def multiple_RTs(num=10):
-    result = [random_tuple(length=10, sparsity=sc(math.e)) for _ in range(num)]
+    result = [random_tuple(length=10, sparsity=sc(0.5)) for _ in range(num)]
     return result
 
 
