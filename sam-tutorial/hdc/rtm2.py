@@ -16,10 +16,7 @@ For inputs greater than e, we can map the input x to the output math.log(x)/(1.0
 
 '''
 def sc(metric = math.e) :
-    if metric < 1:
-        except:
-            exit(0)
-    elif metric > math.e :
+    if metric > math.e :
         density = math.log(metric)/(1.0 + math.log(metric))
     else :
         density = 0.5 * (math.log(metric))
@@ -36,7 +33,7 @@ def random_tuple(length=3000, sparsity=0.5):
 
 
 def multiple_RTs(num=10):
-    result = [random_tuple(length=10, sparsity=sc(0.5)) for _ in range(num)]
+    result = [random_tuple(length=40, sparsity=sc(1.19)) for _ in range(num)]
     return result
 
 
