@@ -22,5 +22,5 @@ def pf(upper_bound=1000):
 
 
 if __name__ == "__main__":
-    pp(pf())
+    print(pf())
 
