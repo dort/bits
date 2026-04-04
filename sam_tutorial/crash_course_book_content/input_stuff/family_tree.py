@@ -340,6 +340,159 @@ def print_family_tree(tree):
 
     print("\n" + "=" * 60)
 
+    # Print graphical tree
+    print_graphical_tree(tree)
+
+
+def print_graphical_tree(tree):
+    """Print a graphical ASCII representation of the family tree."""
+    user_name = tree.user_name
+    couple = tree.couple
+
+    print("\n" + "=" * 70)
+    print("                      GRAPHICAL FAMILY TREE")
+    print("=" * 70)
+
+    # Get all generations
+    maternal_gp = tree.members[couple['mother']]['parents']
+    paternal_gp = tree.members[couple['father']]['parents']
+
+    # Great grandparents level
+    great_gp_paternal = []
+    great_gp_maternal = []
+    for gp in paternal_gp:
+        great_gp_paternal.extend(tree.members[gp]['parents'])
+    for gp in maternal_gp:
+        great_gp_maternal.extend(tree.members[gp]['parents'])
+
+    if great_gp_paternal or great_gp_maternal:
+        print("\n  GREAT GRANDPARENTS:")
+        line = "  "
+        if great_gp_paternal:
+            line += "  ".join([f"[{n}]" for n in great_gp_paternal])
+        if great_gp_paternal and great_gp_maternal:
+            line += "          "
+        if great_gp_maternal:
+            line += "  ".join([f"[{n}]" for n in great_gp_maternal])
+        print(line)
+        print("       " + "│" * (len(great_gp_paternal) + len(great_gp_maternal)))
+
+    # Grandparents level
+    if paternal_gp or maternal_gp:
+        print("\n  GRANDPARENTS:")
+        line = "  "
+        boxes = []
+        if paternal_gp:
+            gp_str = " ═══ ".join([f"[{n}]" for n in paternal_gp])
+            boxes.append(gp_str)
+        if maternal_gp:
+            gp_str = " ═══ ".join([f"[{n}]" for n in maternal_gp])
+            boxes.append(gp_str)
+        print(line + "              ".join(boxes))
+
+        # Connection lines
+        print("         │                              │")
+        print("         ▼                              ▼")
+
+    # Parents level with aunts/uncles
+    print("\n  PARENTS & AUNTS/UNCLES:")
+
+    # Get aunts/uncles for each side
+    paternal_siblings = tree.get_siblings(couple['father'])
+    maternal_siblings = tree.get_siblings(couple['mother'])
+
+    parent_line = "  "
+    if paternal_siblings:
+        parent_line += " ".join([f"({n})" for n in paternal_siblings]) + "  "
+    parent_line += f"┌─[{couple['father']}]═══════[{couple['mother']}]─┐"
+    if maternal_siblings:
+        parent_line += "  " + " ".join([f"({n})" for n in maternal_siblings])
+    print(parent_line)
+
+    # Show cousins if any
+    cousins = tree.get_cousins(user_name)
+    if cousins:
+        print("  " + " " * 20 + "│           │")
+        cousin_line = "  Cousins: " + ", ".join(cousins)
+        print(cousin_line)
+
+    # Connection to children
+    print("  " + " " * 20 + "│           │")
+    print("  " + " " * 20 + "└─────┬─────┘")
+    print("  " + " " * 26 + "│")
+    print("  " + " " * 26 + "▼")
+
+    # User and siblings level
+    print("\n  YOU & SIBLINGS:")
+    siblings = tree.get_siblings(user_name)
+    user_person = tree.members[user_name]
+
+    user_box = f"★[{user_name}]★"
+    if user_person['spouse']:
+        user_box += f"═══[{user_person['spouse']}]"
+
+    sibling_boxes = []
+    for sib in siblings:
+        sib_person = tree.members[sib]
+        sib_box = f"[{sib}]"
+        if sib_person['spouse']:
+            sib_box += f"═[{sib_person['spouse']}]"
+        sibling_boxes.append(sib_box)
+
+    all_boxes = [user_box] + sibling_boxes
+    print("  " + "    ".join(all_boxes))
+
+    # Children level
+    user_children = user_person['children']
+    sibling_children = []
+    for sib in siblings:
+        sib_person = tree.members[sib]
+        for child in sib_person['children']:
+            sibling_children.append((sib, child))
+
+    if user_children or sibling_children:
+        print("  " + " " * 5 + "│")
+        print("  " + " " * 5 + "▼")
+        print("\n  CHILDREN (Your descendants):")
+
+        if user_children:
+            child_boxes = []
+            for child in user_children:
+                child_person = tree.members[child]
+                child_box = f"[{child}]"
+                if child_person['spouse']:
+                    child_box += f"═[{child_person['spouse']}]"
+                child_boxes.append(child_box)
+            print("  " + "  ".join(child_boxes))
+
+            # Grandchildren
+            grandchildren = []
+            for child in user_children:
+                child_person = tree.members[child]
+                for gc in child_person['children']:
+                    grandchildren.append((child, gc))
+
+            if grandchildren:
+                print("  " + " " * 5 + "│")
+                print("  " + " " * 5 + "▼")
+                print("\n  GRANDCHILDREN:")
+                for parent, gc in grandchildren:
+                    gc_person = tree.members[gc]
+                    gc_box = f"[{gc}]"
+                    if gc_person['spouse']:
+                        gc_box += f"═[{gc_person['spouse']}]"
+                    print(f"    {gc_box} (child of {parent})")
+
+    # Legend
+    print("\n  " + "─" * 50)
+    print("  LEGEND:")
+    print("    ★[Name]★  = You (the user)")
+    print("    [Name]    = Family member")
+    print("    (Name)    = Aunt/Uncle")
+    print("    ═══       = Married/Spouse")
+    print("    │ ▼       = Parent-Child relationship")
+    print("  " + "─" * 50)
+
     # Print raw variables
     print("\n--- Raw Variables ---")
     print(f"user_name = {repr(user_name)}")

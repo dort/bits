@@ -1,0 +1,1033 @@
+
+╭─── Claude Code v2.0.76 ──────────────────────────────────────────────────────────────────────────────╮
+│                                               │ Tips for getting started                             │
+│             Welcome back charlie!             │ Ask Claude to create a new app or clone a repository │
+│                                               │ ──────────────────────────────────────────────────── │
+│                  * ▐▛███▜▌ *                  │ Recent activity                                      │
+│                 * ▝▜█████▛▘ *                 │ No recent activity                                   │
+│                  *  ▘▘ ▝▝  *                  │                                                      │
+│                                               │                                                      │
+│             Opus 4.5 · Claude Max             │                                                      │
+│   ~/…/crash_course_book_content/input_stuff   │                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+> create a python program which prompts a user to put in family members and then prints a family tree -- the program should first request the user's name and then the 
+parents of the user, storing a variable named couple which holds a dictionary containing the mother's name and the father's name, which the user should supply on the 
+command line 
+
+● I'll create a Python program for building and displaying a family tree.
+
+● Write(family_tree.py)
+  ⎿  Wrote 96 lines to family_tree.py                                              
+      1 #!/usr/bin/env python3
+      2 """A simple family tree program that collects family member information."""
+      3 def get_user_info():
+      4     """Get the user's name and their parents' names."""
+      5     print("=== Family Tree Builder ===\n")
+      6     user_name = input("Enter your name: ").strip()
+     … +86 lines (ctrl+o to expand)
+
+● I've created family_tree.py. Here's what it does:
+
+  1. Prompts for your name - Stores it as user_name
+  2. Prompts for parents - Stores them in a couple dictionary with keys "mother" and "father"
+  3. Optionally add more family members - Siblings, grandparents, etc.
+  4. Prints a visual family tree
+
+  Run it with:
+  python3 family_tree.py
+
+  Example session:
+  === Family Tree Builder ===
+
+  Enter your name: John
+  Enter your mother's name: Mary
+  Enter your father's name: Robert
+
+  Hello John!
+  Your parents are Robert (father) and Mary (mother).
+
+  Would you like to add more family members? (yes/no): yes
+
+  Enter relationship (e.g., sibling, grandparent) or 'done': sibling
+  Enter sibling's name: Sarah
+  Added Sarah as sibling.
+
+  Enter relationship (e.g., sibling, grandparent) or 'done': done
+
+  ========================================
+           FAMILY TREE
+  ========================================
+
+          Parents
+          -------
+      Robert + Mary
+              |
+              v
+           [John] (You)
+      Siblings: Sarah
+
+  ========================================
+
+> please fix the program and if the user enters a grandparent, ask which parent is the child of that grandparent 
+
+● Read(family_tree.py)
+  ⎿  Read 96 lines
+
+● Write(family_tree.py)
+  ⎿  Added 63 lines, removed 21 lines                                                                                                                                    
+      20      return user_name, couple
+      21  
+      22  
+      23 -def add_family_members(family_tree):                                                                                                                           
+      23 +def add_family_members(family_tree, couple):                                                                                                                   
+      24      """Allow user to add additional family members."""
+      25      print("\n--- Add Family Members ---")
+      26      print("You can add siblings, grandparents, or other relatives.")
+     ...
+       33  
+       34          name = input(f"Enter {relation}'s name: ").strip()
+       35  
+       36 -        if relation not in family_tree:                                                                                                                       
+       37 -            family_tree[relation] = []                                                                                                                        
+       38 -        family_tree[relation].append(name)                                                                                                                    
+       39 -        print(f"Added {name} as {relation}.\n")                                                                                                               
+       36 +        # Special handling for grandparents                                                                                                                   
+       37 +        if relation == 'grandparent':                                                                                                                         
+       38 +            print(f"\nWhich parent is {name}'s child?")                                                                                                       
+       39 +            print(f"  1. {couple['mother']} (mother)")                                                                                                        
+       40 +            print(f"  2. {couple['father']} (father)")                                                                                                        
+       41 +            choice = input("Enter 1 or 2: ").strip()                                                                                                          
+       42  
+       43 +            if choice == '1':                                                                                                                                 
+       44 +                parent_side = 'maternal'                                                                                                                      
+       45 +            elif choice == '2':                                                                                                                               
+       46 +                parent_side = 'paternal'                                                                                                                      
+       47 +            else:                                                                                                                                             
+       48 +                print("Invalid choice. Defaulting to maternal side.")                                                                                         
+       49 +                parent_side = 'maternal'                                                                                                                      
+       50  
+       51 +            key = f"{parent_side}_grandparent"                                                                                                                
+       52 +            if key not in family_tree:                                                                                                                        
+       53 +                family_tree[key] = []                                                                                                                         
+       54 +            family_tree[key].append(name)                                                                                                                     
+       55 +            print(f"Added {name} as {parent_side} grandparent.\n")                                                                                            
+       56 +        else:                                                                                                                                                 
+       57 +            if relation not in family_tree:                                                                                                                   
+       58 +                family_tree[relation] = []                                                                                                                    
+       59 +            family_tree[relation].append(name)                                                                                                                
+       60 +            print(f"Added {name} as {relation}.\n")                                                                                                           
+       61 +                                                                                                                                                              
+       62 +                                                                                                                                                              
+       63  def print_family_tree(user_name, couple, family_tree):
+       64      """Print the family tree in a visual format."""
+       44 -    print("\n" + "=" * 40)                                                                                                                                    
+       45 -    print("         FAMILY TREE")                                                                                                                             
+       46 -    print("=" * 40)                                                                                                                                           
+       65 +    print("\n" + "=" * 50)                                                                                                                                    
+       66 +    print("              FAMILY TREE")                                                                                                                        
+       67 +    print("=" * 50)                                                                                                                                           
+       68  
+       69 +    # Print grandparents if any                                                                                                                               
+       70 +    maternal_gp = family_tree.get('maternal_grandparent', [])                                                                                                 
+       71 +    paternal_gp = family_tree.get('paternal_grandparent', [])                                                                                                 
+       72 +                                                                                                                                                              
+       73 +    if maternal_gp or paternal_gp:                                                                                                                            
+       74 +        print("\n           Grandparents")                                                                                                                    
+       75 +        print("           ------------")                                                                                                                      
+       76 +                                                                                                                                                              
+       77 +        if paternal_gp:                                                                                                                                       
+       78 +            paternal_names = ", ".join(paternal_gp)                                                                                                           
+       79 +            print(f"  Paternal: {paternal_names}")                                                                                                            
+       80 +            print(f"       |")                                                                                                                                
+       81 +                                                                                                                                                              
+       82 +        if maternal_gp:                                                                                                                                       
+       83 +            maternal_names = ", ".join(maternal_gp)                                                                                                           
+       84 +            print(f"                              Maternal: {maternal_names}")                                                                                
+       85 +            print(f"                                   |")                                                                                                    
+       86 +                                                                                                                                                              
+       87 +        print()                                                                                                                                               
+       88 +                                                                                                                                                              
+       89      # Print parents
+       49 -    print("\n        Parents")                                                                                                                                
+       50 -    print("        -------")                                                                                                                                  
+       51 -    print(f"    {couple['father']} + {couple['mother']}")                                                                                                     
+       52 -    print("            |")                                                                                                                                    
+       53 -    print("            v")                                                                                                                                    
+       90 +    print("              Parents")                                                                                                                            
+       91 +    print("              -------")                                                                                                                            
+       92 +    print(f"        {couple['father']} + {couple['mother']}")                                                                                                 
+       93 +    print("                |")                                                                                                                                
+       94 +    print("                v")                                                                                                                                
+       95  
+       96      # Print user
+       56 -    print(f"         [{user_name}] (You)")                                                                                                                    
+       97 +    print(f"           [{user_name}] (You)")                                                                                                                  
+       98  
+       99      # Print siblings if any
+      100      if 'sibling' in family_tree:
+      101          siblings = ", ".join(family_tree['sibling'])
+       61 -        print(f"    Siblings: {siblings}")                                                                                                                    
+      102 +        print(f"        Siblings: {siblings}")                                                                                                                
+      103  
+       63 -    # Print other relatives                                                                                                                                   
+       64 -    other_relations = [r for r in family_tree if r != 'sibling']                                                                                              
+      104 +    # Print other relatives (excluding grandparents and siblings)                                                                                             
+      105 +    skip_relations = ['sibling', 'maternal_grandparent', 'paternal_grandparent']                                                                              
+      106 +    other_relations = [r for r in family_tree if r not in skip_relations]                                                                                     
+      107      if other_relations:
+       66 -        print("\n    Other Relatives:")                                                                                                                       
+      108 +        print("\n        Other Relatives:")                                                                                                                   
+      109          for relation in other_relations:
+      110              members = ", ".join(family_tree[relation])
+       69 -            print(f"      {relation.title()}(s): {members}")                                                                                                  
+      111 +            print(f"          {relation.title()}(s): {members}")                                                                                              
+      112  
+       71 -    print("\n" + "=" * 40)                                                                                                                                    
+      113 +    print("\n" + "=" * 50)                                                                                                                                    
+      114  
+      115  
+      116  def main():
+     ...
+      127      # Ask if user wants to add more family members
+      128      add_more = input("\nWould you like to add more family members? (yes/no): ").strip().lower()
+      129      if add_more in ('yes', 'y'):
+       88 -        add_family_members(family_tree)                                                                                                                       
+      130 +        add_family_members(family_tree, couple)                                                                                                               
+      131  
+      132      # Print the family tree
+      133      print_family_tree(user_name, couple, family_tree)
+
+● Fixed. Now when you enter a grandparent, the program asks which parent is their child:
+
+  Enter relationship (e.g., sibling, grandparent) or 'done': grandparent
+  Enter grandparent's name: Eleanor
+
+  Which parent is Eleanor's child?
+    1. Mary (mother)
+    2. Robert (father)
+  Enter 1 or 2: 1
+  Added Eleanor as maternal grandparent.
+
+  The family tree output now shows grandparents connected to the correct side:
+
+  ==================================================
+                FAMILY TREE
+  ==================================================
+
+             Grandparents
+             ------------
+    Paternal: William, Dorothy
+         |
+                                Maternal: Eleanor, George
+                                     |
+
+                Parents
+                -------
+          Robert + Mary
+                  |
+                  v
+             [John] (You)
+          Siblings: Sarah
+
+  ==================================================
+
+> please also print the raw variables upon completion of the user's input below the tree 
+
+● Update(family_tree.py)
+  ⎿  Added 6 lines                                                                                                                                                       
+      112  
+      113      print("\n" + "=" * 50)
+      114  
+      115 +    # Print raw variables                                                                                                                                     
+      116 +    print("\n--- Raw Variables ---")                                                                                                                          
+      117 +    print(f"user_name = {repr(user_name)}")                                                                                                                   
+      118 +    print(f"couple = {couple}")                                                                                                                               
+      119 +    print(f"family_tree = {family_tree}")                                                                                                                     
+      120  
+      121 +                                                                                                                                                              
+      122  def main():
+      123      """Main function to run the family tree program."""
+      124      # Get user and parents info
+
+● Done. Now after the tree, the program prints the raw variables:
+
+  ==================================================
+                FAMILY TREE
+  ==================================================
+
+                Parents
+                -------
+          Robert + Mary
+                  |
+                  v
+             [John] (You)
+          Siblings: Sarah
+
+  ==================================================
+
+  --- Raw Variables ---
+  user_name = 'John'
+  couple = {'mother': 'Mary', 'father': 'Robert'}
+  family_tree = {'sibling': ['Sarah'], 'maternal_grandparent': ['Eleanor']}
+
+> now augment the program to allow the user to enter uncle, aunt, great grandparent, or spouse or child of any previously entered member of the family tree, allowing for 
+unlimted extension in terms of cousins, grandchildren, etc... 
+
+● This requires a significant restructure to support arbitrary family relationships. I'll create a more flexible data model where each person is a node with relationships to others.
+
+● Write(family_tree.py)
+  ⎿  Added 305 lines, removed 71 lines                                                                                                                                   
+        1  #!/usr/bin/env python3
+        2 -"""A simple family tree program that collects family member information."""                                                                                   
+        2 +"""A family tree program that supports unlimited family relationships."""                                                                                     
+        3  
+        4  
+        5 -def get_user_info():                                                                                                                                          
+        5 +class FamilyTree:                                                                                                                                             
+        6 +    """Manages all family members and their relationships."""                                                                                                 
+        7 +                                                                                                                                                              
+        8 +    def __init__(self):                                                                                                                                       
+        9 +        self.members = {}  # name -> person dict                                                                                                              
+       10 +        self.user_name = None                                                                                                                                 
+       11 +        self.couple = None  # Original couple dict for compatibility                                                                                          
+       12 +                                                                                                                                                              
+       13 +    def add_person(self, name):                                                                                                                               
+       14 +        """Add a person to the family tree if not already present."""                                                                                         
+       15 +        if name not in self.members:                                                                                                                          
+       16 +            self.members[name] = {                                                                                                                            
+       17 +                'name': name,                                                                                                                                 
+       18 +                'spouse': None,                                                                                                                               
+       19 +                'children': [],                                                                                                                               
+       20 +                'parents': []                                                                                                                                 
+       21 +            }                                                                                                                                                 
+       22 +        return self.members[name]                                                                                                                             
+       23 +                                                                                                                                                              
+       24 +    def set_spouse(self, person1_name, person2_name):                                                                                                         
+       25 +        """Set two people as spouses."""                                                                                                                      
+       26 +        p1 = self.add_person(person1_name)                                                                                                                    
+       27 +        p2 = self.add_person(person2_name)                                                                                                                    
+       28 +        p1['spouse'] = person2_name                                                                                                                           
+       29 +        p2['spouse'] = person1_name                                                                                                                           
+       30 +                                                                                                                                                              
+       31 +    def add_child(self, parent_name, child_name):                                                                                                             
+       32 +        """Add a child to a parent."""                                                                                                                        
+       33 +        parent = self.add_person(parent_name)                                                                                                                 
+       34 +        child = self.add_person(child_name)                                                                                                                   
+       35 +        if child_name not in parent['children']:                                                                                                              
+       36 +            parent['children'].append(child_name)                                                                                                             
+       37 +        if parent_name not in child['parents']:                                                                                                               
+       38 +            child['parents'].append(parent_name)                                                                                                              
+       39 +        # If parent has spouse, also add as parent of child                                                                                                   
+       40 +        if parent['spouse'] and parent['spouse'] not in child['parents']:                                                                                     
+       41 +            spouse = self.members[parent['spouse']]                                                                                                           
+       42 +            if child_name not in spouse['children']:                                                                                                          
+       43 +                spouse['children'].append(child_name)                                                                                                         
+       44 +            child['parents'].append(parent['spouse'])                                                                                                         
+       45 +                                                                                                                                                              
+       46 +    def add_parent(self, child_name, parent_name):                                                                                                            
+       47 +        """Add a parent to a child."""                                                                                                                        
+       48 +        self.add_child(parent_name, child_name)                                                                                                               
+       49 +                                                                                                                                                              
+       50 +    def get_siblings(self, person_name):                                                                                                                      
+       51 +        """Get siblings of a person (people who share parents)."""                                                                                            
+       52 +        person = self.members.get(person_name)                                                                                                                
+       53 +        if not person or not person['parents']:                                                                                                               
+       54 +            return []                                                                                                                                         
+       55 +        siblings = set()                                                                                                                                      
+       56 +        for parent_name in person['parents']:                                                                                                                 
+       57 +            parent = self.members[parent_name]                                                                                                                
+       58 +            for child in parent['children']:                                                                                                                  
+       59 +                if child != person_name:                                                                                                                      
+       60 +                    siblings.add(child)                                                                                                                       
+       61 +        return list(siblings)                                                                                                                                 
+       62 +                                                                                                                                                              
+       63 +    def get_grandparents(self, person_name):                                                                                                                  
+       64 +        """Get grandparents of a person."""                                                                                                                   
+       65 +        person = self.members.get(person_name)                                                                                                                
+       66 +        if not person:                                                                                                                                        
+       67 +            return []                                                                                                                                         
+       68 +        grandparents = []                                                                                                                                     
+       69 +        for parent_name in person['parents']:                                                                                                                 
+       70 +            parent = self.members[parent_name]                                                                                                                
+       71 +            grandparents.extend(parent['parents'])                                                                                                            
+       72 +        return grandparents                                                                                                                                   
+       73 +                                                                                                                                                              
+       74 +    def get_aunts_uncles(self, person_name):                                                                                                                  
+       75 +        """Get aunts and uncles (siblings of parents)."""                                                                                                     
+       76 +        person = self.members.get(person_name)                                                                                                                
+       77 +        if not person:                                                                                                                                        
+       78 +            return []                                                                                                                                         
+       79 +        aunts_uncles = []                                                                                                                                     
+       80 +        for parent_name in person['parents']:                                                                                                                 
+       81 +            aunts_uncles.extend(self.get_siblings(parent_name))                                                                                               
+       82 +        return aunts_uncles                                                                                                                                   
+       83 +                                                                                                                                                              
+       84 +    def get_cousins(self, person_name):                                                                                                                       
+       85 +        """Get cousins (children of aunts/uncles)."""                                                                                                         
+       86 +        aunts_uncles = self.get_aunts_uncles(person_name)                                                                                                     
+       87 +        cousins = []                                                                                                                                          
+       88 +        for au in aunts_uncles:                                                                                                                               
+       89 +            au_person = self.members[au]                                                                                                                      
+       90 +            cousins.extend(au_person['children'])                                                                                                             
+       91 +        return cousins                                                                                                                                        
+       92 +                                                                                                                                                              
+       93 +    def get_all_members_list(self):                                                                                                                           
+       94 +        """Get a numbered list of all family members."""                                                                                                      
+       95 +        return list(self.members.keys())                                                                                                                      
+       96 +                                                                                                                                                              
+       97 +    def display_members_menu(self):                                                                                                                           
+       98 +        """Display all members with numbers for selection."""                                                                                                 
+       99 +        members = self.get_all_members_list()                                                                                                                 
+      100 +        print("\nFamily members:")                                                                                                                            
+      101 +        for i, name in enumerate(members, 1):                                                                                                                 
+      102 +            print(f"  {i}. {name}")                                                                                                                           
+      103 +        return members                                                                                                                                        
+      104 +                                                                                                                                                              
+      105 +    def select_member(self, prompt="Select a family member"):                                                                                                 
+      106 +        """Let user select a family member by number."""                                                                                                      
+      107 +        members = self.display_members_menu()                                                                                                                 
+      108 +        while True:                                                                                                                                           
+      109 +            choice = input(f"\n{prompt} (enter number): ").strip()                                                                                            
+      110 +            try:                                                                                                                                              
+      111 +                idx = int(choice) - 1                                                                                                                         
+      112 +                if 0 <= idx < len(members):                                                                                                                   
+      113 +                    return members[idx]                                                                                                                       
+      114 +                else:                                                                                                                                         
+      115 +                    print("Invalid number. Try again.")                                                                                                       
+      116 +            except ValueError:                                                                                                                                
+      117 +                print("Please enter a number.")                                                                                                               
+      118 +                                                                                                                                                              
+      119 +                                                                                                                                                              
+      120 +def get_user_info(tree):                                                                                                                                      
+      121      """Get the user's name and their parents' names."""
+      122      print("=== Family Tree Builder ===\n")
+      123  
+      124      user_name = input("Enter your name: ").strip()
+      125 +    tree.user_name = user_name                                                                                                                                
+      126 +    tree.add_person(user_name)                                                                                                                                
+      127  
+      128      print("\nNow enter your parents' names:")
+      129      mother_name = input("Enter your mother's name: ").strip()
+      130      father_name = input("Enter your father's name: ").strip()
+      131  
+       15 -    couple = {                                                                                                                                                
+      132 +    # Store original couple dict for compatibility                                                                                                            
+      133 +    tree.couple = {                                                                                                                                           
+      134          "mother": mother_name,
+      135          "father": father_name
+      136      }
+      137  
+       20 -    return user_name, couple                                                                                                                                  
+      138 +    # Add parents and set them as spouses                                                                                                                     
+      139 +    tree.add_person(mother_name)                                                                                                                              
+      140 +    tree.add_person(father_name)                                                                                                                              
+      141 +    tree.set_spouse(mother_name, father_name)                                                                                                                 
+      142 +    tree.add_parent(user_name, mother_name)                                                                                                                   
+      143 +    tree.add_parent(user_name, father_name)                                                                                                                   
+      144  
+      145 +    return user_name                                                                                                                                          
+      146  
+       23 -def add_family_members(family_tree, couple):                                                                                                                  
+      147 +                                                                                                                                                              
+      148 +def add_family_members(tree):                                                                                                                                 
+      149      """Allow user to add additional family members."""
+      150      print("\n--- Add Family Members ---")
+       26 -    print("You can add siblings, grandparents, or other relatives.")                                                                                          
+      151 +    print("Relationships: sibling, grandparent, great grandparent,")                                                                                          
+      152 +    print("               aunt, uncle, spouse, child")                                                                                                        
+      153      print("Enter 'done' when finished.\n")
+      154  
+      155      while True:
+       30 -        relation = input("Enter relationship (e.g., sibling, grandparent) or 'done': ").strip().lower()                                                       
+      156 +        relation = input("Enter relationship or 'done': ").strip().lower()                                                                                    
+      157          if relation == 'done':
+      158              break
+      159  
+       34 -        name = input(f"Enter {relation}'s name: ").strip()                                                                                                    
+      160 +        if relation == 'sibling':                                                                                                                             
+      161 +            name = input("Enter sibling's name: ").strip()                                                                                                    
+      162 +            tree.add_person(name)                                                                                                                             
+      163 +            # Siblings share the same parents as user                                                                                                         
+      164 +            user = tree.members[tree.user_name]                                                                                                               
+      165 +            for parent_name in user['parents']:                                                                                                               
+      166 +                tree.add_child(parent_name, name)                                                                                                             
+      167 +            print(f"Added {name} as sibling.\n")                                                                                                              
+      168  
+       36 -        # Special handling for grandparents                                                                                                                   
+       37 -        if relation == 'grandparent':                                                                                                                         
+      169 +        elif relation == 'grandparent':                                                                                                                       
+      170 +            name = input("Enter grandparent's name: ").strip()                                                                                                
+      171              print(f"\nWhich parent is {name}'s child?")
+       39 -            print(f"  1. {couple['mother']} (mother)")                                                                                                        
+       40 -            print(f"  2. {couple['father']} (father)")                                                                                                        
+      172 +            print(f"  1. {tree.couple['mother']} (mother)")                                                                                                   
+      173 +            print(f"  2. {tree.couple['father']} (father)")                                                                                                   
+      174              choice = input("Enter 1 or 2: ").strip()
+      175  
+      176              if choice == '1':
+       44 -                parent_side = 'maternal'                                                                                                                      
+      177 +                parent_name = tree.couple['mother']                                                                                                           
+      178              elif choice == '2':
+       46 -                parent_side = 'paternal'                                                                                                                      
+      179 +                parent_name = tree.couple['father']                                                                                                           
+      180              else:
+       48 -                print("Invalid choice. Defaulting to maternal side.")                                                                                         
+       49 -                parent_side = 'maternal'                                                                                                                      
+      181 +                print("Invalid choice. Defaulting to mother.")                                                                                                
+      182 +                parent_name = tree.couple['mother']                                                                                                           
+      183  
+       51 -            key = f"{parent_side}_grandparent"                                                                                                                
+       52 -            if key not in family_tree:                                                                                                                        
+       53 -                family_tree[key] = []                                                                                                                         
+       54 -            family_tree[key].append(name)                                                                                                                     
+       55 -            print(f"Added {name} as {parent_side} grandparent.\n")                                                                                            
+      184 +            tree.add_parent(parent_name, name)                                                                                                                
+      185 +            print(f"Added {name} as grandparent of {parent_name}.\n")                                                                                         
+      186 +                                                                                                                                                              
+      187 +        elif relation == 'great grandparent':                                                                                                                 
+      188 +            name = input("Enter great grandparent's name: ").strip()                                                                                          
+      189 +            grandparents = tree.get_grandparents(tree.user_name)                                                                                              
+      190 +            if not grandparents:                                                                                                                              
+      191 +                print("No grandparents in tree yet. Add grandparents first.\n")                                                                               
+      192 +                continue                                                                                                                                      
+      193 +                                                                                                                                                              
+      194 +            print(f"\nWhich grandparent is {name}'s child?")                                                                                                  
+      195 +            for i, gp in enumerate(grandparents, 1):                                                                                                          
+      196 +                print(f"  {i}. {gp}")                                                                                                                         
+      197 +            choice = input("Enter number: ").strip()                                                                                                          
+      198 +            try:                                                                                                                                              
+      199 +                idx = int(choice) - 1                                                                                                                         
+      200 +                if 0 <= idx < len(grandparents):                                                                                                              
+      201 +                    gp_name = grandparents[idx]                                                                                                               
+      202 +                    tree.add_parent(gp_name, name)                                                                                                            
+      203 +                    print(f"Added {name} as great grandparent (parent of {gp_name}).\n")                                                                      
+      204 +                else:                                                                                                                                         
+      205 +                    print("Invalid choice.\n")                                                                                                                
+      206 +            except ValueError:                                                                                                                                
+      207 +                print("Invalid input.\n")                                                                                                                     
+      208 +                                                                                                                                                              
+      209 +        elif relation in ('aunt', 'uncle'):                                                                                                                   
+      210 +            name = input(f"Enter {relation}'s name: ").strip()                                                                                                
+      211 +            print(f"\nWhich parent is {name}'s sibling?")                                                                                                     
+      212 +            print(f"  1. {tree.couple['mother']} (mother)")                                                                                                   
+      213 +            print(f"  2. {tree.couple['father']} (father)")                                                                                                   
+      214 +            choice = input("Enter 1 or 2: ").strip()                                                                                                          
+      215 +                                                                                                                                                              
+      216 +            if choice == '1':                                                                                                                                 
+      217 +                parent_name = tree.couple['mother']                                                                                                           
+      218 +            elif choice == '2':                                                                                                                               
+      219 +                parent_name = tree.couple['father']                                                                                                           
+      220 +            else:                                                                                                                                             
+      221 +                print("Invalid choice. Defaulting to mother.")                                                                                                
+      222 +                parent_name = tree.couple['mother']                                                                                                           
+      223 +                                                                                                                                                              
+      224 +            # Aunt/uncle shares parents with the selected parent                                                                                              
+      225 +            tree.add_person(name)                                                                                                                             
+      226 +            parent = tree.members[parent_name]                                                                                                                
+      227 +            for grandparent_name in parent['parents']:                                                                                                        
+      228 +                tree.add_child(grandparent_name, name)                                                                                                        
+      229 +                                                                                                                                                              
+      230 +            if not parent['parents']:                                                                                                                         
+      231 +                print(f"Note: {parent_name} has no parents in tree yet.")                                                                                     
+      232 +                print(f"Adding {name} but relationship incomplete until grandparents added.\n")                                                               
+      233 +            else:                                                                                                                                             
+      234 +                print(f"Added {name} as {relation} (sibling of {parent_name}).\n")                                                                            
+      235 +                                                                                                                                                              
+      236 +        elif relation == 'spouse':                                                                                                                            
+      237 +            print("\nWho is getting a spouse?")                                                                                                               
+      238 +            person_name = tree.select_member("Select the person")                                                                                             
+      239 +            spouse_name = input(f"Enter {person_name}'s spouse's name: ").strip()                                                                             
+      240 +            tree.set_spouse(person_name, spouse_name)                                                                                                         
+      241 +            print(f"Added {spouse_name} as spouse of {person_name}.\n")                                                                                       
+      242 +                                                                                                                                                              
+      243 +        elif relation == 'child':                                                                                                                             
+      244 +            print("\nWho is the parent of this child?")                                                                                                       
+      245 +            parent_name = tree.select_member("Select the parent")                                                                                             
+      246 +            child_name = input(f"Enter {parent_name}'s child's name: ").strip()                                                                               
+      247 +            tree.add_child(parent_name, child_name)                                                                                                           
+      248 +            print(f"Added {child_name} as child of {parent_name}.\n")                                                                                         
+      249 +                                                                                                                                                              
+      250          else:
+       57 -            if relation not in family_tree:                                                                                                                   
+       58 -                family_tree[relation] = []                                                                                                                    
+       59 -            family_tree[relation].append(name)                                                                                                                
+       60 -            print(f"Added {name} as {relation}.\n")                                                                                                           
+      251 +            print(f"Unknown relationship '{relation}'. Try: sibling, grandparent,")                                                                           
+      252 +            print("great grandparent, aunt, uncle, spouse, child\n")                                                                                          
+      253  
+      254  
+       63 -def print_family_tree(user_name, couple, family_tree):                                                                                                        
+      255 +def print_family_tree(tree):                                                                                                                                  
+      256      """Print the family tree in a visual format."""
+       65 -    print("\n" + "=" * 50)                                                                                                                                    
+       66 -    print("              FAMILY TREE")                                                                                                                        
+       67 -    print("=" * 50)                                                                                                                                           
+      257 +    user_name = tree.user_name                                                                                                                                
+      258 +    couple = tree.couple                                                                                                                                      
+      259  
+       69 -    # Print grandparents if any                                                                                                                               
+       70 -    maternal_gp = family_tree.get('maternal_grandparent', [])                                                                                                 
+       71 -    paternal_gp = family_tree.get('paternal_grandparent', [])                                                                                                 
+      260 +    print("\n" + "=" * 60)                                                                                                                                    
+      261 +    print("                    FAMILY TREE")                                                                                                                  
+      262 +    print("=" * 60)                                                                                                                                           
+      263  
+       73 -    if maternal_gp or paternal_gp:                                                                                                                            
+       74 -        print("\n           Grandparents")                                                                                                                    
+       75 -        print("           ------------")                                                                                                                      
+      264 +    # Print great grandparents if any                                                                                                                         
+      265 +    grandparents = tree.get_grandparents(user_name)                                                                                                           
+      266 +    great_grandparents = []                                                                                                                                   
+      267 +    for gp in grandparents:                                                                                                                                   
+      268 +        gp_person = tree.members[gp]                                                                                                                          
+      269 +        great_grandparents.extend(gp_person['parents'])                                                                                                       
+      270  
+       77 -        if paternal_gp:                                                                                                                                       
+       78 -            paternal_names = ", ".join(paternal_gp)                                                                                                           
+       79 -            print(f"  Paternal: {paternal_names}")                                                                                                            
+       80 -            print(f"       |")                                                                                                                                
+      271 +    if great_grandparents:                                                                                                                                    
+      272 +        print("\n  Great Grandparents: " + ", ".join(great_grandparents))                                                                                     
+      273 +        print("          |")                                                                                                                                  
+      274  
+      275 +    # Print grandparents                                                                                                                                      
+      276 +    maternal_gp = tree.members[couple['mother']]['parents']                                                                                                   
+      277 +    paternal_gp = tree.members[couple['father']]['parents']                                                                                                   
+      278 +                                                                                                                                                              
+      279 +    if maternal_gp or paternal_gp:                                                                                                                            
+      280 +        print("\n  Grandparents")                                                                                                                             
+      281 +        print("  ------------")                                                                                                                               
+      282 +        if paternal_gp:                                                                                                                                       
+      283 +            print(f"    Paternal ({couple['father']}'s parents): {', '.join(paternal_gp)}")                                                                   
+      284          if maternal_gp:
+       83 -            maternal_names = ", ".join(maternal_gp)                                                                                                           
+       84 -            print(f"                              Maternal: {maternal_names}")                                                                                
+       85 -            print(f"                                   |")                                                                                                    
+      285 +            print(f"    Maternal ({couple['mother']}'s parents): {', '.join(maternal_gp)}")                                                                   
+      286 +        print("          |")                                                                                                                                  
+      287  
+       87 -        print()                                                                                                                                               
+      288 +    # Print aunts/uncles                                                                                                                                      
+      289 +    aunts_uncles = tree.get_aunts_uncles(user_name)                                                                                                           
+      290 +    if aunts_uncles:                                                                                                                                          
+      291 +        print(f"\n  Aunts/Uncles: {', '.join(aunts_uncles)}")                                                                                                 
+      292 +        # Print cousins (children of aunts/uncles)                                                                                                            
+      293 +        cousins = tree.get_cousins(user_name)                                                                                                                 
+      294 +        if cousins:                                                                                                                                           
+      295 +            print(f"    └─ Cousins: {', '.join(cousins)}")                                                                                                    
+      296  
+      297      # Print parents
+       90 -    print("              Parents")                                                                                                                            
+       91 -    print("              -------")                                                                                                                            
+       92 -    print(f"        {couple['father']} + {couple['mother']}")                                                                                                 
+       93 -    print("                |")                                                                                                                                
+       94 -    print("                v")                                                                                                                                
+      298 +    print("\n  Parents")                                                                                                                                      
+      299 +    print("  -------")                                                                                                                                        
+      300 +    print(f"    {couple['father']} + {couple['mother']}")                                                                                                     
+      301 +    print("          |")                                                                                                                                      
+      302 +    print("          v")                                                                                                                                      
+      303  
+       96 -    # Print user                                                                                                                                              
+       97 -    print(f"           [{user_name}] (You)")                                                                                                                  
+      304 +    # Print user and siblings                                                                                                                                 
+      305 +    siblings = tree.get_siblings(user_name)                                                                                                                   
+      306 +    print(f"    [{user_name}] (You)", end="")                                                                                                                 
+      307 +    if siblings:                                                                                                                                              
+      308 +        print(f"  &  Siblings: {', '.join(siblings)}")                                                                                                        
+      309 +    else:                                                                                                                                                     
+      310 +        print()                                                                                                                                               
+      311  
+       99 -    # Print siblings if any                                                                                                                                   
+      100 -    if 'sibling' in family_tree:                                                                                                                              
+      101 -        siblings = ", ".join(family_tree['sibling'])                                                                                                          
+      102 -        print(f"        Siblings: {siblings}")                                                                                                                
+      312 +    # Print user's spouse if any                                                                                                                              
+      313 +    user_person = tree.members[user_name]                                                                                                                     
+      314 +    if user_person['spouse']:                                                                                                                                 
+      315 +        print(f"      + Spouse: {user_person['spouse']}")                                                                                                     
+      316  
+      104 -    # Print other relatives (excluding grandparents and siblings)                                                                                             
+      105 -    skip_relations = ['sibling', 'maternal_grandparent', 'paternal_grandparent']                                                                              
+      106 -    other_relations = [r for r in family_tree if r not in skip_relations]                                                                                     
+      107 -    if other_relations:                                                                                                                                       
+      108 -        print("\n        Other Relatives:")                                                                                                                   
+      109 -        for relation in other_relations:                                                                                                                      
+      110 -            members = ", ".join(family_tree[relation])                                                                                                        
+      111 -            print(f"          {relation.title()}(s): {members}")                                                                                              
+      317 +    # Print user's children if any                                                                                                                            
+      318 +    if user_person['children']:                                                                                                                               
+      319 +        print(f"          |")                                                                                                                                 
+      320 +        print(f"          └─ Children: {', '.join(user_person['children'])}")                                                                                 
+      321 +        # Print grandchildren                                                                                                                                 
+      322 +        for child_name in user_person['children']:                                                                                                            
+      323 +            child = tree.members[child_name]                                                                                                                  
+      324 +            if child['spouse']:                                                                                                                               
+      325 +                print(f"               {child_name} + {child['spouse']}")                                                                                     
+      326 +            if child['children']:                                                                                                                             
+      327 +                print(f"               └─ {child_name}'s children: {', '.join(child['children'])}")                                                           
+      328  
+      113 -    print("\n" + "=" * 50)                                                                                                                                    
+      329 +    # Print extended family (anyone else with children)                                                                                                       
+      330 +    print("\n  Extended Family:")                                                                                                                             
+      331 +    printed = {user_name}                                                                                                                                     
+      332 +    for name, person in tree.members.items():                                                                                                                 
+      333 +        if name in printed or name in [couple['mother'], couple['father']]:                                                                                   
+      334 +            continue                                                                                                                                          
+      335 +        if person['children'] and name not in user_person['children']:                                                                                        
+      336 +            children_str = ', '.join(person['children'])                                                                                                      
+      337 +            spouse_str = f" + {person['spouse']}" if person['spouse'] else ""                                                                                 
+      338 +            print(f"    {name}{spouse_str} -> Children: {children_str}")                                                                                      
+      339 +            printed.add(name)                                                                                                                                 
+      340  
+      341 +    print("\n" + "=" * 60)                                                                                                                                    
+      342 +                                                                                                                                                              
+      343      # Print raw variables
+      344      print("\n--- Raw Variables ---")
+      345      print(f"user_name = {repr(user_name)}")
+      346      print(f"couple = {couple}")
+      119 -    print(f"family_tree = {family_tree}")                                                                                                                     
+      347 +    print(f"\nfamily_tree.members = {{")                                                                                                                      
+      348 +    for name, data in tree.members.items():                                                                                                                   
+      349 +        print(f"  {repr(name)}: {{")                                                                                                                          
+      350 +        print(f"    'spouse': {repr(data['spouse'])},")                                                                                                       
+      351 +        print(f"    'children': {data['children']},")                                                                                                         
+      352 +        print(f"    'parents': {data['parents']}")                                                                                                            
+      353 +        print(f"  }},")                                                                                                                                       
+      354 +    print("}")                                                                                                                                                
+      355  
+      356  
+      357  def main():
+      358      """Main function to run the family tree program."""
+      359 +    tree = FamilyTree()                                                                                                                                       
+      360 +                                                                                                                                                              
+      361      # Get user and parents info
+      125 -    user_name, couple = get_user_info()                                                                                                                       
+      362 +    user_name = get_user_info(tree)                                                                                                                           
+      363  
+      364      print(f"\nHello {user_name}!")
+      128 -    print(f"Your parents are {couple['father']} (father) and {couple['mother']} (mother).")                                                                   
+      365 +    print(f"Your parents are {tree.couple['father']} (father) and {tree.couple['mother']} (mother).")                                                         
+      366  
+      130 -    # Initialize family tree with additional members                                                                                                          
+      131 -    family_tree = {}                                                                                                                                          
+      132 -                                                                                                                                                              
+      367      # Ask if user wants to add more family members
+      368      add_more = input("\nWould you like to add more family members? (yes/no): ").strip().lower()
+      369      if add_more in ('yes', 'y'):
+      136 -        add_family_members(family_tree, couple)                                                                                                               
+      370 +        add_family_members(tree)                                                                                                                              
+      371  
+      372      # Print the family tree
+      139 -    print_family_tree(user_name, couple, family_tree)                                                                                                         
+      373 +    print_family_tree(tree)                                                                                                                                   
+      374  
+      375  
+      376  if __name__ == "__main__":
+
+● Done. The program now uses a FamilyTree class that stores each person with their relationships (spouse, children, parents), enabling unlimited extension.
+
+  Supported relationships:
+  - sibling - shares your parents
+  - grandparent - asks which parent they belong to
+  - great grandparent - asks which grandparent they belong to
+  - aunt / uncle - asks which parent is their sibling
+  - spouse - select any family member to add their spouse
+  - child - select any family member to add their child
+
+  Example session:
+  Enter relationship or 'done': aunt
+  Enter aunt's name: Susan
+
+  Which parent is Susan's sibling?
+    1. Mary (mother)
+    2. Robert (father)
+  Enter 1 or 2: 1
+  Added Susan as aunt (sibling of Mary).
+
+  Enter relationship or 'done': spouse
+
+  Who is getting a spouse?
+  Family members:
+    1. John
+    2. Mary
+    3. Robert
+    4. Susan
+
+  Select the person (enter number): 4
+  Enter Susan's spouse's name: Tom
+  Added Tom as spouse of Susan.
+
+  Enter relationship or 'done': child
+
+  Who is the parent of this child?
+  Family members:
+    1. John
+    2. Mary
+    3. Robert
+    4. Susan
+    5. Tom
+
+  Select the parent (enter number): 4
+  Enter Susan's child's name: Emma
+  Added Emma as child of Susan.
+
+  This creates cousin Emma (Susan's child). You can continue adding children to Emma to create second cousins, add spouses and children to your own children to create grandchildren, etc.
+
+> run it 
+
+● Bash(python3 family_tree.py)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "/home/ni/repos/bits/sam_tutorial/crash_course_book_content/input_stuff/family_tree.py", line 377, in <module>
+         main()
+         ~~~~^^
+       File "/home/ni/repos/bits/sam_tutorial/crash_course_book_content/input_stuff/family_tree.py", line 362, in main
+         user_name = get_user_info(tree)
+       File "/home/ni/repos/bits/sam_tutorial/crash_course_book_content/input_stuff/family_tree.py", line 124, in get_user_info
+         user_name = input("Enter your name: ").strip()
+                     ~~~~~^^^^^^^^^^^^^^^^^^^^^
+     … +5 lines (ctrl+o to see all)
+
+● The program requires interactive input. I can demonstrate it with sample data piped in:
+
+● Bash(python3 family_tree.py << 'EOF' timeout: 30s
+      John…)
+  ⎿  === Family Tree Builder ===    
+
+     Enter your name:
+     … +175 lines (ctrl+o to expand)
+
+● The program ran successfully. Here's what the sample data created:
+
+  Family structure:
+  - You: John
+  - Parents: Robert + Mary
+  - Sibling: Sarah (married to Tom)
+  - Grandparents:
+    - Paternal: William
+    - Maternal: Eleanor, George
+  - Aunts/Uncles: Susan (Mary's sister), Emma (George's daughter)
+  - Your child: Michael
+
+  To run it interactively yourself, execute:
+  python3 family_tree.py
+
+> plese graphically display the resultant relationships in additional output 
+
+● Update(family_tree.py)
+  ⎿  Added 153 lines                                                                                                                                                     
+      340  
+      341      print("\n" + "=" * 60)
+      342  
+      343 +    # Print graphical tree                                                                                                                                    
+      344 +    print_graphical_tree(tree)                                                                                                                                
+      345 +                                                                                                                                                              
+      346 +                                                                                                                                                              
+      347 +def print_graphical_tree(tree):                                                                                                                               
+      348 +    """Print a graphical ASCII representation of the family tree."""                                                                                          
+      349 +    user_name = tree.user_name                                                                                                                                
+      350 +    couple = tree.couple                                                                                                                                      
+      351 +                                                                                                                                                              
+      352 +    print("\n" + "=" * 70)                                                                                                                                    
+      353 +    print("                      GRAPHICAL FAMILY TREE")                                                                                                      
+      354 +    print("=" * 70)                                                                                                                                           
+      355 +                                                                                                                                                              
+      356 +    # Get all generations                                                                                                                                     
+      357 +    maternal_gp = tree.members[couple['mother']]['parents']                                                                                                   
+      358 +    paternal_gp = tree.members[couple['father']]['parents']                                                                                                   
+      359 +                                                                                                                                                              
+      360 +    # Great grandparents level                                                                                                                                
+      361 +    great_gp_paternal = []                                                                                                                                    
+      362 +    great_gp_maternal = []                                                                                                                                    
+      363 +    for gp in paternal_gp:                                                                                                                                    
+      364 +        great_gp_paternal.extend(tree.members[gp]['parents'])                                                                                                 
+      365 +    for gp in maternal_gp:                                                                                                                                    
+      366 +        great_gp_maternal.extend(tree.members[gp]['parents'])                                                                                                 
+      367 +                                                                                                                                                              
+      368 +    if great_gp_paternal or great_gp_maternal:                                                                                                                
+      369 +        print("\n  GREAT GRANDPARENTS:")                                                                                                                      
+      370 +        line = "  "                                                                                                                                           
+      371 +        if great_gp_paternal:                                                                                                                                 
+      372 +            line += "  ".join([f"[{n}]" for n in great_gp_paternal])                                                                                          
+      373 +        if great_gp_paternal and great_gp_maternal:                                                                                                           
+      374 +            line += "          "                                                                                                                              
+      375 +        if great_gp_maternal:                                                                                                                                 
+      376 +            line += "  ".join([f"[{n}]" for n in great_gp_maternal])                                                                                          
+      377 +        print(line)                                                                                                                                           
+      378 +        print("       " + "│" * (len(great_gp_paternal) + len(great_gp_maternal)))                                                                            
+      379 +                                                                                                                                                              
+      380 +    # Grandparents level                                                                                                                                      
+      381 +    if paternal_gp or maternal_gp:                                                                                                                            
+      382 +        print("\n  GRANDPARENTS:")                                                                                                                            
+      383 +        line = "  "                                                                                                                                           
+      384 +        boxes = []                                                                                                                                            
+      385 +        if paternal_gp:                                                                                                                                       
+      386 +            gp_str = " ═══ ".join([f"[{n}]" for n in paternal_gp])                                                                                            
+      387 +            boxes.append(gp_str)                                                                                                                              
+      388 +        if maternal_gp:                                                                                                                                       
+      389 +            gp_str = " ═══ ".join([f"[{n}]" for n in maternal_gp])                                                                                            
+      390 +            boxes.append(gp_str)                                                                                                                              
+      391 +        print(line + "              ".join(boxes))                                                                                                            
+      392 +                                                                                                                                                              
+      393 +        # Connection lines                                                                                                                                    
+      394 +        print("         │                              │")                                                                                                    
+      395 +        print("         ▼                              ▼")                                                                                                    
+      396 +                                                                                                                                                              
+      397 +    # Parents level with aunts/uncles                                                                                                                         
+      398 +    print("\n  PARENTS & AUNTS/UNCLES:")                                                                                                                      
+      399 +                                                                                                                                                              
+      400 +    # Get aunts/uncles for each side                                                                                                                          
+      401 +    paternal_siblings = tree.get_siblings(couple['father'])                                                                                                   
+      402 +    maternal_siblings = tree.get_siblings(couple['mother'])                                                                                                   
+      403 +                                                                                                                                                              
+      404 +    parent_line = "  "                                                                                                                                        
+      405 +    if paternal_siblings:                                                                                                                                     
+      406 +        parent_line += " ".join([f"({n})" for n in paternal_siblings]) + "  "                                                                                 
+      407 +    parent_line += f"┌─[{couple['father']}]═══════[{couple['mother']}]─┐"                                                                                     
+      408 +    if maternal_siblings:                                                                                                                                     
+      409 +        parent_line += "  " + " ".join([f"({n})" for n in maternal_siblings])                                                                                 
+      410 +    print(parent_line)                                                                                                                                        
+      411 +                                                                                                                                                              
+      412 +    # Show cousins if any                                                                                                                                     
+      413 +    cousins = tree.get_cousins(user_name)                                                                                                                     
+      414 +    if cousins:                                                                                                                                               
+      415 +        print("  " + " " * 20 + "│           │")                                                                                                              
+      416 +        cousin_line = "  Cousins: " + ", ".join(cousins)                                                                                                      
+      417 +        print(cousin_line)                                                                                                                                    
+      418 +                                                                                                                                                              
+      419 +    # Connection to children                                                                                                                                  
+      420 +    print("  " + " " * 20 + "│           │")                                                                                                                  
+      421 +    print("  " + " " * 20 + "└─────┬─────┘")                                                                                                                  
+      422 +    print("  " + " " * 26 + "│")                                                                                                                              
+      423 +    print("  " + " " * 26 + "▼")                                                                                                                              
+      424 +                                                                                                                                                              
+      425 +    # User and siblings level                                                                                                                                 
+      426 +    print("\n  YOU & SIBLINGS:")                                                                                                                              
+      427 +    siblings = tree.get_siblings(user_name)                                                                                                                   
+      428 +    user_person = tree.members[user_name]                                                                                                                     
+      429 +                                                                                                                                                              
+      430 +    user_box = f"★[{user_name}]★"                                                                                                                             
+      431 +    if user_person['spouse']:                                                                                                                                 
+      432 +        user_box += f"═══[{user_person['spouse']}]"                                                                                                           
+      433 +                                                                                                                                                              
+      434 +    sibling_boxes = []                                                                                                                                        
+      435 +    for sib in siblings:                                                                                                                                      
+      436 +        sib_person = tree.members[sib]                                                                                                                        
+      437 +        sib_box = f"[{sib}]"                                                                                                                                  
+      438 +        if sib_person['spouse']:                                                                                                                              
+      439 +            sib_box += f"═[{sib_person['spouse']}]"                                                                                                           
+      440 +        sibling_boxes.append(sib_box)                                                                                                                         
+      441 +                                                                                                                                                              
+      442 +    all_boxes = [user_box] + sibling_boxes                                                                                                                    
+      443 +    print("  " + "    ".join(all_boxes))                                                                                                                      
+      444 +                                                                                                                                                              
+      445 +    # Children level                                                                                                                                          
+      446 +    user_children = user_person['children']                                                                                                                   
+      447 +    sibling_children = []                                                                                                                                     
+      448 +    for sib in siblings:                                                                                                                                      
+      449 +        sib_person = tree.members[sib]                                                                                                                        
+      450 +        for child in sib_person['children']:                                                                                                                  
+      451 +            sibling_children.append((sib, child))                                                                                                             
+      452 +                                                                                                                                                              
+      453 +    if user_children or sibling_children:                                                                                                                     
+      454 +        print("  " + " " * 5 + "│")                                                                                                                           
+      455 +        print("  " + " " * 5 + "▼")                                                                                                                           
+      456 +        print("\n  CHILDREN (Your descendants):")                                                                                                             
+      457 +                                                                                                                                                              
+      458 +        if user_children:                                                                                                                                     
+      459 +            child_boxes = []                                                                                                                                  
+      460 +            for child in user_children:                                                                                                                       
+      461 +                child_person = tree.members[child]                                                                                                            
+      462 +                child_box = f"[{child}]"                                                                                                                      
+      463 +                if child_person['spouse']:                                                                                                                    
+      464 +                    child_box += f"═[{child_person['spouse']}]"                                                                                               
+      465 +                child_boxes.append(child_box)                                                                                                                 
+      466 +            print("  " + "  ".join(child_boxes))                                                                                                              
+      467 +                                                                                                                                                              
+      468 +            # Grandchildren                                                                                                                                   
+      469 +            grandchildren = []                                                                                                                                
+      470 +            for child in user_children:                                                                                                                       
+      471 +                child_person = tree.members[child]                                                                                                            
+      472 +                for gc in child_person['children']:                                                                                                           
+      473 +                    grandchildren.append((child, gc))                                                                                                         
+      474 +                                                                                                                                                              
+      475 +            if grandchildren:                                                                                                                                 
+      476 +                print("  " + " " * 5 + "│")                                                                                                                   
+      477 +                print("  " + " " * 5 + "▼")                                                                                                                   
+      478 +                print("\n  GRANDCHILDREN:")                                                                                                                   
+      479 +                for parent, gc in grandchildren:                                                                                                              
+      480 +                    gc_person = tree.members[gc]                                                                                                              
+      481 +                    gc_box = f"[{gc}]"                                                                                                                        
+      482 +                    if gc_person['spouse']:                                                                                                                   
+      483 +                        gc_box += f"═[{gc_person['spouse']}]"                                                                                                 
+      484 +                    print(f"    {gc_box} (child of {parent})")                                                                                                
+      485 +                                                                                                                                                              
+      486 +    # Legend                                                                                                                                                  
+      487 +    print("\n  " + "─" * 50)                                                                                                                                  
+      488 +    print("  LEGEND:")                                                                                                                                        
+      489 +    print("    ★[Name]★  = You (the user)")                                                                                                                   
+      490 +    print("    [Name]    = Family member")                                                                                                                    
+      491 +    print("    (Name)    = Aunt/Uncle")                                                                                                                       
+      492 +    print("    ═══       = Married/Spouse")                                                                                                                   
+      493 +    print("    │ ▼       = Parent-Child relationship")                                                                                                        
+      494 +    print("  " + "─" * 50)                                                                                                                                    
+      495 +                                                                                                                                                              
+      496      # Print raw variables
+      497      print("\n--- Raw Variables ---")
+      498      print(f"user_name = {repr(user_name)}")
+
+● Now let me run it again to show the graphical display:
+
+● Bash(python3 family_tree.py << 'EOF' timeout: 30s
+      John…)
+  ⎿  === Family Tree Builder ===    
+
+     Enter your name:
+     … +290 lines (ctrl+o to expand)
+
+● The program now displays a graphical ASCII family tree:
+
+  ======================================================================
+                        GRAPHICAL FAMILY TREE
+  ======================================================================
+
+    GRANDPARENTS:
+    [William] ═══ [Dorothy]              [Eleanor] ═══ [George]
+           │                              │
+           ▼                              ▼
+
+    PARENTS & AUNTS/UNCLES:
+    (James) (Emma)  ┌─[Robert]═══════[Mary]─┐  (Susan)
+                        │           │
+                        └─────┬─────┘
+                              │
+                              ▼
+
+    YOU & SIBLINGS:
+    ★[John]★    [Sarah]
+         │
+         ▼
+
+    CHILDREN (Your descendants):
+    [Michael]
+
+    ──────────────────────────────────────────────────
+    LEGEND:
+      ★[Name]★  = You (the user)
+      [Name]    = Family member
+      (Name)    = Aunt/Uncle
+      ═══       = Married/Spouse
+      │ ▼       = Parent-Child relationship
+    ──────────────────────────────────────────────────
+
+  The graphical output shows:
+  - Grandparents with marriage connections (═══)
+  - Parents centered with aunts/uncles in parentheses on each side
+  - You marked with stars (★)
+  - Siblings alongside you
+  - Children below with descent lines
+  - A legend explaining the symbols
+
+──────────────────
