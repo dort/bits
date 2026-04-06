@@ -53,6 +53,8 @@ def add_family_members(family_tree, couple):
                 family_tree[key] = []
             family_tree[key].append(name)
             print(f"Added {name} as {parent_side} grandparent.\n")
+            newstring = "Added " + family_tree[key][0] + " as " + key  + "\n"
+            print(newstring)
         else:
             if relation not in family_tree:
                 family_tree[relation] = []
@@ -141,3 +143,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print("\nThank you for trying our buggy program")
