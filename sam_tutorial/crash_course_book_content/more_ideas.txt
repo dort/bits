@@ -1,0 +1,14 @@
+to look into in the future:
+
+readline module
+
+raw_input()
+
+slices
+
+filters
+
+ast   abstract syntax tree
+
+bytecode representation
+
