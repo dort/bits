@@ -1,0 +1,637 @@
+;;;; Introduction to Pure sink.
+
+;; Here we only show operations as either i128 or f64 numerics.
+;; If you need smaller types, i8, i16, i32, f32 also exist, but are omitted for didactic purposes.
+;;
+;; Values are stored in big endian order. This is important when one uses a conversion.
+;;
+;; A note about value representation. All values are held as raw bytes, these bytes have no header in front of them.
+;;   results may not be printable values!
+;;   It might be recommended to encode values as hex or base 64 when debugging, and decoding them on the fly.
+;;
+;; One surprising fact is that Pure effectively cannot take outside tuples, it only accepts "Pure syntax".
+;; To do you you would need to convert your tuple expressions into tuple pure operations.
+;;
+;; These are not exhaustive specifications, but the "WHERE" clauses should give a high level view of what to expect.
+; 
+; Here ".." represents a half open range
+;      ".." represents a closed range
+;      "Args<_>" is a variable length argument list. (its basically just describing a tuple, without the parenthesis)
+;      "?" means the value may not be written, even if pure sink successfully runs without errors
+;      "|_|" is cardinality (number of elements)
+;
+;
+; "ifnz"             ;; "if-not-zero"
+;                    ;; NOTE : !! the ascii b'0' is not the byte b'\0' !!
+;                    ;;
+;                    ;; ( ifnz <c : Symbol>
+;                    ;;   then <nz : Pure Expr >
+;                    ;; ) -> (out : Expr)?
+;                    ;;
+;                    ;; ( ifnz <c  : Symbol    >
+;                    ;;   then <nz : Pure Expr >
+;                    ;;   else <z  : Pure Expr >
+;                    ;; ) -> out : Expr
+;                    ;;
+;                    ;; WHERE |c| >= 1 
+;                    ;;   AND out == eval_pure(nz) IF FORALL i in 0..|c| . c[i] == b'\0'
+;                    ;;   AND out == eval_pure(z)  IF EXISTS i in 0..|c| . NOT (c[i] == b'\0')
+;
+;
+; "tuple"            ;; (tuple <.. args : Args Expr >) -> t : Tuple<Expr>
+;                    ;; WHERE FORALL i in 0..|args| . t[i] == args[i]
+;
+; "reverse_symbol"   ;; (reverse_symbol <s : Symbol>) -> r : Symbol 
+;                    ;; WHERE |s| == |r| 
+;                    ;;   AND FORALL i in 0..|s| . s[i] == r[ |r|-i ]
+;
+; "collapse_symbol"  ;; (collapse_symbol <t : Tuple Symbol>) -> s : Symbol
+;                    ;; WHERE |s| == ( SUM i in  0..|t| . |t[i]| )
+;
+; "explode_symbol"   ;; (explode_symbol <s : Symbol>) -> t : Tuple<Symbol>
+;                    ;; WHERE FORALL i in 0..|t| . |t[i]| == 1
+;
+; "hash_expr"        ;; (hash_expr <e : Expr>) -> h : i128
+;
+; "encode_hex"       ;; (encode_hex <s : Symbol>) -> h : Symbol
+;                    ;; WHERE |h| == 2*|s|
+;                    ;;   AND FORALL i in 0..|h| . h[i] in (b'0'..=b'9' | b'a'..=b'f')
+;
+; "decode_hex"       ;; (decode_hex <h : Symbol>) -> s : Symbol
+;                    ;; WHERE |h| > |s|
+;                    ;;   AND FORALL i in 0..|h| . h[i] in (b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'B')
+;
+;
+; "encode_base64url" ;; (encode_base64url <s : Symbol>) -> b64 : Symbol
+;                    ;; WHERE |b64| > |s|
+;                    ;;   AND FORALL i in 0..|b64| . b64[i] in (b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'-' | b'_' | b'=' )
+;
+; "decode_base64url" ;; (decode_base64url <b64 : Symbol>) -> s : Symbol
+;                    ;; WHERE |b64| > |s|
+;                    ;;   AND FORALL i in 0..|b64| . b64[i] in (b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'-' | b'_' | b'=' )
+;
+; ;; i128
+;
+; "i128_as_f64"      ;; (i128_as_f64 <n : i128>) -> f :f64
+;
+; "i128_one"         ;; (i128_one) -> one : i128
+;
+; "neg_i128"         ;; (neg_i128 <v : i128>) -> nv : i128
+;                    ;; WHERE nv == -v
+;
+; "abs_i128"         ;; (abs_i128 <i : i128>) -> z : i128  
+;                    ;; WHERE i ==  z IF i >  0
+;                    ;;   AND i ==  z IF i == 0
+;                    ;;   AND i == -z IF i <  0
+;
+; "signum_i128"      ;; (signum_i128 <i : i128>) -> s : i128
+;                    ;; WHERE s ==  1 IF i >  0
+;                    ;;   AND s ==  0 IF i == 0
+;                    ;;   AND s == -1 IF i <  0
+;
+; "sub_i128"         ;; (sub_i128 <l : i128> <r : i128>) -> s : i128
+;                    ;; WHERE s == l - r
+;
+; "div_i128"         ;; (div_i128 <l : i128> <r : i128>) -> d : i128
+;                    ;; WHERE d == l / r
+;                    ;;   AND NOT( d == 0 ) 
+;
+; "mod_i128"         ;; (mod_i128 <l : i128> <r : i128>) -> m : i128
+;                    ;; WHERE m == l % r
+;                    ;;   AND m in 0..r
+;
+; "pow_i128"         ;; (pow_i128 <l : i128> <r : i128>) -> m : i128
+;                    ;; WHERE m == pow(l,r)
+;                    ;;   AND r >= 0       ;; implementation detail, r as u32 conversion!
+;
+; "clamp_i128"       ;; (clamp_i128 <x : i128> <min : i128> <max : i128>) -> c : i128
+;                    ;; WHERE c in min..=max
+;
+; "sum_i128"         ;; (sum_i128 <l : i128> <r : i128>) -> s : i128
+;                    ;; WHERE s == l + r
+;
+; "product_i128"     ;; (product_i128 <l : i128> <r : i128>) -> p : i128
+;                    ;; WHERE s == l * r
+;
+; "max_i128"         ;; (max_i128 <l : i128> <r : i128>) -> m : i128
+;                    ;; WHERE m == l      IF l >  r
+;                    ;;   AND m == l == r IF l == r
+;                    ;;   AND m == r      IF l <  r
+;
+; "min_i128"         ;; (min_i128 <l : i128> <r : i128>) -> m : i128
+;                    ;; WHERE m == r      IF l > r
+;                    ;;   AND m == l == r IF l == r
+;                    ;;   AND m == l      IF l < r
+;
+; "i128_from_string" ;; (i128_from_string <n : i128>) -> s : Symbol 
+;                    ;; WHERE |s| >= 1
+;                    ;;   AND s[0] in (b'-' | b'0'..=b'9')
+;                    ;;   AND ( FORALL i in 1..|s| . s[i] == in b'0'..=b'9'
+;                    ;;       ) IF n >= 0 AND s[0] in b'1'..=b'9'
+;                    ;;   AND ( FORALL i in 2..|s| . s[i] == in b'0'..=b'9'
+;                    ;;            AND |s| > 1 
+;                    ;;            AND s[0] == b'-'
+;                    ;;       ) IF n < 0
+;
+; "i128_to_string"   ;; (i128_to_string <s : Symbol>) -> n : i128
+;                    ;; WHERE |s| >= 1
+;                    ;;   AND s[0] in (b'-' | b'1'..=b'9')
+;                    ;;   AND ( |s| > 1 AND s[1] in b'1'..=b'9' AND FORALL i in 2..|s| . s[i] == in b'0'..=b'9'
+;                    ;;       ) IF  s[0] == b'-'
+;                    ;;   AND ( s[1] in b'0'..=b'9' AND FORALL i in 1..|s| . s[i] == in b'0'..=b'9'
+;                    ;;       ) IF s[0] in b'0'..=b'9'
+;
+;
+; "f64_as_i128"      ;; (f64_as_i128 <f : f64>) -> n : i128
+;                    ;; WHERE n <  0 IF f < (-0.0 | +0.0)
+;                    ;;   AND n == 0 IF f == -0.0
+;                    ;;   AND n == 0 IF f == +0.0
+;                    ;;   AND n == CLAMP(truncate(f), i128_MIN, i128_MAX)
+;
+; "inf_f64"          ;; (inf_f64) -> inf : f64
+;                    ;; WHERE FORALL f in f64 . f < inf    IF NOT (NAN(f) | f == inf)
+;
+; "neginf_f64"       ;; (neginf_f64) -> neginf : f64
+;                    ;; WHERE FORALL f in f64 . f > neginf IF NOT (NAN(f) | f == neginf)
+;                    ;;   AND neginf == -inf
+;
+; "e_f64"            ;; (e_f64) -> e : f64
+;
+; "pi_f64"           ;; (pi_f64) -> pi : f64
+;
+; "tau_f64"          ;; (tau_f64) -> tau  : f64
+;                    ;; WHERE tau == 2.0*pi
+;
+; "phi_f64"          ;; (phi_f64) -> phi  : f64
+;
+; "to_radians_f64"   ;; (to_radians <d : f64>) -> r : f64
+;                    ;; WHERE r == d*(tau/360.0)
+;
+; "to_degrees_f64"   ;; (to_degrees_f64 <r : f64>) -> d : f64
+;                    ;; WHERE d == r*(360.0/tau)
+;
+; "sin_f64"          ;; (sin_f64 <r : f64>) -> s : f64
+;                    ;; WHERE radians(r)
+;                    ;;   AND s in -1.0..=1.0
+;
+; "cos_f64"          ;; (cos_f64 <r : f64>) -> c : f64 
+;                    ;; WHERE radians(r)
+;                    ;;   AND c in -1.0..=1.0
+;
+; "tan_f64"          ;; (tan_f64 <r : f64>) -> t : f64
+;                    ;; WHERE radians(r)
+;
+; "asin_f64"         ;; (asin_f64 <s : f64>) -> r : f64
+;                    ;; WHERE radians(r) 
+;                    ;;   AND s in -1.0..=1.0
+;                    ;;   AND r in -pi..=pi
+;
+; "acos_f64"         ;; (acos_f64 <c : f64>) -> r : f64 
+;                    ;; WHERE radians(r)
+;                    ;;   AND s in -1.0..=1.0
+;                    ;;   AND r in -pi..=pi
+;
+; "atan_f64"         ;; (atan_f64 <t : f64>) -> r : f64
+;                    ;; WHERE radians(r)
+;
+; "sinh_f64"         ;; (sinh_f64 <x : f64>) -> sh : f64
+;
+; "cosh_f64"         ;; (cosh_f64 <x : f64>) -> ch : f64
+;                    ;; WHERE ch in 1.0..=inf
+;
+; "tanh_f64"         ;; (tanh_f64 <x : f64>) -> th : f64
+;                    ;; WHERE th in -1.0..=1.0
+;
+; "asinh_f64"        ;; (asinh_f64 <x : f64>) -> ash : f64
+;
+; "acosh_f64"        ;; (acosh_f64 <x : f64>) -> ach : f64
+;                    ;; WHERE x   in 1.0..=inf
+;                    ;;   AND ach in 0.0..=inf
+;
+; "atanh_f64"        ;; (atanh_f64 <x : f64>) -> ath : f64
+;                    ;; WHERE x   in -1.0..=1.0
+;
+; "neg_f64"          ;; (neg_f64 x : f64) -> n : f64
+;                    ;; WHERE n == -x
+;                    ;;   AND n < +0.0 IF x >= +0.0
+;                    ;;   AND n > -0.0 IF x <= -0.0
+;                    ;;   AND -n == --x
+;
+; "abs_f64"          ;; (abs_f64 <x : f64>) -> a : f64
+;                    ;; WHERE a == x IF x >= 0.0
+;                    ;;   AND (a > x AND -a == x) IF x <  0.0
+;
+; "floor_f64"        ;; (floor_f64 <x : f64>) -> f : f64
+;                    ;; WHERE x >= f
+;                    ;;   AND abs_f64(x - f) in 0.0..=1.0
+;
+; "ceil_f64"         ;; (ceil_f64 <x : f64>) -> c : f64
+;                    ;; WHERE x <= c
+;                    ;;   AND abs_f64(x - c) in 0.0..=1.0
+;
+; "round_f64"        ;; (round_f64 <x : f64>) -> r : f64
+;                    ;; WHERE x >  r IF abs_f64(x - r) >= 0.5
+;                    ;;   AND x <= r IF abs_f64(x - r) <  0.5
+;                    ;;   AND abs_f64(x - r) in 0.0..=1.0
+;
+; "sqrt_f64"         ;; (sqrt_f64 <x : f64>) -> s : f64
+;                    ;; WHERE x >= 0.0
+;                    ;;   AND x >  s IF x >  1
+;                    ;;   AND s == 1 IF x == 1
+;                    ;;   AND x <  s IF x <  1
+;
+; "cbrt_f64"         ;; (cbrt_f64 <x : f64>) -> c : f64
+;                    ;; WHERE c > 0.0 IF x > 0.0
+;                    ;;   AND c < 0.0 IF x < 0.0
+;                    ;;   AND c == 0.0 IF x == 0.0
+;                    ;;   AND abs_f64(c) > abs_f64(x) IF abs_f64(x) < 1.0
+;                    ;;   AND abs_f64(c) < abs_f64(x) IF abs_f64(x) > 1.0
+;
+; "exp_f64"          ;; (exp_f64 <x : f64>) -> exp : f64
+;                    ;; WHERE powf_f64(e_f64,x) == exp
+;
+; "exp2_f64"         ;; (exp2_f64 <x : f64>) -> exp : f64
+;                    ;; WHERE powf_f64(2,x) == exp
+;
+; "ln_f64"           ;; (ln_f64 <x : f64>) -> ln : f64
+;                    ;; WHERE exp_f64(ln) == x
+;
+; "log2_f64"         ;; (log2_f64 <x : f64>) -> log2
+;                    ;; WHERE exp2_f64(log2) = x
+;
+; "log10_f64"        ;; (log10_f64 <x : f64>) -> log10
+;                    ;; WHERE powf_f64(10.0,log2) = x
+;
+; "trunc_f64"        ;; (trunc_f64 <x : f64>) -> t : f64
+;                    ;; WHERE abs_f64(x) > abs_f64(t) IF NOT (x == 0.0)
+;                    ;;   AND abs(x - t) in 0.0..=1.0
+;
+; "recip_f64"        ;; (recip_f64 <x : f64>) -> r : f64
+;                    ;; WHERE abs(x) >  abs(r) IF abs(x) > 1.0
+;                    ;;   AND abs(r) == 1.0    IF abs(x) == 1.0
+;                    ;;   AND abs(x) <  abs(r) IF abs(x) < 1.0
+;                    ;;   AND r > 0.0 IF x > 0.0
+;                    ;;   AND r < 0.0 IF x < 0.0
+;                    ;;   AND NOT (x == 0.0)
+;
+; "fract_f64"        ;; (fract_f64 <x : f64>) -> f : f64
+;                    ;; WHERE f == x - trunc_f64(x)
+;
+; "signum_f64"       ;; (signum_f64 <x : f64>) -> s
+;                    ;; WHERE s ==  1.0 IF x in +0.0..=inf
+;                    ;;   AND s == -1.0 IF x in -0.0..=neginf
+;
+; "copysign_f64"     ;; (copysign_f64 <m : f64> <s : f64>) -> cs : f64
+;                    ;; WHERE cs == signum_f64(s)*abs_f64(m)
+;
+; "powf_f64"         ;; (powf_f64 <x : f64> <exp : f64>) -> p : f64
+;
+; "sub_f64"          ;; (sub_f64 <l : f64> <r : f64>) -> s : f64
+;                    ;; WHERE s == l - r
+;                    ;;   AND s ==  l IF r == 0.0
+;                    ;;   AND s == -r IF l == 0.0
+;
+; "div_f64"          ;; (div_f64 <l : f64> <r : f64>) -> s : f64
+;                    ;; WHERE s == l / r
+;                    ;;   AND (NOT r == 0.0)
+;                    ;;   AND s == l   IF r == 1.0
+;                    ;;   AND s == 0.0 IF l == 0.0
+;
+; "atan2_f64"        ;; (atan2_f64 <y : f64> <x : f64>) -> at2 : f64
+;                    ;; WHERE radians(at2)
+;
+; "hypot_f64"        ;; (hypot_f64 <x : f64> <y : f64>) -> h : f64
+;                    ;; WHERE h*h == x*x, y*y
+;
+; "clamp_f64"        ;; (clamp <x : f64> <min : f64> <max : f64>) -> c : f64
+;                    ;; WHERE c in min..=max
+;                    ;;   AND min <= max
+;
+; "sum_f64"          ;; (sum_f64 <l : f64> <r : f64>) -> s : f64
+;                    ;; WHERE s == l + r
+;                    ;;   AND s == l IF r == 0.0
+;                    ;;   AND s == r IF l == 0.0
+;
+; "product_f64"      ;; (sub_f64 <l : f64> <r : f64>) -> s : f64
+;                    ;; WHERE s == l * r
+;                    ;;   AND s == l IF r == 1.0
+;                    ;;   AND s == r IF l == 1.0
+;                    ;;   AND s == 0.0 IF (l == 0.0 | r == 0.0)
+;
+; "max_f64"          ;; (max_f64 <l : f64> <r : f64>) -> m : f64
+;                    ;; WHERE m == l      IF l >  r
+;                    ;;   AND m == l == r IF l == r
+;                    ;;   AND m == r      IF l <  r
+;
+; "min_f64"          ;; (min_f64 <l : f64> <r : f64>) -> m : f64
+;                    ;; WHERE m == r      IF l > r
+;                    ;;   AND m == l == r IF l == r
+;                    ;;   AND m == l      IF l < r
+;
+;
+; "f64_from_string"  ;; (f64_from_string <s : Symbol>) -> f : f64
+;                    ;; WHERE s[0] in (b'+' | b '-' | b'0'..=b'9' | b'i' | b'I' | b'n' | b'N' | b'.')
+;                    ;;   AND FORALL i in 1..|s| . s[i] == ("inf"[i] | "INF"[i])             AND f ==  inf IF |s| == |"inf"|       AND s[0] == (b'i' | b'I')
+;                    ;;   AND FORALL i in 1..|s| . s[i] == ("infinity"[i] | "INFINITY"[i])   AND f ==  inf IF |s| == |"infinity"|  AND s[0] == (b'i' | b'I')
+;                    ;;   AND FORALL i in 2..|s| . s[i] == ("+inf"[i] | "+INF"[i])           AND f ==  inf IF |s| == |"+inf"|      AND s[0] == b'+' AND s[1] == (b'i' | b'I')
+;                    ;;   AND FORALL i in 2..|s| . s[i] == ("+infinity"[i] | "+INFINITY"[i]) AND f ==  inf IF |s| == |"+infinity"| AND s[0] == b'+' AND s[1] == (b'i' | b'I')
+;                    ;;   AND FORALL i in 2..|s| . s[i] == ("-inf"[i] | "-INF"[i])           AND f == -inf IF |s| == |"-inf"|      AND s[0] == b'-' AND s[1] == (b'i' | b'I')
+;                    ;;   AND FORALL i in 2..|s| . s[i] == ("-infinity"[i] | "-INFINITY"[i]) AND f == -inf IF |s| == |"-infinity"| AND s[0] == b'-' AND s[1] == (b'i' | b'I')
+;                    ;;   AND FORALL i in 2..|s| . s[i] == ("nan"[i] | "NAN"[i])             AND f ==  NaN IF s[0] == (b'n' | b'N')
+;                    ;;   AND ( ( s[i+1] in b'0'..=b'9'
+;                    ;;         | s[i-1] in b'0'..=b'9'
+;                    ;;         ) AND s[i+1] in b'0'..=b'9' IF s[i-1] == (b'-'| b'+'|)
+;                    ;;           AND NOT (EXISTS j in DOMAIN(s) . NOT ( j == i ) AND s[j] == b'.') 
+;                    ;;                IF EXISTS i in DOMAIN(s) . s[i] == b'.'
+;                    ;;       )
+;                    ;;   AND ( s[i-1] in (b'0'..=b'9' | b'.')
+;                    ;;       | s[i+1] in (b'0'..=b'9' | b'+' | b'-') AND s[i+2] in b'0'..=b'9' IF s[i+1] == (b'+' | b'-')
+;                    ;;       ) AND NOT (EXISTS j in DOMAIN(s) . NOT ( j == i ) AND s[j] == (b'e' | b'E')) IF EXISTS i in DOMAIN(s) . s[i] == (b'e' | b'E')
+;                    ;;   AND |s| > 2 IF ('.' | 'e' | 'E') in RANGE(s)
+;                    ;;
+;                    ;; The above focused on describing valid input rather than expected output.
+;                    ;; `f64_from_string` accepts a __lot of input varaints__, The above only scratches the surface. The usage example is more helpful.
+;                    ;; https://doc.rust-lang.org/src/core/num/float_parse.rs.html#78
+;
+; "f64_to_string"    ;; (f64_to_string <f : f64>) -> s : Symbol
+;                    ;; WHERE FORALL r in f64 . f64_from_string(f64_to_string(f64_from_string(r))) == f64_from_string(r)
+;                    ;;
+;                    ;; This is based on floating point debug printing.
+;                    ;; The main point with the above is that the output of this function returns values of the same format as f64_from_string,
+;                    ;; but does not guarantee that it will have the same representation.
+;                    ;; https://doc.rust-lang.org/src/core/fmt/float.rs.html#239
+
+
+
+;; example runner
+(exec 0
+      (, (example $order $f $code)) 
+      (O (pure (ex $order $f (output $out)) $out 
+               $code
+          )
+          (+ (ex $order $f (code $code)))
+          ; for cleaner output
+          (- (example $order $f $code) )   
+      )
+)
+
+
+; "ifnz"
+    ; note the first version can conditionally add to the space
+    (example (00 00) ifnz-then         ( ifnz 0 
+                                         then "ifnz wrote then case on the string 0"
+                                       )
+    )
+    ; This one unconditionally adds to the space
+    (example (00 01) ifnz-then-else    ( ifnz (i8_from_string 0) 
+                                         then "ifnz wrote then case on 0 value" 
+                                         else "ifnz wrote else case on 0 value"
+                                       )
+    )
+
+; "tuple" 
+    ; When looked at like the following, tuple looks weird, why not just write `(1 2)`. 
+    ; We need it, otherwise the interpretter would try to run a `1` operation on `2`
+    (example (01 00) tuple             (tuple 1 2))
+
+; "reverse_symbol"
+    (example (02 00) reverse_symbol    (reverse_symbol abc))
+
+; "collapse_symbol"
+    ; The `tuple` operation is needed in place of the literal parenthesis, as the pure expression uses the head in it's interpretter.
+    (example (03 00) collapse_symbol   (collapse_symbol (tuple a b c)))
+
+; "explode_symbol"
+    (example (04 00) explode_symbol    (explode_symbol abc))
+
+; "hash_expr"
+    (example (05 00) hash_expr         (encode_hex (hash_expr 0)))           ;; works on symbols
+    (example (05 01) hash_expr         (encode_hex (hash_expr (tuple 0 0)))) ;; works on tuples
+        ; (example (05 02) hash_expr   (hash_expr $x))                       ;; NOTE! pure does not hash values with variables inside!
+        ;; I avoid more example to not insert more non ascii into the terminal
+
+; "encode_hex"
+    (example (06 00) encode_hex        (encode_hex qwerty))
+; "decode_hex"
+    (example (07 00) decode_hex        (decode_hex 68656c6c6f))
+    (example (07 01) decode/encode_hex (decode_hex (encode_hex querty)))
+
+; "encode_base64url"
+    (example (08 00) encode_base64url  (encode_base64url qwerty))
+; "decode_base64url"
+    (example (09 00) decode_hex        (decode_base64url aGVsbG8))
+    (example (10 00) decode/encode_hex (decode_base64url (encode_base64url querty)))
+
+; "i128_from_string"
+; "i128_to_string"
+    (example (11 00) i128_from/to_string (i128_to_string (i128_from_string 1000)))
+
+; "i128_as_f64"
+    (example (12 00) i128_as_f64 (f64_to_string (recip_f64 (i128_as_f64 (i128_from_string 1000)))))
+
+; "i128_one"
+    (example (13 00) i128_one (i128_to_string (i128_one)))
+
+; "neg_i128"
+    (example (14 00) neg_i128 (i128_to_string (neg_i128 (i128_one))))
+
+; "abs_i128"
+    (example (15 00) abs_i128 (i128_to_string (abs_i128 (i128_from_string  10))))
+    (example (15 01) abs_i128 (i128_to_string (abs_i128 (i128_from_string -10))))
+
+; "signum_i128"
+    (example (16 00) signum_i218 (i128_to_string (signum_i128 (i128_from_string  10))))
+    (example (16 01) signum_i218 (i128_to_string (signum_i128 (i128_from_string -10))))
+
+; "sub_i128"
+; "div_i128"
+; "mod_i128"
+; "pow_i128"
+; "sum_i128"
+; "max_i128"
+; "min_i128"
+; "product_i128"
+    (i128_arith sub_i128     00)
+    (i128_arith div_i128     01)
+    (i128_arith mod_i128     02)
+    (i128_arith pow_i128     03)
+    (i128_arith sum_i128     04)
+    (i128_arith max_i128     05)
+    (i128_arith min_i128     06)
+    (i128_arith product_i128 07)
+    (exec ((MACRO))
+        (, (i128_arith $op $n)  )
+        (O (+ (example (17 $n) $op (i128_to_string ($op (i128_from_string  10) (i128_from_string 2)))) )
+           (- (i128_arith $op $n) )
+        )
+    )
+
+; "clamp_i128"
+    (example (18 00) clamp_i128 (i128_to_string (clamp_i128 (i128_from_string 15)
+                                                            (i128_from_string  5)
+                                                            (i128_from_string 10) )))
+    (example (18 01) clamp_i128 (i128_to_string (clamp_i128 (i128_from_string  0)
+                                                            (i128_from_string  5)
+                                                            (i128_from_string 10) )))
+
+
+; "f64_from_string"
+; "f64_to_string"
+    (example (20 00) float_to/from_string  (f64_to_string (f64_from_string      3.14)))
+    (example (20 01) float_to/from_string  (f64_to_string (f64_from_string     -3.14)))
+    (example (20 02) float_to/from_string  (f64_to_string (f64_from_string    2.5E30)))
+    (example (20 03) float_to/from_string  (f64_to_string (f64_from_string    2.5E10)))
+    (example (20 04) float_to/from_string  (f64_to_string (f64_from_string    2.5e10)))
+    (example (20 05) float_to/from_string  (f64_to_string (f64_from_string     2.e10)))
+    (example (20 06) float_to/from_string  (f64_to_string (f64_from_string   2.5E-10)))
+    (example (20 07) float_to/from_string  (f64_to_string (f64_from_string   2.5e-10)))
+    (example (20 08) float_to/from_string  (f64_to_string (f64_from_string   2.5e+10)))
+    (example (20 09) float_to/from_string  (f64_to_string (f64_from_string  20.5e-10)))
+    (example (20 10) float_to/from_string  (f64_to_string (f64_from_string         5)))
+    (example (20 11) float_to/from_string  (f64_to_string (f64_from_string        5.)))
+    (example (20 12) float_to/from_string  (f64_to_string (f64_from_string       -.5)))
+    (example (20 13) float_to/from_string  (f64_to_string (f64_from_string        .5)))
+    (example (20 14) float_to/from_string  (f64_to_string (f64_from_string       0.5)))
+    (example (20 15) float_to/from_string  (f64_to_string (f64_from_string         7)))
+    (example (20 16) float_to/from_string  (f64_to_string (f64_from_string       007)))
+    (example (20 17) float_to/from_string  (f64_to_string (f64_from_string       inf)))
+    (example (20 18) float_to/from_string  (f64_to_string (f64_from_string      -inf)))
+    (example (20 19) float_to/from_string  (f64_to_string (f64_from_string       0.0)))
+    (example (20 20) float_to/from_string  (f64_to_string (f64_from_string      +0.0)))
+    (example (20 21) float_to/from_string  (f64_to_string (f64_from_string      -0.0)))
+    (example (20 22) float_to/from_string  (f64_to_string (f64_from_string  infinity)))
+    (example (20 23) float_to/from_string  (f64_to_string (f64_from_string  iNfiNiTy)))
+    (example (20 24) float_to/from_string  (f64_to_string (f64_from_string +infinity)))
+    (example (20 25) float_to/from_string  (f64_to_string (f64_from_string -infinity)))
+    (example (20 26) float_to/from_string  (f64_to_string (f64_from_string       NaN)))
+    (example (20 27) float_to/from_string  (f64_to_string (f64_from_string       nan)))
+
+; "f64_as_i128"
+; "inf_f64"
+; "neginf_f64"
+; "e_f64"
+; "pi_f64"
+; "tau_f64"
+; "phi_f64"
+    (f64_constants f64_as_i128 00)
+    (f64_constants inf_f64     01)
+    (f64_constants neginf_f64  02)
+    (f64_constants e_f64       03)
+    (f64_constants pi_f64      04)
+    (f64_constants tau_f64     05)
+    (f64_constants phi_f64     06)
+    (exec ((MACRO)) (, (f64_constants $name $n) )
+                    (O (+ (example (21 $n) $name (f64_to_string ($name))) )
+                       (- (f64_constants $name $n) )
+                    )
+    )
+
+; "to_radians_f64"
+; "to_degrees_f64"
+; "sin_f64"
+; "cos_f64"
+; "tan_f64"
+; "asin_f64"
+; "acos_f64"
+; "atan_f64"
+; "sinh_f64"
+; "cosh_f64"
+; "tanh_f64"
+; "asinh_f64"
+; "acosh_f64"
+; "atanh_f64"
+    (example (22 00) to_radians_f64 (f64_to_string (to_radians (f64_from_string 180))))
+    (example (23 00) to_degrees_f64 (f64_to_string (to_degrees_f64 (pi_f64))))
+    (example (24 00) sin_f64 (f64_to_string (sin_f64 (pi_f64))))
+    (example (25 00) cos_f64 (f64_to_string (cos_f64 (pi_f64))))
+    (example (26 00) tan_f64 (f64_to_string (tan_f64 (pi_f64))))
+    (example (27 00) asin_f64 (f64_to_string (asin_f64 (sin_f64 (pi_f64)))))
+    (example (28 00) acos_f64 (f64_to_string (acos_f64 (cos_f64 (pi_f64)))))
+    (example (29 00) atan_f64 (f64_to_string (acos_f64 (tan_f64 (pi_f64)))))
+    (example (30 00) sinh_f64 (f64_to_string (sinh_f64 (pi_f64))))
+    (example (31 00) cosh_f64 (f64_to_string (cosh_f64 (pi_f64))))
+    (example (32 00) tanh_f64 (f64_to_string (tanh_f64 (pi_f64))))
+    (example (33 00) sinh_f64 (f64_to_string (asinh_f64 (sinh_f64 (pi_f64)))))
+    (example (34 00) cosh_f64 (f64_to_string (acosh_f64 (cosh_f64 (pi_f64)))))
+    (example (35 00) tanh_f64 (f64_to_string (atanh_f64 (tanh_f64 (pi_f64)))))
+
+; "neg_f64"
+; "abs_f64"
+; "floor_f64"
+; "ceil_f64"
+; "round_f64"
+; "sqrt_f64"
+; "cbrt_f64"
+; "exp_f64"
+; "exp2_f64"
+; "ln_f64"
+; "log2_f64"
+; "log10_f64"
+; "trunc_f64"
+; "recip_f64"
+; "fract_f64"
+; "signum_f64"
+    (f64_unary neg_f64    00)
+    (f64_unary abs_f64    01)
+    (f64_unary floor_f64  02)
+    (f64_unary ceil_f64   03)
+    (f64_unary round_f64  05)
+    (f64_unary sqrt_f64   06)
+    (f64_unary cbrt_f64   07)
+    (f64_unary exp_f64    08)
+    (f64_unary exp2_f64   09)
+    (f64_unary ln_f64     10)
+    (f64_unary log2_f64   11)
+    (f64_unary log10_f64  12)
+    (f64_unary trunc_f64  13)
+    (f64_unary recip_f64  14)
+    (f64_unary fract_f64  15)
+    (f64_unary signum_f64 16)
+    (exec ((MACRO))
+        (, (f64_unary $op $n) )
+        (O (+ (example (36 $n) $op (f64_to_string ($op (pi_f64)))) )
+           (- (f64_unary $op $n) )
+        )
+    )
+
+
+; "copysign_f64"
+    (example (37 00) copysign_f64 (f64_to_string (copysign_f64 (f64_from_string -1.0) (pi_f64))))
+
+; "atan2_f64"
+    (example (38 00) atan2_f64 (f64_to_string (atan2_f64 (pi_f64) (e_f64))))
+
+; "hypot_f64"
+    (example (39 00) hypot_f64 (f64_to_string (hypot_f64 (f64_from_string 1.0) (f64_from_string 1.0))))
+
+; "powf_f64"
+; "powi_f64"
+; "sub_f64"
+; "div_f64"
+; "sum_f64"
+; "product_f64"
+; "max_f64"
+; "min_f64"
+    (f64_arith powf_f64     00)
+    (f64_arith powi_f64     01)
+    (f64_arith sub_f64      02)
+    (f64_arith div_f64      03)
+    (f64_arith mod_f64      04)
+    (f64_arith sum_f64      05)
+    (f64_arith max_f64      06)
+    (f64_arith min_f64      07)
+    (f64_arith product_i128 08)
+    (exec ((MACRO))
+        (, (f64_arith $op $n)  )
+        (O (+ (example (40 $n) $op (f64_to_string ($op (f64_from_string  10) (f64_from_string 2)))))
+           (- (f64_arith $op $n) )
+        )
+    )
+
+; "clamp_f64"
+    (example (41 00) clamp_i128 (i128_to_string (clamp_f64 (f64_from_string 15)
+                                                           (f64_from_string  5)
+                                                           (f64_from_string 10) )))
+    (example (41 01) clamp_i128 (i128_to_string (clamp_f64 (f64_from_string  0)
+                                                           (f64_from_string  5)
+                                                           (f64_from_string 10) )))
