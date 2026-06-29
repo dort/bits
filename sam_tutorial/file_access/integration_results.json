@@ -1,0 +1,59 @@
+{
+  "integral": {
+    "function": "sin(x)",
+    "lower_bound": 0,
+    "upper_bound": "pi",
+    "exact_value": 2.0
+  },
+  "method": "Simpson's Rule",
+  "experiments": [
+    {
+      "n_intervals": 4,
+      "approximation": 2.0045597549844207,
+      "absolute_error": 0.0045597549844207386,
+      "relative_error": 0.0022798774922103693
+    },
+    {
+      "n_intervals": 8,
+      "approximation": 2.000269169948388,
+      "absolute_error": 0.0002691699483881038,
+      "relative_error": 0.0001345849741940519
+    },
+    {
+      "n_intervals": 16,
+      "approximation": 2.000016591047936,
+      "absolute_error": 1.6591047935943237e-05,
+      "relative_error": 8.295523967971619e-06
+    },
+    {
+      "n_intervals": 32,
+      "approximation": 2.0000010333694127,
+      "absolute_error": 1.0333694127062643e-06,
+      "relative_error": 5.166847063531321e-07
+    },
+    {
+      "n_intervals": 64,
+      "approximation": 2.0000000645300013,
+      "absolute_error": 6.453000134243325e-08,
+      "relative_error": 3.2265000671216626e-08
+    },
+    {
+      "n_intervals": 128,
+      "approximation": 2.000000004032258,
+      "absolute_error": 4.032258082986573e-09,
+      "relative_error": 2.0161290414932864e-09
+    },
+    {
+      "n_intervals": 256,
+      "approximation": 2.000000000252003,
+      "absolute_error": 2.5200286302151653e-10,
+      "relative_error": 1.2600143151075827e-10
+    },
+    {
+      "n_intervals": 3000,
+      "approximation": 2.0000000000000138,
+      "absolute_error": 1.3766765505351941e-14,
+      "relative_error": 6.8833827526759706e-15
+    }
+  ]
+}

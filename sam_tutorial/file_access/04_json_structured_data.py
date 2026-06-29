@@ -128,7 +128,7 @@ results = {
     "experiments": []
 }
 
-for n in [4, 8, 16, 32, 64, 128, 256]:
+for n in [4, 8, 16, 32, 64, 128, 256, 3000]:
     approximation = simpsons_rule(math.sin, 0, math.pi, n)
     error = abs(approximation - 2.0)
 
@@ -148,6 +148,30 @@ print("Integration results saved to 'integration_results.json'")
 with open("integration_results.json", "r") as f:
     data = json.load(f)
 
+
+'''
+
+
+
+
+
+Petersen graph saved to 'petersen_graph.json'
+Integration results saved to 'integration_results.json'
+
+Convergence analysis for integral of sin(x):
+     n          approx        error    ratio
+---------------------------------------------
+     4  2.004559754984     4.56e-03         
+     8  2.000269169948     2.69e-04    16.94
+    16  2.000016591048     1.66e-05    16.22
+    32  2.000001033369     1.03e-06    16.06
+    64  2.000000064530     6.45e-08    16.01
+   128  2.000000004032     4.03e-09    16.00
+   256  2.000000000252     2.52e-10    16.00
+
+'''
+
+    
 print(f"\nConvergence analysis for integral of {data['integral']['function']}:")
 print(f"{'n':>6} {'approx':>15} {'error':>12} {'ratio':>8}")
 print("-" * 45)

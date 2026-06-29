@@ -1,0 +1,3 @@
+(: Z Nat)
+(exec 0 (, (: Z Nat)) (O (ACT zero (Put Z in there))))
+(exec 1 (I (ACT zero (Put $k in there))) (, (I have found $k)))

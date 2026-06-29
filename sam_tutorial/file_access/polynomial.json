@@ -1,0 +1,25 @@
+{
+  "name": "Chebyshev T_4",
+  "degree": 4,
+  "coefficients": [
+    1,
+    0,
+    -8,
+    0,
+    8
+  ],
+  "roots": [
+    0.9238795325112867,
+    0.38268343236508984,
+    -0.3826834323650897,
+    -0.9238795325112867
+  ],
+  "properties": {
+    "orthogonal": true,
+    "interval": [
+      -1,
+      1
+    ],
+    "weight_function": "1/sqrt(1-x^2)"
+  }
+}

@@ -46,7 +46,7 @@ def safe_divide(a, b):
         return result
     except ZeroDivisionError:
         print(f"  Warning: Cannot divide {a} by zero!")
-        return None  # or float('inf'), or raise a different error
+        return float('inf')  # or float('inf'), or raise a different error
 
 # Test it
 print(f"10 / 2 = {safe_divide(10, 2)}")

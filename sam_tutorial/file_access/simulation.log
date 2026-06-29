@@ -1,0 +1,19 @@
+[16:09:16] [INFO] === Simulation Log Started: 2026-05-11 16:09:16.706425 ===
+[16:09:16] [INFO] Lorenz system with sigma=10.0, rho=28.0, beta=2.6667
+[16:09:16] [INFO] Initial conditions: (1.0, 1.0, 1.0)
+[16:09:16] [INFO] Time span: [0.0, 50.0], dt=0.01
+[16:09:16] [INFO] Starting integration: 5000 steps
+[16:09:16] [INFO] Progress: 10% (t=5.00)
+[16:09:16] [INFO] Progress: 20% (t=10.00)
+[16:09:16] [INFO] Progress: 30% (t=15.00)
+[16:09:16] [INFO] Progress: 40% (t=20.00)
+[16:09:16] [INFO] Progress: 50% (t=25.00)
+[16:09:16] [INFO] Progress: 60% (t=30.00)
+[16:09:16] [INFO] Progress: 70% (t=35.00)
+[16:09:16] [INFO] Progress: 80% (t=40.00)
+[16:09:16] [INFO] Progress: 90% (t=45.00)
+[16:09:16] [INFO] Progress: 100% (t=50.00)
+[16:09:16] [INFO] Simulation complete. Saved 501 points to lorenz_trajectory.csv
+[16:09:16] [INFO] Analyzing results...
+[16:09:16] [INFO] Analysis saved to 'analysis_results.json'
+[16:09:16] [INFO] === Simulation Log Ended ===

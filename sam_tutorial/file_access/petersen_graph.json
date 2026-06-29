@@ -1,0 +1,87 @@
+{
+  "name": "Petersen Graph",
+  "description": "A famous graph in graph theory, counterexample to many conjectures",
+  "vertices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "edges": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      7,
+      9
+    ],
+    [
+      9,
+      6
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      8,
+      5
+    ],
+    [
+      0,
+      5
+    ],
+    [
+      1,
+      6
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      4,
+      9
+    ]
+  ],
+  "properties": {
+    "num_vertices": 10,
+    "num_edges": 15,
+    "regular": true,
+    "degree": 3,
+    "chromatic_number": 3,
+    "is_planar": false,
+    "is_hamiltonian": false
+  }
+}

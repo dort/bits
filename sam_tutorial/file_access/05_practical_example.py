@@ -44,7 +44,7 @@ default_config = {
 # Save default config if it doesn't exist
 config_file = "lorenz_config.json"
 if not os.path.exists(config_file):
-    with open(config_file, "w") as f:
+    with open(config_file, "w") as  f:
         json.dump(default_config, f, indent=2)
     print(f"Created default config: {config_file}")
 else:

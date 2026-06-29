@@ -281,7 +281,7 @@ def read_text_file(filename, encodings=None):
     Returns (content, encoding_used) or raises an error.
     """
     if encodings is None:
-        encodings = ["utf-8", "latin-1", "cp1252"]
+        encodings = ["cp1252", "latin-1", "utf-8",]
 
     last_error = None
 
@@ -292,6 +292,7 @@ def read_text_file(filename, encodings=None):
             return content, encoding
         except UnicodeDecodeError as e:
             last_error = e
+            print("we didn't use the error after all?")
             continue
         except FileNotFoundError:
             raise
@@ -308,6 +309,7 @@ def read_text_file(filename, encodings=None):
 with open("unicode_test.txt", "w", encoding="utf-8") as f:
     f.write("Mathematics: ∫ f(x)dx, √2, π, ∑, ∏, ∈, ∀, ∃\n")
     f.write("Greek: α, β, γ, δ, ε, θ, λ, μ, σ, ω\n")
+    f.write("Sanskrit:  व्यञ्जनानि ä  ")
 
 content, encoding = read_text_file("unicode_test.txt")
 print(f"   Read with encoding: {encoding}")

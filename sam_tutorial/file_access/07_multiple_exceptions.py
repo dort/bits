@@ -197,7 +197,13 @@ def demonstrate_hierarchy(operation, x):
     """Show how exception hierarchy works."""
     try:
         return operation(x)
+
     except ArithmeticError as e:
+#        if {type(e).__name__} == OverflowError:
+            # do something special that relates to only overflow errors
+#        elif  {type(e).__name__} == "FloatingPointError":
+            #   
+
         # Catches ZeroDivisionError, OverflowError, etc.
         print(f"  ArithmeticError caught: {type(e).__name__}: {e}")
         return None
@@ -216,6 +222,7 @@ try:
     demonstrate_hierarchy(lambda x: math.sqrt(x), -1)
 except ValueError as e:
     print(f"  ValueError escaped! Caught in outer handler: {e}")
+    print(e)
 
 # -----------------------------------------------------------------------------
 # CATCHING ALL EXCEPTIONS (use carefully!)

@@ -1,0 +1,29 @@
+{
+  "trajectory_file": "lorenz_trajectory.csv",
+  "num_points": 501,
+  "time_span": [
+    0.0,
+    49.99999999999862
+  ],
+  "statistics": {
+    "x": {
+      "min": -18.044369285780327,
+      "max": 16.68476347622216,
+      "mean": -1.3060337388964303,
+      "std": 7.9301787384674585
+    },
+    "y": {
+      "min": -22.433383573625193,
+      "max": 27.18347313583823,
+      "mean": -1.2869317725384333,
+      "std": 8.893930546524997
+    },
+    "z": {
+      "min": 1.0,
+      "max": 46.75801524533206,
+      "mean": 24.09156036588281,
+      "std": 8.106531164239438
+    }
+  },
+  "notes": "The Lorenz attractor has two 'wings' - the trajectory switches chaotically between them"
+}
