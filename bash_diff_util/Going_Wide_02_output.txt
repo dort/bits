@@ -1,0 +1,1419 @@
+loaded 24 expressions
+loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+result:
+((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+(INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+(DEF fork (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+(DEF fork (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+(DEF fork (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+(DEF join (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+(DEF join (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+(DEF join (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+(eval (0) -> 0)
+(eval (1) -> 1)
+(eval (not 0) -> 1)
+(eval (not 1) -> 0)
+(eval (if 0 0) -> 1)
+(eval (if 0 1) -> 1)
+(eval (if 1 0) -> 0)
+(eval (if 1 1) -> 1)
+(eval (or 0 0) -> 0)
+(eval (or 0 1) -> 1)
+(eval (or 1 0) -> 1)
+(eval (or 1 1) -> 1)
+(eval (and 0 0) -> 0)
+(eval (and 0 1) -> 0)
+(eval (and 1 0) -> 0)
+(eval (and 1 1) -> 1)
+(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 1 (vs --steps 0) =====
+--- steps 0
++++ steps 1
+@@ -25,4 +25,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 2 (vs --steps 1) =====
+--- steps 1
++++ steps 2
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 3 (vs --steps 2) =====
+--- steps 2
++++ steps 3
+@@ -25,10 +25,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 4 (vs --steps 3) =====
+--- steps 3
++++ steps 4
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 5 (vs --steps 4) =====
+--- steps 4
++++ steps 5
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 6 (vs --steps 5) =====
+--- steps 5
++++ steps 6
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 7 (vs --steps 6) =====
+--- steps 6
++++ steps 7
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 8 (vs --steps 7) =====
+--- steps 7
++++ steps 8
+@@ -25,6 +25,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 9 (vs --steps 8) =====
+--- steps 8
++++ steps 9
+@@ -1,7 +1,10 @@
+ loaded 24 expressions
+ loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+ result:
++((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
++((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join (DONE case/2)) if)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ (DEF fork (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (DEF fork (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+@@ -25,5 +28,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 10 (vs --steps 9) =====
+--- steps 9
++++ steps 10
+@@ -28,4 +28,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 11 (vs --steps 10) =====
+--- steps 10
++++ steps 11
+@@ -28,7 +28,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 12 (vs --steps 11) =====
+--- steps 11
++++ steps 12
+@@ -28,10 +28,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 13 (vs --steps 12) =====
+--- steps 12
++++ steps 13
+@@ -28,7 +28,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 14 (vs --steps 13) =====
+--- steps 13
++++ steps 14
+@@ -28,7 +28,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 15 (vs --steps 14) =====
+--- steps 14
++++ steps 15
+@@ -28,7 +28,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 16 (vs --steps 15) =====
+--- steps 15
++++ steps 16
+@@ -28,7 +28,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 17 (vs --steps 16) =====
+--- steps 16
++++ steps 17
+@@ -28,6 +28,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 18 (vs --steps 17) =====
+--- steps 17
++++ steps 18
+@@ -1,9 +1,15 @@
+ loaded 24 expressions
+ loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+ result:
++((fork ((DONE arg/0) arg/0)) (1))
++((fork ((DONE arg/0) arg/1)) (not (and (or (1) (0)) (1))))
++((fork ((DONE arg/1) arg/0)) (1))
++((fork ((DONE arg/1) arg/1)) (or (0) (1)))
+ ((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join ((DONE arg/0) case/2)) or)
++((join ((DONE arg/1) case/2)) and)
+ ((join (DONE case/2)) if)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ (DEF fork (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+@@ -28,5 +34,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 19 (vs --steps 18) =====
+--- steps 18
++++ steps 19
+@@ -34,4 +34,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 20 (vs --steps 19) =====
+--- steps 19
++++ steps 20
+@@ -34,7 +34,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 21 (vs --steps 20) =====
+--- steps 20
++++ steps 21
+@@ -34,10 +34,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 22 (vs --steps 21) =====
+--- steps 21
++++ steps 22
+@@ -34,7 +34,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 23 (vs --steps 22) =====
+--- steps 22
++++ steps 23
+@@ -34,7 +34,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 24 (vs --steps 23) =====
+--- steps 23
++++ steps 24
+@@ -34,7 +34,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 25 (vs --steps 24) =====
+--- steps 24
++++ steps 25
+@@ -8,6 +8,8 @@
+ ((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join (((DONE arg/0) arg/0) case/0)) 1)
++((join (((DONE arg/1) arg/0) case/0)) 1)
+ ((join ((DONE arg/0) case/2)) or)
+ ((join ((DONE arg/1) case/2)) and)
+ ((join (DONE case/2)) if)
+@@ -34,7 +36,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 26 (vs --steps 25) =====
+--- steps 25
++++ steps 26
+@@ -1,6 +1,7 @@
+ loaded 24 expressions
+ loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+ result:
++((fork (((DONE arg/0) arg/1) arg/0)) (and (or (1) (0)) (1)))
+ ((fork ((DONE arg/0) arg/0)) (1))
+ ((fork ((DONE arg/0) arg/1)) (not (and (or (1) (0)) (1))))
+ ((fork ((DONE arg/1) arg/0)) (1))
+@@ -9,6 +10,7 @@
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ ((join (((DONE arg/0) arg/0) case/0)) 1)
++((join (((DONE arg/0) arg/1) case/1)) not)
+ ((join (((DONE arg/1) arg/0) case/0)) 1)
+ ((join ((DONE arg/0) case/2)) or)
+ ((join ((DONE arg/1) case/2)) and)
+@@ -36,6 +38,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 27 (vs --steps 26) =====
+--- steps 26
++++ steps 27
+@@ -1,7 +1,11 @@
+ loaded 24 expressions
+ loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+ result:
++((fork ((((DONE arg/0) arg/1) arg/0) arg/0)) (or (1) (0)))
++((fork ((((DONE arg/0) arg/1) arg/0) arg/1)) (1))
+ ((fork (((DONE arg/0) arg/1) arg/0)) (and (or (1) (0)) (1)))
++((fork (((DONE arg/1) arg/1) arg/0)) (0))
++((fork (((DONE arg/1) arg/1) arg/1)) (1))
+ ((fork ((DONE arg/0) arg/0)) (1))
+ ((fork ((DONE arg/0) arg/1)) (not (and (or (1) (0)) (1))))
+ ((fork ((DONE arg/1) arg/0)) (1))
+@@ -9,9 +13,11 @@
+ ((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join ((((DONE arg/0) arg/1) arg/0) case/2)) and)
+ ((join (((DONE arg/0) arg/0) case/0)) 1)
+ ((join (((DONE arg/0) arg/1) case/1)) not)
+ ((join (((DONE arg/1) arg/0) case/0)) 1)
++((join (((DONE arg/1) arg/1) case/2)) or)
+ ((join ((DONE arg/0) case/2)) or)
+ ((join ((DONE arg/1) case/2)) and)
+ ((join (DONE case/2)) if)
+@@ -38,5 +44,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 28 (vs --steps 27) =====
+--- steps 27
++++ steps 28
+@@ -44,4 +44,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 29 (vs --steps 28) =====
+--- steps 28
++++ steps 29
+@@ -44,7 +44,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 30 (vs --steps 29) =====
+--- steps 29
++++ steps 30
+@@ -44,10 +44,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 31 (vs --steps 30) =====
+--- steps 30
++++ steps 31
+@@ -18,7 +18,9 @@
+ ((join (((DONE arg/0) arg/1) case/1)) not)
+ ((join (((DONE arg/1) arg/0) case/0)) 1)
+ ((join (((DONE arg/1) arg/1) case/2)) or)
++((join ((DONE arg/0) arg/0)) 1)
+ ((join ((DONE arg/0) case/2)) or)
++((join ((DONE arg/1) arg/0)) 1)
+ ((join ((DONE arg/1) case/2)) and)
+ ((join (DONE case/2)) if)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+@@ -44,7 +46,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 32 (vs --steps 31) =====
+--- steps 31
++++ steps 32
+@@ -46,7 +46,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 33 (vs --steps 32) =====
+--- steps 32
++++ steps 33
+@@ -46,7 +46,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 34 (vs --steps 33) =====
+--- steps 33
++++ steps 34
+@@ -13,7 +13,10 @@
+ ((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) case/2)) and)
++((join ((((DONE arg/1) arg/1) arg/0) case/0)) 0)
++((join ((((DONE arg/1) arg/1) arg/1) case/0)) 1)
+ ((join (((DONE arg/0) arg/0) case/0)) 1)
+ ((join (((DONE arg/0) arg/1) case/1)) not)
+ ((join (((DONE arg/1) arg/0) case/0)) 1)
+@@ -46,7 +49,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 35 (vs --steps 34) =====
+--- steps 34
++++ steps 35
+@@ -49,6 +49,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 36 (vs --steps 35) =====
+--- steps 35
++++ steps 36
+@@ -1,6 +1,8 @@
+ loaded 24 expressions
+ loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+ result:
++((fork (((((DONE arg/0) arg/1) arg/0) arg/0) arg/0)) (1))
++((fork (((((DONE arg/0) arg/1) arg/0) arg/0) arg/1)) (0))
+ ((fork ((((DONE arg/0) arg/1) arg/0) arg/0)) (or (1) (0)))
+ ((fork ((((DONE arg/0) arg/1) arg/0) arg/1)) (1))
+ ((fork (((DONE arg/0) arg/1) arg/0)) (and (or (1) (0)) (1)))
+@@ -13,6 +15,7 @@
+ ((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join (((((DONE arg/0) arg/1) arg/0) arg/0) case/2)) or)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) case/2)) and)
+ ((join ((((DONE arg/1) arg/1) arg/0) case/0)) 0)
+@@ -49,5 +52,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 37 (vs --steps 36) =====
+--- steps 36
++++ steps 37
+@@ -52,4 +52,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 38 (vs --steps 37) =====
+--- steps 37
++++ steps 38
+@@ -52,7 +52,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 39 (vs --steps 38) =====
+--- steps 38
++++ steps 39
+@@ -52,10 +52,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 40 (vs --steps 39) =====
+--- steps 39
++++ steps 40
+@@ -17,12 +17,15 @@
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/0) case/2)) or)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
++((join ((((DONE arg/0) arg/1) arg/0) arg/1)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) case/2)) and)
+ ((join ((((DONE arg/1) arg/1) arg/0) case/0)) 0)
+ ((join ((((DONE arg/1) arg/1) arg/1) case/0)) 1)
+ ((join (((DONE arg/0) arg/0) case/0)) 1)
+ ((join (((DONE arg/0) arg/1) case/1)) not)
+ ((join (((DONE arg/1) arg/0) case/0)) 1)
++((join (((DONE arg/1) arg/1) arg/0)) 0)
++((join (((DONE arg/1) arg/1) arg/1)) 1)
+ ((join (((DONE arg/1) arg/1) case/2)) or)
+ ((join ((DONE arg/0) arg/0)) 1)
+ ((join ((DONE arg/0) case/2)) or)
+@@ -52,7 +55,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 41 (vs --steps 40) =====
+--- steps 40
++++ steps 41
+@@ -55,7 +55,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 42 (vs --steps 41) =====
+--- steps 41
++++ steps 42
+@@ -30,6 +30,7 @@
+ ((join ((DONE arg/0) arg/0)) 1)
+ ((join ((DONE arg/0) case/2)) or)
+ ((join ((DONE arg/1) arg/0)) 1)
++((join ((DONE arg/1) arg/1)) 1)
+ ((join ((DONE arg/1) case/2)) and)
+ ((join (DONE case/2)) if)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+@@ -55,7 +56,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 43 (vs --steps 42) =====
+--- steps 42
++++ steps 43
+@@ -15,6 +15,8 @@
+ ((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+ ((fork (DONE arg/1)) (and (1) (or (0) (1))))
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++((join ((((((DONE arg/0) arg/1) arg/0) arg/0) arg/0) case/0)) 1)
++((join ((((((DONE arg/0) arg/1) arg/0) arg/0) arg/1) case/0)) 0)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/0) case/2)) or)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) arg/1)) 1)
+@@ -56,7 +58,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 44 (vs --steps 43) =====
+--- steps 43
++++ steps 44
+@@ -58,6 +58,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 45 (vs --steps 44) =====
+--- steps 44
++++ steps 45
+@@ -58,5 +58,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 46 (vs --steps 45) =====
+--- steps 45
++++ steps 46
+@@ -58,4 +58,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 47 (vs --steps 46) =====
+--- steps 46
++++ steps 47
+@@ -58,7 +58,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 48 (vs --steps 47) =====
+--- steps 47
++++ steps 48
+@@ -58,10 +58,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 49 (vs --steps 48) =====
+--- steps 48
++++ steps 49
+@@ -17,6 +17,8 @@
+ ((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ ((join ((((((DONE arg/0) arg/1) arg/0) arg/0) arg/0) case/0)) 1)
+ ((join ((((((DONE arg/0) arg/1) arg/0) arg/0) arg/1) case/0)) 0)
++((join (((((DONE arg/0) arg/1) arg/0) arg/0) arg/0)) 1)
++((join (((((DONE arg/0) arg/1) arg/0) arg/0) arg/1)) 0)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/0) case/2)) or)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) arg/1)) 1)
+@@ -58,7 +60,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 50 (vs --steps 49) =====
+--- steps 49
++++ steps 50
+@@ -60,7 +60,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 51 (vs --steps 50) =====
+--- steps 50
++++ steps 51
+@@ -21,6 +21,7 @@
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/0) arg/1)) 0)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/0) case/2)) or)
+ ((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
++((join ((((DONE arg/0) arg/1) arg/0) arg/0)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) arg/1)) 1)
+ ((join ((((DONE arg/0) arg/1) arg/0) case/2)) and)
+ ((join ((((DONE arg/1) arg/1) arg/0) case/0)) 0)
+@@ -36,6 +37,7 @@
+ ((join ((DONE arg/1) arg/0)) 1)
+ ((join ((DONE arg/1) arg/1)) 1)
+ ((join ((DONE arg/1) case/2)) and)
++((join (DONE arg/1)) 1)
+ ((join (DONE case/2)) if)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ (DEF fork (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+@@ -60,7 +62,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 52 (vs --steps 51) =====
+--- steps 51
++++ steps 52
+@@ -62,7 +62,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 53 (vs --steps 52) =====
+--- steps 52
++++ steps 53
+@@ -62,6 +62,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 54 (vs --steps 53) =====
+--- steps 53
++++ steps 54
+@@ -62,5 +62,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 55 (vs --steps 54) =====
+--- steps 54
++++ steps 55
+@@ -62,4 +62,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 56 (vs --steps 55) =====
+--- steps 55
++++ steps 56
+@@ -62,7 +62,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 57 (vs --steps 56) =====
+--- steps 56
++++ steps 57
+@@ -62,10 +62,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 58 (vs --steps 57) =====
+--- steps 57
++++ steps 58
+@@ -62,7 +62,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 59 (vs --steps 58) =====
+--- steps 58
++++ steps 59
+@@ -62,7 +62,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 60 (vs --steps 59) =====
+--- steps 59
++++ steps 60
+@@ -27,6 +27,7 @@
+ ((join ((((DONE arg/1) arg/1) arg/0) case/0)) 0)
+ ((join ((((DONE arg/1) arg/1) arg/1) case/0)) 1)
+ ((join (((DONE arg/0) arg/0) case/0)) 1)
++((join (((DONE arg/0) arg/1) arg/0)) 1)
+ ((join (((DONE arg/0) arg/1) case/1)) not)
+ ((join (((DONE arg/1) arg/0) case/0)) 1)
+ ((join (((DONE arg/1) arg/1) arg/0)) 0)
+@@ -62,7 +63,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 61 (vs --steps 60) =====
+--- steps 60
++++ steps 61
+@@ -63,7 +63,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 62 (vs --steps 61) =====
+--- steps 61
++++ steps 62
+@@ -63,6 +63,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 63 (vs --steps 62) =====
+--- steps 62
++++ steps 63
+@@ -63,5 +63,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 64 (vs --steps 63) =====
+--- steps 63
++++ steps 64
+@@ -63,4 +63,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 65 (vs --steps 64) =====
+--- steps 64
++++ steps 65
+@@ -63,7 +63,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 66 (vs --steps 65) =====
+--- steps 65
++++ steps 66
+@@ -63,10 +63,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 67 (vs --steps 66) =====
+--- steps 66
++++ steps 67
+@@ -63,7 +63,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 68 (vs --steps 67) =====
+--- steps 67
++++ steps 68
+@@ -34,6 +34,7 @@
+ ((join (((DONE arg/1) arg/1) arg/1)) 1)
+ ((join (((DONE arg/1) arg/1) case/2)) or)
+ ((join ((DONE arg/0) arg/0)) 1)
++((join ((DONE arg/0) arg/1)) 0)
+ ((join ((DONE arg/0) case/2)) or)
+ ((join ((DONE arg/1) arg/0)) 1)
+ ((join ((DONE arg/1) arg/1)) 1)
+@@ -63,7 +64,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 69 (vs --steps 68) =====
+--- steps 68
++++ steps 69
+@@ -39,6 +39,7 @@
+ ((join ((DONE arg/1) arg/0)) 1)
+ ((join ((DONE arg/1) arg/1)) 1)
+ ((join ((DONE arg/1) case/2)) and)
++((join (DONE arg/0)) 1)
+ ((join (DONE arg/1)) 1)
+ ((join (DONE case/2)) if)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+@@ -64,7 +65,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 70 (vs --steps 69) =====
+--- steps 69
++++ steps 70
+@@ -65,7 +65,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 71 (vs --steps 70) =====
+--- steps 70
++++ steps 71
+@@ -65,6 +65,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 72 (vs --steps 71) =====
+--- steps 71
++++ steps 72
+@@ -65,5 +65,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 73 (vs --steps 72) =====
+--- steps 72
++++ steps 73
+@@ -65,4 +65,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 74 (vs --steps 73) =====
+--- steps 73
++++ steps 74
+@@ -65,7 +65,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 75 (vs --steps 74) =====
+--- steps 74
++++ steps 75
+@@ -65,10 +65,10 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
++(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 76 (vs --steps 75) =====
+--- steps 75
++++ steps 76
+@@ -65,7 +65,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 77 (vs --steps 76) =====
+--- steps 76
++++ steps 77
+@@ -65,7 +65,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 78 (vs --steps 77) =====
+--- steps 77
++++ steps 78
+@@ -42,6 +42,7 @@
+ ((join (DONE arg/0)) 1)
+ ((join (DONE arg/1)) 1)
+ ((join (DONE case/2)) if)
++((join DONE) 1)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+ (DEF fork (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (DEF fork (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+@@ -65,7 +66,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 79 (vs --steps 78) =====
+--- steps 78
++++ steps 79
+@@ -66,7 +66,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 80 (vs --steps 79) =====
+--- steps 79
++++ steps 80
+@@ -66,6 +66,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 81 (vs --steps 80) =====
+--- steps 80
++++ steps 81
+@@ -66,5 +66,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+ (exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
+
+===== diff for --steps 82 (vs --steps 81) =====
+--- steps 81
++++ steps 82
+@@ -66,4 +66,11 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec MAIN (, (DEF fork $a $b) (DEF join $c $d) (exec MAIN $e $f)) (, (exec (1 fork) $a $b) (exec (0 join) $c $d) (exec (TERM) (, ((join DONE) $g) ((fork $h) $i) ((join $j) $x10)) (O (+ (OUTPUT $g)) (- ((fork $h) $i)) (- ((join $j) $x10)))) (exec (RESET) (, (($x11 $x12) $x13)) (, (exec MAIN $e $f)))))
++(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
++(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
++(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
++(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
++(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
++(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
++(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 83 (vs --steps 82) =====
+--- steps 82
++++ steps 83
+@@ -1,49 +1,8 @@
+ loaded 24 expressions
+ loaded "../../../MM2_Structuring_Code/structuring_code/mm2_programs/Going_Wide_02.mm2" ; running and outputing to Some("stdout")
+ result:
+-((fork (((((DONE arg/0) arg/1) arg/0) arg/0) arg/0)) (1))
+-((fork (((((DONE arg/0) arg/1) arg/0) arg/0) arg/1)) (0))
+-((fork ((((DONE arg/0) arg/1) arg/0) arg/0)) (or (1) (0)))
+-((fork ((((DONE arg/0) arg/1) arg/0) arg/1)) (1))
+-((fork (((DONE arg/0) arg/1) arg/0)) (and (or (1) (0)) (1)))
+-((fork (((DONE arg/1) arg/1) arg/0)) (0))
+-((fork (((DONE arg/1) arg/1) arg/1)) (1))
+-((fork ((DONE arg/0) arg/0)) (1))
+-((fork ((DONE arg/0) arg/1)) (not (and (or (1) (0)) (1))))
+-((fork ((DONE arg/1) arg/0)) (1))
+-((fork ((DONE arg/1) arg/1)) (or (0) (1)))
+-((fork (DONE arg/0)) (or (1) (not (and (or (1) (0)) (1)))))
+-((fork (DONE arg/1)) (and (1) (or (0) (1))))
+-((fork DONE) (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
+-((join ((((((DONE arg/0) arg/1) arg/0) arg/0) arg/0) case/0)) 1)
+-((join ((((((DONE arg/0) arg/1) arg/0) arg/0) arg/1) case/0)) 0)
+-((join (((((DONE arg/0) arg/1) arg/0) arg/0) arg/0)) 1)
+-((join (((((DONE arg/0) arg/1) arg/0) arg/0) arg/1)) 0)
+-((join (((((DONE arg/0) arg/1) arg/0) arg/0) case/2)) or)
+-((join (((((DONE arg/0) arg/1) arg/0) arg/1) case/0)) 1)
+-((join ((((DONE arg/0) arg/1) arg/0) arg/0)) 1)
+-((join ((((DONE arg/0) arg/1) arg/0) arg/1)) 1)
+-((join ((((DONE arg/0) arg/1) arg/0) case/2)) and)
+-((join ((((DONE arg/1) arg/1) arg/0) case/0)) 0)
+-((join ((((DONE arg/1) arg/1) arg/1) case/0)) 1)
+-((join (((DONE arg/0) arg/0) case/0)) 1)
+-((join (((DONE arg/0) arg/1) arg/0)) 1)
+-((join (((DONE arg/0) arg/1) case/1)) not)
+-((join (((DONE arg/1) arg/0) case/0)) 1)
+-((join (((DONE arg/1) arg/1) arg/0)) 0)
+-((join (((DONE arg/1) arg/1) arg/1)) 1)
+-((join (((DONE arg/1) arg/1) case/2)) or)
+-((join ((DONE arg/0) arg/0)) 1)
+-((join ((DONE arg/0) arg/1)) 0)
+-((join ((DONE arg/0) case/2)) or)
+-((join ((DONE arg/1) arg/0)) 1)
+-((join ((DONE arg/1) arg/1)) 1)
+-((join ((DONE arg/1) case/2)) and)
+-((join (DONE arg/0)) 1)
+-((join (DONE arg/1)) 1)
+-((join (DONE case/2)) if)
+-((join DONE) 1)
+ (INPUT (if (or (1) (not (and (or (1) (0)) (1)))) (and (1) (or (0) (1)))))
++(OUTPUT 1)
+ (DEF fork (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (DEF fork (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (DEF fork (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+@@ -66,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (TERM) (, ((join DONE) $a) ((fork $b) $c) ((join $d) $e)) (O (+ (OUTPUT $a)) (- ((fork $b) $c)) (- ((join $d) $e))))
+ (exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+
+===== diff for --steps 84 (vs --steps 83) =====
+--- steps 83
++++ steps 84
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (RESET) (, (($a $b) $c)) (, (exec MAIN (, (DEF fork $d $e) (DEF join $f $g) (exec MAIN $h $i)) (, (exec (1 fork) $d $e) (exec (0 join) $f $g) (exec (TERM) (, ((join DONE) $j) ((fork $x10) $x11) ((join $x12) $x13)) (O (+ (OUTPUT $j)) (- ((fork $x10) $x11)) (- ((join $x12) $x13)))) (exec (RESET) (, (($x14 $x15) $x16)) (, (exec MAIN $h $i)))))))
+ (exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+
+===== diff for --steps 85 (vs --steps 84) =====
+--- steps 84
++++ steps 85
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/0)) $b) (eval ($b) -> $c)) (, ((join $a) $c)))
+ (exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+
+===== diff for --steps 86 (vs --steps 85) =====
+--- steps 85
++++ steps 86
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/1)) $b) ((join ($a arg/0)) $c) (eval ($b $c) -> $d)) (, ((join $a) $d)))
+ (exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+
+===== diff for --steps 87 (vs --steps 86) =====
+--- steps 86
++++ steps 87
+@@ -25,7 +25,6 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (0 join) (, ((join ($a case/2)) $b) ((join ($a arg/0)) $c) ((join ($a arg/1)) $d) (eval ($b $c $d) -> $e)) (, ((join $a) $e)))
+ (exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 88 (vs --steps 87) =====
+--- steps 87
++++ steps 88
+@@ -25,6 +25,5 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b))) (, ((join ($a case/0)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 89 (vs --steps 88) =====
+--- steps 88
++++ steps 89
+@@ -25,5 +25,4 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c))) (, ((fork ($a arg/0)) $c) ((join ($a case/1)) $b)))
+ (exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== diff for --steps 90 (vs --steps 89) =====
+--- steps 89
++++ steps 90
+@@ -25,4 +25,3 @@
+ (eval (and 0 1) -> 0)
+ (eval (and 1 0) -> 0)
+ (eval (and 1 1) -> 1)
+-(exec (1 fork) (, ((fork $a) ($b $c $d))) (, ((fork ($a arg/0)) $c) ((fork ($a arg/1)) $d) ((join ($a case/2)) $b)))
+
+===== converged at --steps 91 =====
+Last 10 lines identical to --steps 90; stopping.
