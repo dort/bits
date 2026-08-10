@@ -1,0 +1,464 @@
+
+● Good idea — the residual dependence has to live in how d interacts with m and N. I'll compute and store the actual FR values for
+  all pairs (not just the y/n flags) so we can study win margins against m, N, q, r, and d together.
+
+● Bash(python3 - <<'EOF' 
+      import numpy as np…)
+  ⎿  saved (243931, 5)
+  ⎿  (timeout 5m)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Among d = gcd(q,r) > 1 pairs:
+       gcd(d, m) = 1: sole wins 27331/56555 = 48.33%
+       gcd(d, m) > 1: sole wins 3553/45374 = 7.83%
+
+● Bash(python3 -c "import sklearn; print(sklearn.__version__)" 2>&1 | head -1)
+  ⎿  Traceback (most recent call last):
+
+● No sklearn — I'll do the crosstabs manually, scanning candidate features for cells with near-0% or near-100% win rates.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Waiting…
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Bash command
+  
+   python3 - <<'EOF'
+   import numpy as np
+   from math import gcd
+   from collections import defaultdict
+
+   arr = np.load('/tmp/frs.npy')
+      118 +- r = 0 cannot either: balanced and parity tail coincide there (tie).                                              
+      119 +- Prime r is rare among sole wins because d > 1 with r prime requires r | q.                                       
+      120 +- d > 1 is the gate, not the whole law: residual dependence on m remains                                           
+      121 +  (m = 3, 4, and 5 never produce sole wins even when d > 1).                                                       
+      122 +                                                                                                                   
+      123  ## Output format
+      124  
+      125  One row per (m, n) pair, with three columns — one per strategy (interval,
+
+● Added to check.md as a "Findings" section: the definitions of q, r, and d = gcd(q, r) = gcd(q, N), the zero-exception necessary
+  condition d > 1 with the subgroup-alignment mechanism that explains it, the win-rate-by-d table showing it isn't sufficient, and
+  the corollaries (r = 0 and r = 1 impossible, prime r rare, small m never winning even when d > 1).
+
+✻ Brewed for 16s
+
+※ recap: We're comparing three bipartite labeling strategies (interval, balanced, parity tail) by Fourier ratio, run for all m+n up
+  to 1000. Analysis of sole parity-tail wins is recorded in check.md; next is whatever direction you give.
+
+❯ can we look for a pattern where we evaluate not just q and r but also take m and m+n into our analysis?                            
+
+● Good idea — the residual dependence has to live in how d interacts with m and N. I'll compute and store the actual FR values for
+  all pairs (not just the y/n flags) so we can study win margins against m, N, q, r, and d together.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  saved (243931, 5)
+  ⎿  (timeout 5m)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Among d = gcd(q,r) > 1 pairs:
+       gcd(d, m) = 1: sole wins 27331/56555 = 48.33%
+       gcd(d, m) > 1: sole wins 3553/45374 = 7.83%
+
+● Bash(python3 -c "import sklearn; print(sklearn.__version__)" 2>&1 | head -1)
+  ⎿  Traceback (most recent call last):
+
+● No sklearn — I'll do the crosstabs manually, scanning candidate features for cells with near-0% or near-100% win rates.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  win rate by r' = r/d  [gcd(d,m)=1 subset]
+        1: 4034/4644 = 86.9%
+        2: 1731/2245 = 77.1%
+     … +56 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  sole-win rate by (d = gcd(q,N), g = gcd(m,N)), capped at 8:
+             g=1        g=2        g=3        g=4        g=5        g=6        g=7        g=8
+       d=1    0.0% 105893   0.0% 11673    0.0% 8371     0.0% 2872     0.0% 3699     0.0% 598      0.0% 1949     0.0% 6947
+     … +7 lines (ctrl+o to expand)
+  
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  within cell d=2, g=1: sole-win rate and mean FR margin (FR_bal - FR_pt) by m:
+       m=3   : 0/166 =   0.0%   mean margin -0.0073
+       m=5   : 0/149 =   0.0%   mean margin -0.0094
+     … +8 lines (ctrl+o to expand)
+  
+● Update(check.md)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Edit file
+ check.md
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+
+● Good idea — the residual dependence has to live in how d interacts with m and N. I'll compute and store the actual FR values for
+  all pairs (not just the y/n flags) so we can study win margins against m, N, q, r, and d together.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  saved (243931, 5)
+  ⎿  (timeout 5m)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Among d = gcd(q,r) > 1 pairs:
+       gcd(d, m) = 1: sole wins 27331/56555 = 48.33%
+       gcd(d, m) > 1: sole wins 3553/45374 = 7.83%
+
+● Bash(python3 -c "import sklearn; print(sklearn.__version__)" 2>&1 | head -1)
+  ⎿  Traceback (most recent call last):
+
+● No sklearn — I'll do the crosstabs manually, scanning candidate features for cells with near-0% or near-100% win rates.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  win rate by r' = r/d  [gcd(d,m)=1 subset]
+        1: 4034/4644 = 86.9%
+        2: 1731/2245 = 77.1%
+     … +56 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  sole-win rate by (d = gcd(q,N), g = gcd(m,N)), capped at 8:
+             g=1        g=2        g=3        g=4        g=5        g=6        g=7        g=8
+       d=1    0.0% 105893   0.0% 11673    0.0% 8371     0.0% 2872     0.0% 3699     0.0% 598      0.0% 1949     0.0% 6947
+     … +7 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  within cell d=2, g=1: sole-win rate and mean FR margin (FR_bal - FR_pt) by m:
+       m=3   : 0/166 =   0.0%   mean margin -0.0073
+       m=5   : 0/149 =   0.0%   mean margin -0.0094
+     … +8 lines (ctrl+o to expand)
+
+● Update(check.md)
+  ⎿  Added 37 lines
+      112  | 9 | 61% |
+      113  | 11 | 76% |
+      114  
+      115 +### Two-gcd law: d = gcd(q, N) versus g = gcd(m, N)                                                                
+      116 +                                                                                                                   
+      117 +Bringing m and N = m+n into the analysis exposes the counterpart of d.                                             
+      118 +Since N = qm + r, the two divisor quantities are                                                                   
+      119 +                                                                                                                   
+      120 +- **d = gcd(q, N) = gcd(q, r)** — parity tail's alignment. Its labels kq                                           
+      121 +  are all multiples of d, so its m-set lies in the subgroup dZ_N and its                                           
+      122 +  spectrum concentrates (the finding above).                                                                       
+      123 +- **g = gcd(m, N) = gcd(m, r)** — balanced's alignment. Writing                                                    
+      124 +  k = j + (m/g)·i, the balanced labels satisfy                                                                     
+      125 +  floor(kN/m) = floor(jN/m) + i·(N/g), so balanced's m-set is g translates                                         
+      126 +  (by N/g) of a base pattern: it is periodic with period N/g, its spectrum                                         
+      127 +  is supported only on frequencies divisible by g, and it concentrates the                                         
+      128 +  same way parity tail's does under d.                                                                             
+      129 +                                                                                                                   
+      130 +The sole-win rate is monotone increasing in d and monotone decreasing in g                                         
+      131 +(MAXIMUM = 1000 run; cells with support):                                                                          
+      132 +                                                                                                                   
+      133 +| | g=1 | g=2 | g=3 | g=4 |                                                                                        
+      134 +|---|---|---|---|---|                                                                                              
+      135 +| d=1 | 0% | 0% | 0% | 0% |                                                                                        
+      136 +| d=2 | 47% | 9% | 6% | 4% |                                                                                       
+      137 +| d=4 | 72% | 18% | 10% | 8% |                                                                                     
+      138 +| d=6 | 95% | 24% | 15% | 11% |                                                                                    
+      139 +| d=8 | 100% | 47% | 20% | 12% |                                                                                   
+      140 +                                                                                                                   
+      141 +So the contest is between the two alignments: parity tail wins outright when                                       
+      142 +its stride-alignment d is strong and balanced's count-alignment g is weak                                          
+      143 +(d ≥ 7 with g = 1 is essentially a guaranteed sole win); balanced defends                                          
+      144 +whenever g > 1, and d = 1 makes a sole win impossible regardless of g.                                             
+      145 +                                                                                                                   
+      146 +Residual size effect inside a fixed (d, g) cell: the FR margin                                                     
+      147 +FR_balanced − FR_parity_tail grows with m (within d=2, g=1: m = 3 and 5                                            
+      148 +never win, m = 7 jumps to ~46%, and the mean margin turns positive and                                             
+      149 +grows for large m). The gcd pair sets the direction of the advantage; m                                            
+      150 +sets how much room it has to materialize.                                                                          
+      151 +                                                                                                                   
+      152  ### Corollaries
+      153  
+      154  - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
+
+● Yes — bringing m and N = m+n in reveals that the earlier gcd(q, r) finding is half of a symmetric two-gcd law, now recorded in
+  check.md:
+
+  The two alignments. Since N = qm + r, there are two natural divisor quantities:
+
+  - d = gcd(q, N) (= gcd(q, r)) — parity tail's alignment. Its labels kq all lie in the subgroup of multiples of d, concentrating its
+  spectrum. This was the earlier finding.
+  - g = gcd(m, N) (= gcd(m, r)) — balanced's alignment, the new piece. Writing k = j + (m/g)·i, balanced's formula gives floor(kN/m)
+  = floor(jN/m) + i·(N/g): its label set is exactly g translates of a base pattern spaced N/g apart. That periodicity confines
+  balanced's spectrum to frequencies divisible by g — the same subgroup-concentration mechanism, but exploited through the count m
+  rather than the stride q.
+
+  The contest between them. The sole-win rate is monotone increasing in d and monotone decreasing in g:
+
+  ┌─────┬──────┬─────┬─────┬─────┐
+  │     │ g=1  │ g=2 │ g=3 │ g=4 │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=2 │ 47%  │ 9%  │ 6%  │ 4%  │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=4 │ 72%  │ 18% │ 10% │ 8%  │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=6 │ 95%  │ 24% │ 15% │ 11% │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=8 │ 100% │ 47% │ 20% │ 12% │
+  └─────┴──────┴─────┴─────┴─────┘
+
+  At d ≥ 7 with g = 1 a sole win is essentially guaranteed (d=7: 99.8%, d=8: 100%); at d = 1 it's impossible at every g. This also
+  resolves the earlier mysteries: the "gcd(d, m) = 1 helps" observation was a shadow of g (shared factors between d and m force g >
+  1), and prime r was rare because it rarely yields d > 1.
+
+  What m adds beyond the gcds. Inside a fixed (d, g) cell, the FR margin FR_balanced − FR_parity_tail grows with m: at d=2, g=1, m =
+  3 and 5 never win, m = 7 jumps to ~46%, and the mean margin turns strongly positive for m ≥ 20. So the gcd pair sets the direction
+  of the spectral advantage, and m sets how much room it has to materialize — which is why small m never produced sole wins even when
+  d > 1.
+
+✻ Baked for 3m 31s
+
+※ recap: We're comparing three set-labeling strategies by Fourier ratio, and just found that parity tail's sole wins follow a two-gcd
+  law involving gcd(q,N) and gcd(m,N), now recorded in check.md. Next: commit or probe the residual m-dependence.
+
+❯ is there an intuitive, even if imprecise, summary that is easily human understandable, such as, m being close to a divisor of m+n  
+
+● Let me verify the cleanest candidate phrasing against the data first — "m slightly below a divisor of m+n" corresponds to q | N
+  exactly, so I'll check that case's win rate.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  q divides N ('m just below a divisor of N'): 23842/70661 = 33.7%
+       + m coprime to N and m >= 7:              19398/30261 = 64.1%
+
+● Yes — your phrasing is close to the paradigm case, and it can be sharpened into a two-sided rule of thumb. Picture the m+n labels
+  as positions on a circle, and note that the Fourier ratio rewards patterns that repeat exactly around the circle.
+
+  Parity tail wins outright when its step size meshes with the circle, while m itself is out of phase with it.
+
+  Unpacked:
+  
+  - Parity tail marks every q-th position. When q divides m+n evenly, its marks all sit on an exact sub-wheel of the circle — and "q
+  divides m+n" is precisely your intuition: m is slightly less than a divisor of m+n (namely just below (m+n)/q). Partial meshing (q
+  merely sharing a factor with m+n) gives a weaker version of the same advantage.
+  - Balanced spreads its marks as evenly as the fractions allow. It gets its own exact repetition whenever m shares a factor with m+n
+  — then its pattern is just g identical arcs repeated around the circle — so it defends and parity tail rarely wins. (Full meshing,
+  m dividing m+n exactly, is the degenerate case where the two strategies produce the same labeling.)
+  - The alignment needs room to pay off: for m below about 7 the advantage never materializes.
+
+  Checked against the data: "m just below a divisor of m+n" alone hits a 34% sole-win rate; adding "and m shares no factor with m+n,
+  m ≥ 7" raises it to 64%; and requiring the meshing to be strong (shared factor ≥ 7) makes it essentially 100%.
+
+  So the slogan version: parity tail wins when m+n is nearly — but not exactly — an even multiple of m, in a way that makes the 
+  rounded step size a true divisor of m+n; it loses its edge whenever m itself divides partway into m+n.
+
+✻ Sautéed for 58s
+
+❯ please add this intuitive summary to check.md                                                                                      
+
+● Update(check.md)
+  ⎿  Added 30 lines
+      149  grows for large m). The gcd pair sets the direction of the advantage; m
+      150  sets how much room it has to materialize.
+      151  
+      152 +### Intuitive summary (imprecise but human-readable)                                                               
+      153 +                                                                                                                   
+      154 +Picture the N = m+n labels as positions on a circle; the Fourier ratio                                             
+      155 +rewards patterns that repeat exactly around the circle.                                                            
+      156 +                                                                                                                   
+      157 +**Parity tail wins outright when its step size meshes with the circle,                                             
+      158 +while m itself is out of phase with it.**                                                                          
+      159 +                                                                                                                   
+      160 +- Parity tail marks every q-th position. When q divides m+n evenly, its                                            
+      161 +  marks all sit on an exact sub-wheel of the circle. Equivalently: **m is                                          
+      162 +  slightly less than a divisor of m+n** (just below (m+n)/q). Partial                                              
+      163 +  meshing — q merely sharing a factor with m+n — gives a weaker version of                                         
+      164 +  the same advantage.                                                                                              
+      165 +- Balanced spreads its marks as evenly as the fractions allow. It gets its                                         
+      166 +  own exact repetition whenever **m shares a factor with m+n** (its pattern                                        
+      167 +  becomes g identical arcs repeated around the circle), so it defends and                                          
+      168 +  parity tail rarely wins. Full meshing — m dividing m+n exactly — is the                                          
+      169 +  degenerate case where the two strategies coincide.                                                               
+      170 +- The alignment needs room to pay off: for m below about 7 the advantage                                           
+      171 +  never materializes.                                                                                              
+      172 +                                                                                                                   
+      173 +Checked against the MAXIMUM = 1000 run: "m just below a divisor of m+n"                                            
+      174 +alone gives a 34% sole-win rate; adding "m shares no factor with m+n and                                           
+      175 +m ≥ 7" raises it to 64%; requiring strong meshing (shared factor ≥ 7 between                                       
+      176 +q and m+n) makes it essentially 100%.                                                                              
+      177 +                                                                                                                   
+      178 +Slogan: parity tail wins when m+n is nearly — but not exactly — an even                                            
+      179 +multiple of m, in a way that makes the rounded step size a true divisor of                                         
+      180 +m+n; it loses its edge whenever m itself divides partway into m+n.                                                 
+      181 +                                                                                                                   
+      182  ### Corollaries
+      183  
+      184  - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
+
+● Added to check.md as an "Intuitive summary" subsection, placed between the two-gcd law and the corollaries. It carries the circle
+  picture, the meshing rule for both strategies, your "m slightly less than a divisor of m+n" formulation with its precise meaning,
+  the m ≥ 7 caveat, the empirical accuracy of each successive refinement (34% → 64% → ~100%), and the closing slogan.
+
+✻ Brewed for 12s
+
+❯ is there a similar pattern for when balanced is the sole winner?                                                                   
+
+● By symmetry the natural guess is the mirror image — balanced wins outright when its own alignment g = gcd(m, N) is strong and
+  parity tail's d is weak. One structural note first: when r = 1, balanced's formula floor(k(qm+1)/m) = kq for all k < m, so the two
+  strategies produce identical labelings and neither can be a sole winner. Let me run the same crosstab for balanced.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  r=1 pairs (balanced == parity tail): sole-balanced wins 0/5056 (expect 0)
+
+     sole-BALANCED-win rate by (d = gcd(q,N), g = gcd(m,N)), r >= 2, capped at 8:
+     … +9 lines (ctrl+o to expand)
+     
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  sole-balanced wins with g=1: 0 (exact zero check)
+     d=1, g>1 pairs NOT sole-balanced: 0 (exact 100% check)
+     … +2 lines (ctrl+o to expand)
+
+● Yes — and it's even cleaner than parity tail's, with an exact mechanism behind it that also explains everything we saw earlier. All
+  checks came back with zero exceptions:
+
+  Balanced is a sole winner only when g = gcd(m, m+n) > 1 — exact, no exceptions across all 243,931 pairs. And in the opposite
+  corner, whenever g > 1 and d = gcd(q, m+n) = 1, balanced is always the sole winner — 100% of 37,780 pairs. In between (both gcds >
+  1) the two alignments fight, and balanced usually defends (75–100% per cell, weakening as d grows).
+  
+  The mechanism turns out to be exact, not statistical. The FR is unchanged by translating a label set or by multiplying it by any
+  number coprime to N = m+n (multiplication by a unit permutes the frequencies of the spectrum, leaving ‖F‖₁ and ‖F‖₂ untouched).
+  Now:
+
+  - Parity tail's set {0, q, 2q, …} is exactly q · interval's set. So when gcd(q, N) = 1, q is a unit and parity tail has identical
+  FR to interval — it can't beat it.
+  - Balanced's set {floor(kN/m)} is, when gcd(m, N) = 1, a unit multiple of a contiguous block (x is in the set exactly when m·x mod
+  N lands in a length-m window, so the set is m⁻¹ · window). So when g = 1, balanced has identical FR to interval.
+  - When both gcds are 1, all three strategies tie exactly — confirmed: the d=1, g=1 region is a three-way tie in all 100,837 cases,
+  which is also why interval is never a sole winner: one of the other two always ties it.
+
+  So the intuitive summary mirrors perfectly: balanced wins outright exactly when m meshes with the circle (shares a factor with m+n)
+  — its pattern then repeats as identical arcs — and parity tail's stride doesn't mesh. When neither meshes, all three labelings are
+  secretly the same set up to rotation and re-scaling of the circle, and everything ties. The earlier "necessary conditions" for
+  both strategies are now theorems, not observations.
+
+  I've added this as a section to check.md:
+
+● Update(check.md)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Edit file
+ check.md
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ 179  multiple of m, in a way that makes the rounded step size a true divisor of
+ 180  m+n; it loses its edge whenever m itself divides partway into m+n.
+  parity tail's d is weak. One structural note first: when r = 1, balanced's formula floor(k(qm+1)/m) = kq for all k < m, so the two
+  strategies produce identical labelings and neither can be a sole winner. Let me run the same crosstab for balanced.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  r=1 pairs (balanced == parity tail): sole-balanced wins 0/5056 (expect 0)
+
+     sole-BALANCED-win rate by (d = gcd(q,N), g = gcd(m,N)), r >= 2, capped at 8:
+     … +9 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  sole-balanced wins with g=1: 0 (exact zero check)
+     d=1, g>1 pairs NOT sole-balanced: 0 (exact 100% check)
+     … +2 lines (ctrl+o to expand)
+
+● Yes — and it's even cleaner than parity tail's, with an exact mechanism behind it that also explains everything we saw earlier. All
+  checks came back with zero exceptions:
+
+  Balanced is a sole winner only when g = gcd(m, m+n) > 1 — exact, no exceptions across all 243,931 pairs. And in the opposite
+  corner, whenever g > 1 and d = gcd(q, m+n) = 1, balanced is always the sole winner — 100% of 37,780 pairs. In between (both gcds >
+  1) the two alignments fight, and balanced usually defends (75–100% per cell, weakening as d grows).
+
+  The mechanism turns out to be exact, not statistical. The FR is unchanged by translating a label set or by multiplying it by any
+  number coprime to N = m+n (multiplication by a unit permutes the frequencies of the spectrum, leaving ‖F‖₁ and ‖F‖₂ untouched).
+  Now:
+
+  - Parity tail's set {0, q, 2q, …} is exactly q · interval's set. So when gcd(q, N) = 1, q is a unit and parity tail has identical
+  FR to interval — it can't beat it.
+  - Balanced's set {floor(kN/m)} is, when gcd(m, N) = 1, a unit multiple of a contiguous block (x is in the set exactly when m·x mod
+  N lands in a length-m window, so the set is m⁻¹ · window). So when g = 1, balanced has identical FR to interval.
+  - When both gcds are 1, all three strategies tie exactly — confirmed: the d=1, g=1 region is a three-way tie in all 100,837 cases,
+  which is also why interval is never a sole winner: one of the other two always ties it.
+
+  So the intuitive summary mirrors perfectly: balanced wins outright exactly when m meshes with the circle (shares a factor with m+n)
+  — its pattern then repeats as identical arcs — and parity tail's stride doesn't mesh. When neither meshes, all three labelings are
+  secretly the same set up to rotation and re-scaling of the circle, and everything ties. The earlier "necessary conditions" for
+  both strategies are now theorems, not observations.
+
+  I've added this as a section to check.md:
+
+● Update(check.md)
+  ⎿  Added 39 lines
+      179  multiple of m, in a way that makes the rounded step size a true divisor of
+      180  m+n; it loses its edge whenever m itself divides partway into m+n.
+      181  
+      182 +## Findings: when is balanced the sole winner?                                                                     
+      183 +                                                                                                                   
+      184 +The mirror pattern, with zero exceptions in the MAXIMUM = 1000 run:                                                
+      185 +                                                                                                                   
+      186 +- **g = gcd(m, N) > 1 is necessary**: no sole-balanced win exists with                                             
+      187 +  g = 1 (0 of 145,097 such pairs).                                                                                 
+      188 +- **g > 1 with d = gcd(q, N) = 1 is sufficient**: balanced is the sole                                             
+      189 +  winner in 100% of those 37,780 pairs.                                                                            
+      190 +- When both d > 1 and g > 1 the two alignments compete; balanced defends in                                        
+      191 +  75–100% of each (d, g) cell, weakening as d grows and strengthening as g                                         
+      192 +  grows (the complement of parity tail's table above).                                                             
+      193 +                                                                                                                   
+      194 +### Exact mechanism: unit-multiplication invariance                                                                
+      195 +                                                                                                                   
+      196 +FR is invariant under translating a label set and under multiplying it by                                          
+      197 +any unit c (gcd(c, N) = 1): multiplication by a unit permutes the                                                  
+      198 +frequencies of the spectrum, leaving ‖F‖₁ and ‖F‖₂ unchanged. Consequently:                                        
+      199 +                                                                                                                   
+      200 +- Parity tail's set {kq} is q · {0..m-1}, i.e. q times interval's set. If                                          
+      201 +  d = 1, q is a unit, so **FR_parity_tail = FR_interval exactly**.                                                 
+      202 +- Balanced's set {floor(kN/m)} satisfies: x is in the set iff m·x mod N                                            
+      203 +  falls in a fixed window of length m, so the set is m⁻¹ · (a contiguous                                           
+      204 +  block). If g = 1, m is a unit, so **FR_balanced = FR_interval exactly**.                                         
+      205 +- If d = 1 and g = 1 all three strategies tie exactly — confirmed in all                                           
+      206 +  100,837 such pairs (r ≥ 2). This is also why interval is never a sole                                            
+      207 +  winner: whenever d = 1 or g = 1, the corresponding strategy has interval's                                       
+      208 +  FR, so interval is always tied by someone.                                                                       
+      209 +                                                                                                                   
+      210 +The necessary conditions for both sole-win patterns are therefore theorems,                                        
+      211 +not merely observations: a strategy can only strictly beat interval by                                             
+      212 +having genuine subgroup alignment (d > 1 for parity tail through its                                               
+      213 +stride, g > 1 for balanced through its count).                                                                     
+      214 +                                                                                                                   
+      215 +Intuitive mirror of the earlier summary: balanced wins outright exactly                                            
+      216 +when m meshes with the circle (shares a factor with m+n) — its pattern                                             
+      217 +repeats as identical arcs — while parity tail's stride does not mesh. When                                         
+      218 +neither meshes, all three labelings are the same set up to rotating and                                            
+      219 +re-scaling the circle, and everything ties.                                                                        
+      220 +                                                                                                                   
+      221  ### Corollaries
+      222  
+      223  - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
+
+● The section "Findings: when is balanced the sole winner?" is now in check.md, covering the exact necessary condition (g > 1), the
+  exact sufficient condition (g > 1 with d = 1), the contested region, and the unit-multiplication invariance mechanism that makes
+  these theorems — including why interval can never win alone and why the d = 1, g = 1 region is a perfect three-way tie.
+
+  To summarize the answer: balanced's pattern is the exact mirror of parity tail's. Parity tail wins only when its stride q shares a
+  factor with m+n; balanced wins only when m itself shares a factor with m+n, and it always wins solely when additionally the stride
+  doesn't mesh (d = 1). Both facts reduce to one principle: multiplying a label set by a number coprime to m+n doesn't change FR, and
+  with no shared factors both alternating strategies are secretly interval's set in disguise.
+
+✻ Sautéed for 1m 40s
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ can we prove the unit-multiplication invariance argument symbolically rather than empirically
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents                                                                
+
+

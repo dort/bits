@@ -179,6 +179,45 @@ Slogan: parity tail wins when m+n is nearly — but not exactly — an even
 multiple of m, in a way that makes the rounded step size a true divisor of
 m+n; it loses its edge whenever m itself divides partway into m+n.
 
+## Findings: when is balanced the sole winner?
+
+The mirror pattern, with zero exceptions in the MAXIMUM = 1000 run:
+
+- **g = gcd(m, N) > 1 is necessary**: no sole-balanced win exists with
+  g = 1 (0 of 145,097 such pairs).
+- **g > 1 with d = gcd(q, N) = 1 is sufficient**: balanced is the sole
+  winner in 100% of those 37,780 pairs.
+- When both d > 1 and g > 1 the two alignments compete; balanced defends in
+  75–100% of each (d, g) cell, weakening as d grows and strengthening as g
+  grows (the complement of parity tail's table above).
+
+### Exact mechanism: unit-multiplication invariance
+
+FR is invariant under translating a label set and under multiplying it by
+any unit c (gcd(c, N) = 1): multiplication by a unit permutes the
+frequencies of the spectrum, leaving ‖F‖₁ and ‖F‖₂ unchanged. Consequently:
+
+- Parity tail's set {kq} is q · {0..m-1}, i.e. q times interval's set. If
+  d = 1, q is a unit, so **FR_parity_tail = FR_interval exactly**.
+- Balanced's set {floor(kN/m)} satisfies: x is in the set iff m·x mod N
+  falls in a fixed window of length m, so the set is m⁻¹ · (a contiguous
+  block). If g = 1, m is a unit, so **FR_balanced = FR_interval exactly**.
+- If d = 1 and g = 1 all three strategies tie exactly — confirmed in all
+  100,837 such pairs (r ≥ 2). This is also why interval is never a sole
+  winner: whenever d = 1 or g = 1, the corresponding strategy has interval's
+  FR, so interval is always tied by someone.
+
+The necessary conditions for both sole-win patterns are therefore theorems,
+not merely observations: a strategy can only strictly beat interval by
+having genuine subgroup alignment (d > 1 for parity tail through its
+stride, g > 1 for balanced through its count).
+
+Intuitive mirror of the earlier summary: balanced wins outright exactly
+when m meshes with the circle (shares a factor with m+n) — its pattern
+repeats as identical arcs — while parity tail's stride does not mesh. When
+neither meshes, all three labelings are the same set up to rotating and
+re-scaling the circle, and everything ties.
+
 ### Corollaries
 
 - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
