@@ -37,10 +37,10 @@ STRATEGIES = [
 
 
 def all_pairs(maximum):
-    """All (m, n) with 2 <= m < n and m + n <= maximum."""
-    for m in range(2, maximum // 2 + 1):
-        for n in range(m + 1, maximum - m + 1):
-            yield m, n
+    """All (m, n) with 2 <= m < n and m + n <= maximum, ascending in m + n."""
+    for total in range(5, maximum + 1):
+        for m in range(2, (total + 1) // 2):
+            yield m, total - m
 
 
 def main():
