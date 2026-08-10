@@ -5,7 +5,7 @@ See setup.md for the full specification.
 """
 
 # Bounds m + n. Hard upper limit is 1_000_000; initial runs use 100.
-MAXIMUM = 100
+MAXIMUM = 1000
 HARD_BOUND = 1_000_000
 
 

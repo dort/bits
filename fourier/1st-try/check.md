@@ -54,6 +54,26 @@ For each (m, n) pair and each strategy:
    optimal**. The strategy (or strategies, on a tie) with the lowest FR of
    the three wins.
 
+## Fast evaluation (closed form)
+
+Let 1_A be the indicator vector of the m-set's labels A, Â(u) its
+unnormalized 1D DFT (so Â(0) = m), and S = Σ_{u=1}^{N-1} |Â(u)| the total
+spectral mass of 1_A off the zero frequency. Since 1_B = 1 − 1_A, the DFT of
+1_B is B̂(u) = N·δ_{u0} − Â(u), and substituting into
+F(u, v) = (Â(u)B̂(v) + B̂(u)Â(v)) / N gives, entry by entry:
+
+- u = v = 0: |F| = 2mn/N
+- u ≠ 0, v = 0 (and symmetrically u = 0, v ≠ 0): |F| = (n−m)|Â(u)|/N
+- u ≠ 0, v ≠ 0: |F| = 2|Â(u)||Â(v)|/N, which sums to 2S²/N
+
+Therefore
+
+‖F‖₁ = (2mn + 2(n−m)·S + 2S²) / N,  ‖F‖₂ = √(2mn)
+
+and FR needs only one length-N FFT per labeling instead of an N×N transform.
+Verified: at MAXIMUM = 100 this reproduces the direct 2D computation's
+results exactly.
+
 ## Output format
 
 One row per (m, n) pair, with three columns — one per strategy (interval,
