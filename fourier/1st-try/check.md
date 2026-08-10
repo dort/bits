@@ -74,6 +74,52 @@ and FR needs only one length-N FFT per labeling instead of an N×N transform.
 Verified: at MAXIMUM = 100 this reproduces the direct 2D computation's
 results exactly.
 
+## Findings: when is parity tail the sole winner?
+
+Empirical analysis of the MAXIMUM = 1000 run (248,502 pairs; 30,884 sole
+parity-tail wins). Write N = m+n, q = floor(N/m) (parity tail's stride), and
+r = N mod m, so N = qm + r.
+
+### Necessary condition: gcd(q, r) > 1
+
+Let d = gcd(q, r), which equals gcd(q, N) since gcd(q, qm + r) = gcd(q, r).
+**Every sole parity-tail win has d > 1** — zero exceptions among the 30,884
+sole wins, and none of the 142,002 pairs with d = 1 (and r ≠ 0) is one.
+
+Mechanism: parity tail's labels 0, q, 2q, .., (m−1)q are all multiples of q,
+hence of d, so the m-set lies inside the subgroup dZ_N of multiples of d.
+For a set confined to that subgroup, the DFT Â(u) is periodic in u with
+period N/d — the spectrum collapses onto d identical copies of a length-N/d
+spectrum — and within the subgroup the labels form again a near-subgroup
+arithmetic progression (step q/d, deficit r/d). This alignment concentrates
+spectral mass, which shrinks ‖F‖₁ and hence FR. The balanced strategy
+spreads its labels maximally evenly for every (m, n) alike, so it cannot
+exploit the arithmetic coincidence; when d > 1, parity tail's spectrum is
+strictly more concentrated and it can win outright.
+
+### Not sufficient: win rate grows with d, prime d strongest
+
+| d = gcd(q, r) | sole-win rate among eligible pairs |
+|---|---|
+| 1 | 0% (never) |
+| 2 | 23% |
+| 3 | 34% |
+| 4 | 36% |
+| 5 | 52% |
+| 6 | 40% |
+| 7 | 67% |
+| 8 | 55% |
+| 9 | 61% |
+| 11 | 76% |
+
+### Corollaries
+
+- r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
+- r = 0 cannot either: balanced and parity tail coincide there (tie).
+- Prime r is rare among sole wins because d > 1 with r prime requires r | q.
+- d > 1 is the gate, not the whole law: residual dependence on m remains
+  (m = 3, 4, and 5 never produce sole wins even when d > 1).
+
 ## Output format
 
 One row per (m, n) pair, with three columns — one per strategy (interval,
