@@ -1,0 +1,338 @@
+  76  
+  77 +## Findings: when is parity tail the sole winner?                                                                              
+  78 +                                                                                                                               
+  79 +Empirical analysis of the MAXIMUM = 1000 run (248,502 pairs; 30,884 sole                                                       
+  80 +parity-tail wins). Write N = m+n, q = floor(N/m) (parity tail's stride), and                                                   
+  81 +r = N mod m, so N = qm + r.                                                                                                    
+  82 +                                                                                                                               
+
+  Parity tail is a sole winner only when d = gcd(q, r) > 1. Equivalently, gcd(q, N) > 1, since gcd(q, qm + r) = gcd(q, r). All 30,884
+  sole wins satisfy it; none of the 142,002 eligible pairs with gcd(q, r) = 1 ever produce one.
+
+  The mechanism: parity tail's labels are 0, q, 2q, …, (m−1)q — all multiples of q, hence all multiples of d. So the m-set sits
+  entirely inside the subgroup of multiples of d in Z_N. For a set confined to that subgroup, the DFT Â(u) is periodic in u with
+  period N/d — the spectrum collapses onto d identical copies of a length-N/d spectrum, and inside the subgroup the labels are again
+  a near-subgroup arithmetic progression (step q/d, deficit r/d). This subgroup alignment concentrates spectral mass, which is
+  exactly what shrinks ‖F‖₁ and hence FR. The balanced strategy spreads its labels maximally evenly for every (m, n) alike, so it has
+  no way to exploit this arithmetic coincidence — when the coincidence occurs, parity tail's spectrum is strictly more concentrated
+  and it wins outright.
+
+  The condition is necessary but not sufficient — the win rate rises steeply with d, and prime d does better than composite:
+
+  ┌───────────────┬───────────────┐
+  │ d = gcd(q, r) │ sole-win rate │
+  ├───────────────┼───────────────┤
+  │ 1             │ 0% (never)    │
+  ├───────────────┼───────────────┤
+  │ 2             │ 23%           │
+  ├───────────────┼───────────────┤
+  │ 3             │ 34%           │
+  ├───────────────┼───────────────┤
+  │ 5             │ 52%           │
+  ├───────────────┼───────────────┤
+  │ 7             │ 67%           │
+  ├───────────────┼───────────────┤
+  │ 11            │ 76%           │
+  └───────────────┴───────────────┘
+
+  Two corollaries this explains: r = 1 never yields a sole win (gcd(q, 1) = 1 forces d = 1), and r = 0 can't either (the two
+  strategies coincide there). It also explains why prime values of r were rare in the win set — d > 1 with r prime requires r to
+  divide q exactly. Residual dependence on m remains (m = 3, 4, 5 never produce sole wins even when d > 1), so d > 1 is the gate, not
+  the whole law.
+
+  Want me to record this analysis in check.md?
+
+✻ Sautéed for 2m 49s
+
+❯ yes please add it to check.md                                                                                                      
+
+● Update(check.md)
+  ⎿  Added 46 lines
+       74  Verified: at MAXIMUM = 100 this reproduces the direct 2D computation's
+       75  results exactly.
+       76  
+       77 +## Findings: when is parity tail the sole winner?                                                                  
+       78 +                                                                                                                   
+       79 +Empirical analysis of the MAXIMUM = 1000 run (248,502 pairs; 30,884 sole                                           
+       80 +parity-tail wins). Write N = m+n, q = floor(N/m) (parity tail's stride), and                                       
+       81 +r = N mod m, so N = qm + r.                                                                                        
+       82 +                                                                                                                   
+       83 +### Necessary condition: gcd(q, r) > 1                                                                             
+       84 +                                                                                                                   
+       85 +Let d = gcd(q, r), which equals gcd(q, N) since gcd(q, qm + r) = gcd(q, r).                                        
+       86 +**Every sole parity-tail win has d > 1** — zero exceptions among the 30,884                                        
+       87 +sole wins, and none of the 142,002 pairs with d = 1 (and r ≠ 0) is one.                                            
+       88 +                                                                                                                   
+       89 +Mechanism: parity tail's labels 0, q, 2q, .., (m−1)q are all multiples of q,                                       
+       90 +hence of d, so the m-set lies inside the subgroup dZ_N of multiples of d.                                          
+       91 +For a set confined to that subgroup, the DFT Â(u) is periodic in u with                                            
+       92 +period N/d — the spectrum collapses onto d identical copies of a length-N/d                                        
+       93 +spectrum — and within the subgroup the labels form again a near-subgroup                                           
+       94 +arithmetic progression (step q/d, deficit r/d). This alignment concentrates                                        
+       95 +spectral mass, which shrinks ‖F‖₁ and hence FR. The balanced strategy                                              
+       96 +spreads its labels maximally evenly for every (m, n) alike, so it cannot                                           
+       97 +exploit the arithmetic coincidence; when d > 1, parity tail's spectrum is                                          
+       98 +strictly more concentrated and it can win outright.                                                                
+       99 +                                                                                                                   
+      100 +### Not sufficient: win rate grows with d, prime d strongest                                                       
+      101 +                                                                                                                   
+      102 +| d = gcd(q, r) | sole-win rate among eligible pairs |                                                             
+      103 +|---|---|                                                                                                          
+      104 +| 1 | 0% (never) |                                                                                                 
+      105 +| 2 | 23% |                                                                                                        
+      106 +| 3 | 34% |                                                                                                        
+      107 +| 4 | 36% |                                                                                                        
+      108 +| 5 | 52% |                                                                                                        
+      109 +| 6 | 40% |                                                                                                        
+      110 +| 7 | 67% |                                                                                                        
+      111 +| 8 | 55% |                                                                                                        
+      112 +| 9 | 61% |                                                                                                        
+      113 +| 11 | 76% |                                                                                                       
+      114 +                                                                                                                   
+      115 +### Corollaries                                                                                                    
+      116 +                                                                                                                   
+      117 +- r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.                                                       
+      118 +- r = 0 cannot either: balanced and parity tail coincide there (tie).                                              
+      119 +- Prime r is rare among sole wins because d > 1 with r prime requires r | q.                                       
+      120 +- d > 1 is the gate, not the whole law: residual dependence on m remains                                           
+      121 +  (m = 3, 4, and 5 never produce sole wins even when d > 1).                                                       
+      122 +                                                                                                                   
+      123  ## Output format
+      124  
+      125  One row per (m, n) pair, with three columns — one per strategy (interval,
+
+● Added to check.md as a "Findings" section: the definitions of q, r, and d = gcd(q, r) = gcd(q, N), the zero-exception necessary
+  condition d > 1 with the subgroup-alignment mechanism that explains it, the win-rate-by-d table showing it isn't sufficient, and
+  the corollaries (r = 0 and r = 1 impossible, prime r rare, small m never winning even when d > 1).
+
+✻ Brewed for 16s
+
+※ recap: We're comparing three bipartite labeling strategies (interval, balanced, parity tail) by Fourier ratio, run for all m+n up 
+  to 1000. Analysis of sole parity-tail wins is recorded in check.md; next is whatever direction you give.
+
+❯ can we look for a pattern where we evaluate not just q and r but also take m and m+n into our analysis?                            
+
+● Good idea — the residual dependence has to live in how d interacts with m and N. I'll compute and store the actual FR values for
+  all pairs (not just the y/n flags) so we can study win margins against m, N, q, r, and d together.
+
+● Bash(python3 - <<'EOF' 
+      import numpy as np…)
+  ⎿  saved (243931, 5)
+  ⎿  (timeout 5m)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Among d = gcd(q,r) > 1 pairs:
+       gcd(d, m) = 1: sole wins 27331/56555 = 48.33%
+       gcd(d, m) > 1: sole wins 3553/45374 = 7.83%
+
+● Bash(python3 -c "import sklearn; print(sklearn.__version__)" 2>&1 | head -1)
+  ⎿  Traceback (most recent call last):
+
+● No sklearn — I'll do the crosstabs manually, scanning candidate features for cells with near-0% or near-100% win rates.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Waiting…
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Bash command
+  
+   python3 - <<'EOF'
+   import numpy as np
+   from math import gcd
+   from collections import defaultdict
+
+   arr = np.load('/tmp/frs.npy')
+      118 +- r = 0 cannot either: balanced and parity tail coincide there (tie).                                              
+      119 +- Prime r is rare among sole wins because d > 1 with r prime requires r | q.                                       
+      120 +- d > 1 is the gate, not the whole law: residual dependence on m remains                                           
+      121 +  (m = 3, 4, and 5 never produce sole wins even when d > 1).                                                       
+      122 +                                                                                                                   
+      123  ## Output format
+      124  
+      125  One row per (m, n) pair, with three columns — one per strategy (interval,
+
+● Added to check.md as a "Findings" section: the definitions of q, r, and d = gcd(q, r) = gcd(q, N), the zero-exception necessary
+  condition d > 1 with the subgroup-alignment mechanism that explains it, the win-rate-by-d table showing it isn't sufficient, and
+  the corollaries (r = 0 and r = 1 impossible, prime r rare, small m never winning even when d > 1).
+
+✻ Brewed for 16s
+
+※ recap: We're comparing three bipartite labeling strategies (interval, balanced, parity tail) by Fourier ratio, run for all m+n up
+  to 1000. Analysis of sole parity-tail wins is recorded in check.md; next is whatever direction you give.
+
+❯ can we look for a pattern where we evaluate not just q and r but also take m and m+n into our analysis?                            
+
+● Good idea — the residual dependence has to live in how d interacts with m and N. I'll compute and store the actual FR values for
+  all pairs (not just the y/n flags) so we can study win margins against m, N, q, r, and d together.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  saved (243931, 5)
+  ⎿  (timeout 5m)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Among d = gcd(q,r) > 1 pairs:
+       gcd(d, m) = 1: sole wins 27331/56555 = 48.33%
+       gcd(d, m) > 1: sole wins 3553/45374 = 7.83%
+
+● Bash(python3 -c "import sklearn; print(sklearn.__version__)" 2>&1 | head -1)
+  ⎿  Traceback (most recent call last):
+
+● No sklearn — I'll do the crosstabs manually, scanning candidate features for cells with near-0% or near-100% win rates.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  win rate by r' = r/d  [gcd(d,m)=1 subset]
+        1: 4034/4644 = 86.9%
+        2: 1731/2245 = 77.1%
+     … +56 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  sole-win rate by (d = gcd(q,N), g = gcd(m,N)), capped at 8:
+             g=1        g=2        g=3        g=4        g=5        g=6        g=7        g=8
+       d=1    0.0% 105893   0.0% 11673    0.0% 8371     0.0% 2872     0.0% 3699     0.0% 598      0.0% 1949     0.0% 6947
+     … +7 lines (ctrl+o to expand)
+  
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  within cell d=2, g=1: sole-win rate and mean FR margin (FR_bal - FR_pt) by m:
+       m=3   : 0/166 =   0.0%   mean margin -0.0073
+       m=5   : 0/149 =   0.0%   mean margin -0.0094
+     … +8 lines (ctrl+o to expand)
+  
+● Update(check.md)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Edit file
+ check.md
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+
+● Good idea — the residual dependence has to live in how d interacts with m and N. I'll compute and store the actual FR values for
+  all pairs (not just the y/n flags) so we can study win margins against m, N, q, r, and d together.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  saved (243931, 5)
+  ⎿  (timeout 5m)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  Among d = gcd(q,r) > 1 pairs:
+       gcd(d, m) = 1: sole wins 27331/56555 = 48.33%
+       gcd(d, m) > 1: sole wins 3553/45374 = 7.83%
+
+● Bash(python3 -c "import sklearn; print(sklearn.__version__)" 2>&1 | head -1)
+  ⎿  Traceback (most recent call last):
+
+● No sklearn — I'll do the crosstabs manually, scanning candidate features for cells with near-0% or near-100% win rates.
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  win rate by r' = r/d  [gcd(d,m)=1 subset]
+        1: 4034/4644 = 86.9%
+        2: 1731/2245 = 77.1%
+     … +56 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  sole-win rate by (d = gcd(q,N), g = gcd(m,N)), capped at 8:
+             g=1        g=2        g=3        g=4        g=5        g=6        g=7        g=8
+       d=1    0.0% 105893   0.0% 11673    0.0% 8371     0.0% 2872     0.0% 3699     0.0% 598      0.0% 1949     0.0% 6947
+     … +7 lines (ctrl+o to expand)
+
+● Bash(python3 - <<'EOF'
+      import numpy as np…)
+  ⎿  within cell d=2, g=1: sole-win rate and mean FR margin (FR_bal - FR_pt) by m:
+       m=3   : 0/166 =   0.0%   mean margin -0.0073
+       m=5   : 0/149 =   0.0%   mean margin -0.0094
+     … +8 lines (ctrl+o to expand)
+
+● Update(check.md)
+  ⎿  Added 37 lines
+      112  | 9 | 61% |
+      113  | 11 | 76% |
+      114  
+      115 +### Two-gcd law: d = gcd(q, N) versus g = gcd(m, N)                                                                
+      116 +                                                                                                                   
+      117 +Bringing m and N = m+n into the analysis exposes the counterpart of d.                                             
+      118 +Since N = qm + r, the two divisor quantities are                                                                   
+      119 +                                                                                                                   
+      120 +- **d = gcd(q, N) = gcd(q, r)** — parity tail's alignment. Its labels kq                                           
+      121 +  are all multiples of d, so its m-set lies in the subgroup dZ_N and its                                           
+      122 +  spectrum concentrates (the finding above).                                                                       
+      123 +- **g = gcd(m, N) = gcd(m, r)** — balanced's alignment. Writing                                                    
+      124 +  k = j + (m/g)·i, the balanced labels satisfy                                                                     
+      125 +  floor(kN/m) = floor(jN/m) + i·(N/g), so balanced's m-set is g translates                                         
+      126 +  (by N/g) of a base pattern: it is periodic with period N/g, its spectrum                                         
+      127 +  is supported only on frequencies divisible by g, and it concentrates the                                         
+      128 +  same way parity tail's does under d.                                                                             
+      129 +                                                                                                                   
+      130 +The sole-win rate is monotone increasing in d and monotone decreasing in g                                         
+      131 +(MAXIMUM = 1000 run; cells with support):                                                                          
+      132 +                                                                                                                   
+      133 +| | g=1 | g=2 | g=3 | g=4 |                                                                                        
+      134 +|---|---|---|---|---|                                                                                              
+      135 +| d=1 | 0% | 0% | 0% | 0% |                                                                                        
+      136 +| d=2 | 47% | 9% | 6% | 4% |                                                                                       
+      137 +| d=4 | 72% | 18% | 10% | 8% |                                                                                     
+      138 +| d=6 | 95% | 24% | 15% | 11% |                                                                                    
+      139 +| d=8 | 100% | 47% | 20% | 12% |                                                                                   
+      140 +                                                                                                                   
+      141 +So the contest is between the two alignments: parity tail wins outright when                                       
+      142 +its stride-alignment d is strong and balanced's count-alignment g is weak                                          
+      143 +(d ≥ 7 with g = 1 is essentially a guaranteed sole win); balanced defends                                          
+      144 +whenever g > 1, and d = 1 makes a sole win impossible regardless of g.                                             
+      145 +                                                                                                                   
+      146 +Residual size effect inside a fixed (d, g) cell: the FR margin                                                     
+      147 +FR_balanced − FR_parity_tail grows with m (within d=2, g=1: m = 3 and 5                                            
+      148 +never win, m = 7 jumps to ~46%, and the mean margin turns positive and                                             
+      149 +grows for large m). The gcd pair sets the direction of the advantage; m                                            
+      150 +sets how much room it has to materialize.                                                                          
+      151 +                                                                                                                   
+      152  ### Corollaries
+      153  
+      154  - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
+
+● Yes — bringing m and N = m+n in reveals that the earlier gcd(q, r) finding is half of a symmetric two-gcd law, now recorded in
+  check.md:
+
+  The two alignments. Since N = qm + r, there are two natural divisor quantities:
+
+  - d = gcd(q, N) (= gcd(q, r)) — parity tail's alignment. Its labels kq all lie in the subgroup of multiples of d, concentrating its
+  spectrum. This was the earlier finding.
+  - g = gcd(m, N) (= gcd(m, r)) — balanced's alignment, the new piece. Writing k = j + (m/g)·i, balanced's formula gives floor(kN/m)
+  = floor(jN/m) + i·(N/g): its label set is exactly g translates of a base pattern spaced N/g apart. That periodicity confines
+  balanced's spectrum to frequencies divisible by g — the same subgroup-concentration mechanism, but exploited through the count m
+  rather than the stride q.
+
+  The contest between them. The sole-win rate is monotone increasing in d and monotone decreasing in g:
+
+  ┌─────┬──────┬─────┬─────┬─────┐
+  │     │ g=1  │ g=2 │ g=3 │ g=4 │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=2 │ 47%  │ 9%  │ 6%  │ 4%  │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=4 │ 72%  │ 18% │ 10% │ 8%  │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=6 │ 95%  │ 24% │ 15% │ 11% │
+  ├─────┼──────┼─────┼─────┼─────┤
+  │ d=8 │ 100% │ 47% │ 20% │ 12% │
+  └─────┴──────┴─────┴─────┴─────┘
+
+  At d ≥ 7 with g = 1 a sole win is essentially guaranteed (d=7: 99.8%, d=8: 100%); at d = 1 it's impossible at every g. This also
+  resolves the earlier mysteries: the "gcd(d, m) = 1 helps" observation was a shadow of g (shared factors between d and m force g >
+  1), and prime r was rare because it rarely yields d > 1.
+
+  What m adds beyond the gcds. Inside a fixed (d, g) cell, the FR margin FR_balanced − FR_parity_tail grows with m: at d=2, g=1, m =
+  3 and 5 never win, m = 7 jumps to ~46%, and the mean margin turns strongly positive for m ≥ 20. So the gcd pair sets the direction
+  of the spectral advantage, and m sets how much room it has to materialize — which is why small m never produced sole wins even when
+  d > 1.
+
+✻ Baked for 3m 31s
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ is there a 

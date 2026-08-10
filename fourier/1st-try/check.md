@@ -112,6 +112,43 @@ strictly more concentrated and it can win outright.
 | 9 | 61% |
 | 11 | 76% |
 
+### Two-gcd law: d = gcd(q, N) versus g = gcd(m, N)
+
+Bringing m and N = m+n into the analysis exposes the counterpart of d.
+Since N = qm + r, the two divisor quantities are
+
+- **d = gcd(q, N) = gcd(q, r)** — parity tail's alignment. Its labels kq
+  are all multiples of d, so its m-set lies in the subgroup dZ_N and its
+  spectrum concentrates (the finding above).
+- **g = gcd(m, N) = gcd(m, r)** — balanced's alignment. Writing
+  k = j + (m/g)·i, the balanced labels satisfy
+  floor(kN/m) = floor(jN/m) + i·(N/g), so balanced's m-set is g translates
+  (by N/g) of a base pattern: it is periodic with period N/g, its spectrum
+  is supported only on frequencies divisible by g, and it concentrates the
+  same way parity tail's does under d.
+
+The sole-win rate is monotone increasing in d and monotone decreasing in g
+(MAXIMUM = 1000 run; cells with support):
+
+| | g=1 | g=2 | g=3 | g=4 |
+|---|---|---|---|---|
+| d=1 | 0% | 0% | 0% | 0% |
+| d=2 | 47% | 9% | 6% | 4% |
+| d=4 | 72% | 18% | 10% | 8% |
+| d=6 | 95% | 24% | 15% | 11% |
+| d=8 | 100% | 47% | 20% | 12% |
+
+So the contest is between the two alignments: parity tail wins outright when
+its stride-alignment d is strong and balanced's count-alignment g is weak
+(d ≥ 7 with g = 1 is essentially a guaranteed sole win); balanced defends
+whenever g > 1, and d = 1 makes a sole win impossible regardless of g.
+
+Residual size effect inside a fixed (d, g) cell: the FR margin
+FR_balanced − FR_parity_tail grows with m (within d=2, g=1: m = 3 and 5
+never win, m = 7 jumps to ~46%, and the mean margin turns positive and
+grows for large m). The gcd pair sets the direction of the advantage; m
+sets how much room it has to materialize.
+
 ### Corollaries
 
 - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
