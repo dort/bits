@@ -149,6 +149,36 @@ never win, m = 7 jumps to ~46%, and the mean margin turns positive and
 grows for large m). The gcd pair sets the direction of the advantage; m
 sets how much room it has to materialize.
 
+### Intuitive summary (imprecise but human-readable)
+
+Picture the N = m+n labels as positions on a circle; the Fourier ratio
+rewards patterns that repeat exactly around the circle.
+
+**Parity tail wins outright when its step size meshes with the circle,
+while m itself is out of phase with it.**
+
+- Parity tail marks every q-th position. When q divides m+n evenly, its
+  marks all sit on an exact sub-wheel of the circle. Equivalently: **m is
+  slightly less than a divisor of m+n** (just below (m+n)/q). Partial
+  meshing — q merely sharing a factor with m+n — gives a weaker version of
+  the same advantage.
+- Balanced spreads its marks as evenly as the fractions allow. It gets its
+  own exact repetition whenever **m shares a factor with m+n** (its pattern
+  becomes g identical arcs repeated around the circle), so it defends and
+  parity tail rarely wins. Full meshing — m dividing m+n exactly — is the
+  degenerate case where the two strategies coincide.
+- The alignment needs room to pay off: for m below about 7 the advantage
+  never materializes.
+
+Checked against the MAXIMUM = 1000 run: "m just below a divisor of m+n"
+alone gives a 34% sole-win rate; adding "m shares no factor with m+n and
+m ≥ 7" raises it to 64%; requiring strong meshing (shared factor ≥ 7 between
+q and m+n) makes it essentially 100%.
+
+Slogan: parity tail wins when m+n is nearly — but not exactly — an even
+multiple of m, in a way that makes the rounded step size a true divisor of
+m+n; it loses its edge whenever m itself divides partway into m+n.
+
 ### Corollaries
 
 - r = 1 never yields a sole win: gcd(q, 1) = 1 forces d = 1.
