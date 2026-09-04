@@ -1,0 +1,22 @@
+Done. A working, tested symbolic differentiator now lives in bits/mm2/symbolic_differentiation/ — verified end-to-end with the built mork binary (all 6 test cases report CORRECT, and a deliberately sabotaged solution correctly produces MISTAKE facts).
+
+  Files:
+  - diff_engine.mm2 — the engine (rules only, data-free per the wiki's separation convention)
+  - example.mm2 — sample inputs; test.mm2 — test suite in the wiki's MISTAKE/CORRECT style
+  - run.sh — concatenates input + engine and runs mork run; README.md — full explanation
+
+  Interface: you declare (dvar x), (const c) for every other leaf, and (diff EXPR); the engine emits (result EXPR D). Supported: binary + - * /, unary neg sin cos exp ln. Sample output:                                                
+                                                                                                                                                                              
+  (diff (sin (* x x)))  =>  (result (sin (* x x)) (* (cos (* x x)) (+ (* 1 x) (* x 1))))                                                                                                                                                                             
+
+  How it works: differentiation is structural recursion, but MM2 has only pattern matching and monotonic writes — so the engine runs two saturation phases. Phase A decomposes top-down: a self-recreating driver (Reachability P1 pattern) walks depth levels, instantiating
+  decomposition rules stored as data (Counter Machine pattern), emitting (todo level child), (sub E) per subterm, and one (level l) fact per depth. Phase B combines bottom-up: from (sub (+ u v)) and child derivatives (d u du), (d v dv), it writes the parent's (d ...) fact.
+  Since MM2 has no negation, "nothing new derived" isn't expressible as a stop condition — instead Phase B runs exactly one full rule sweep per (level l) fact, and depth+1 sweeps provably suffice to reach the root.
+
+  Two scheduling facts I confirmed empirically and designed around (saved to memory for future MM2 work): Peano numerals sort deeper-first under MM2's shortlex priority, so level counters can't order rounds; and a per-operator loop exec dies permanently on any level where
+  its operator doesn't occur, which is why rules must be stored as data and re-instantiated by a driver each level.
+
+  Follow-ups if you want them: a simplification pass ((* 1 x) → x etc. — fits the same decompose/rebuild architecture, chained after collection), or (pow u n) via Peano exponent arithmetic.
+
+✻ Churned for 7m 58s
+

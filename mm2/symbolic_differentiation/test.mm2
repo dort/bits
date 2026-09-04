@@ -1,0 +1,42 @@
+; Tests for the symbolic differentiation engine, in the style of the wiki
+; page "MM2 Example: Testing Your Code".
+; Concatenate with the engine and run:
+;   cat test.mm2 diff_engine.mm2 > /tmp/eval.mm2 && mork run /tmp/eval.mm2
+;
+; Expected output: one (CORRECT EXPR) per (diff EXPR) and no MISTAKE facts.
+; A wrong or missing derivative leaves (MISTAKE EXPR D) in the space and
+; removes the corresponding CORRECT fact.
+
+; ---------------- test inputs ----------------
+(dvar x)
+(const 1)
+(const 2)
+(const a)
+
+(diff x)
+(solution x 1)
+
+(diff (+ (* x x) (* 2 x)))
+(solution (+ (* x x) (* 2 x)) (+ (+ (* 1 x) (* x 1)) (+ (* 0 x) (* 2 1))))
+
+(diff (sin (* x x)))
+(solution (sin (* x x)) (* (cos (* x x)) (+ (* 1 x) (* x 1))))
+
+(diff (/ x (+ x a)))
+(solution (/ x (+ x a)) (/ (- (* 1 (+ x a)) (* x (+ 1 0))) (* (+ x a) (+ x a))))
+
+(diff (* (exp (neg x)) (ln x)))
+(solution (* (exp (neg x)) (ln x))
+          (+ (* (* (exp (neg x)) (neg 1)) (ln x)) (* (exp (neg x)) (/ 1 x))))
+
+(diff (cos (- x 2)))
+(solution (cos (- x 2)) (neg (* (sin (- x 2)) (- 1 0))))
+
+; ---------------- test code ----------------
+; MISTAKE = (result U solution) \ (result /\ solution), per diff root.
+; Tags (zzt _) sort after the engine's collect step (zz out).
+(exec (zzt 0) (, (diff $e) (result $e $de)) (O (+ (MISTAKE $e $de))))
+(exec (zzt 0) (, (diff $e) (solution $e $de)) (O (+ (MISTAKE $e $de))))
+(exec (zzt 1) (, (result $e $de) (solution $e $de)) (O (- (MISTAKE $e $de))))
+(exec (zzt 2) (, (diff $e)) (, (CORRECT $e)))
+(exec (zzt 3) (, (MISTAKE $e $de)) (O (- (CORRECT $e))))

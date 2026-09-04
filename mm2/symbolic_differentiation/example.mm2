@@ -1,0 +1,20 @@
+; Example inputs for the symbolic differentiation engine.
+; Concatenate with diff_engine.mm2 and run:
+;   cat example.mm2 diff_engine.mm2 > /tmp/eval.mm2 && mork run /tmp/eval.mm2
+
+(dvar x)
+(const 1)
+(const 2)
+(const a)
+
+; d/dx (x*x + 2*x)        = (1*x + x*1) + (0*x + 2*1)
+(diff (+ (* x x) (* 2 x)))
+
+; d/dx sin(x*x)           = cos(x*x) * (1*x + x*1)      [chain rule]
+(diff (sin (* x x)))
+
+; d/dx (x / (x + a))      = (1*(x+a) - x*(1+0)) / ((x+a)*(x+a))
+(diff (/ x (+ x a)))
+
+; d/dx exp(neg(x)) * ln(x)
+(diff (* (exp (neg x)) (ln x)))

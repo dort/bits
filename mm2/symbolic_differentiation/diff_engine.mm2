@@ -1,0 +1,108 @@
+; =====================================================================
+; Symbolic differentiation engine in MM2
+; =====================================================================
+;
+; Input facts (supplied in a separate file, concatenated before running):
+;   (dvar x)        the variable of differentiation (exactly one)
+;   (const c)       every other leaf symbol appearing in expressions
+;                   (numeric literals, parameters, other variables)
+;   (diff EXPR)     an expression to differentiate (any number of these)
+;
+; Output facts:
+;   (result EXPR D) where D = dEXPR/dx, unsimplified
+;
+; Supported operators:
+;   binary:  (+ u v) (- u v) (* u v) (/ u v)
+;   unary:   (neg u) (sin u) (cos u) (exp u) (ln u)
+;
+; Architecture (two reflective phases; priorities order them by shortlex
+; on the exec tag: (0 _) < (a0 _) < (az _) < (b0 _) < (bz _) < (zz _)):
+;
+;   Setup    (0 _)   base derivative facts (d x 1), (d c 0); seed (todo Z EXPR).
+;   Phase A  (a_ _)  top-down decomposition. A self-recreating driver walks
+;                    depth levels; at each level it instantiates the arule
+;                    data below, producing (todo (S l) child) and (sub E)
+;                    for every subterm E, plus one (level l) fact per depth.
+;                    It stops when a level produces no todo facts.
+;   Phase B  (b_ _)  bottom-up combination. The driver runs one full sweep
+;                    of the brule data per (level l) fact. Each sweep joins
+;                    child derivatives (d u du) into parent derivatives, so
+;                    after k sweeps all subterms of height <= k are done;
+;                    the number of levels equals tree depth + 1, which is
+;                    exactly enough sweeps to reach the root.
+;   Collect  (zz _)  copy the root derivatives into (result EXPR D).
+
+; ---------------------------------------------------------------------
+; Setup
+; ---------------------------------------------------------------------
+(exec (0 dvar) (, (dvar $x)) (, (d $x 1)))
+(exec (0 const) (, (const $c)) (, (d $c 0)))
+(exec (0 root) (, (diff $e)) (, (todo Z $e)))
+
+; ---------------------------------------------------------------------
+; Phase A: decomposition rules, stored as data parameterized by level $l
+; ---------------------------------------------------------------------
+((arule sum $l)  (, (todo $l (+ $u $v)))
+                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (+ $u $v))))
+((arule dif $l)  (, (todo $l (- $u $v)))
+                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (- $u $v))))
+((arule prod $l) (, (todo $l (* $u $v)))
+                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (* $u $v))))
+((arule quot $l) (, (todo $l (/ $u $v)))
+                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (/ $u $v))))
+((arule neg $l)  (, (todo $l (neg $u)))
+                 (, (todo (S $l) $u) (sub (neg $u))))
+((arule sin $l)  (, (todo $l (sin $u)))
+                 (, (todo (S $l) $u) (sub (sin $u))))
+((arule cos $l)  (, (todo $l (cos $u)))
+                 (, (todo (S $l) $u) (sub (cos $u))))
+((arule exp $l)  (, (todo $l (exp $u)))
+                 (, (todo (S $l) $u) (sub (exp $u))))
+((arule ln $l)   (, (todo $l (ln $u)))
+                 (, (todo (S $l) $u) (sub (ln $u))))
+
+; Phase A driver: while any todo exists at level $l, instantiate every
+; arule at $l (tag (a0 ($l $k)) outranks the next driver (az (S $l))),
+; record (level $l), and re-create the driver for the next level.
+(exec (az Z)
+  (, (exec (az $l) $p $t)
+     (todo $l $_)
+     ((arule $k $l) $ap $at))
+  (, (exec (a0 ($l $k)) $ap $at)
+     (exec (az (S $l)) $p $t)
+     (level $l)))
+
+; ---------------------------------------------------------------------
+; Phase B: combination rules, stored as data (level-free)
+; ---------------------------------------------------------------------
+((brule sum)  (, (sub (+ $u $v)) (d $u $du) (d $v $dv))
+              (, (d (+ $u $v) (+ $du $dv))))
+((brule dif)  (, (sub (- $u $v)) (d $u $du) (d $v $dv))
+              (, (d (- $u $v) (- $du $dv))))
+((brule prod) (, (sub (* $u $v)) (d $u $du) (d $v $dv))
+              (, (d (* $u $v) (+ (* $du $v) (* $u $dv)))))
+((brule quot) (, (sub (/ $u $v)) (d $u $du) (d $v $dv))
+              (, (d (/ $u $v) (/ (- (* $du $v) (* $u $dv)) (* $v $v)))))
+((brule neg)  (, (sub (neg $u)) (d $u $du))
+              (, (d (neg $u) (neg $du))))
+((brule sin)  (, (sub (sin $u)) (d $u $du))
+              (, (d (sin $u) (* (cos $u) $du))))
+((brule cos)  (, (sub (cos $u)) (d $u $du))
+              (, (d (cos $u) (neg (* (sin $u) $du)))))
+((brule exp)  (, (sub (exp $u)) (d $u $du))
+              (, (d (exp $u) (* (exp $u) $du))))
+((brule ln)   (, (sub (ln $u)) (d $u $du))
+              (, (d (ln $u) (/ $du $u))))
+
+; Phase B driver: one full sweep of all brules per recorded level.
+(exec (bz Z)
+  (, (exec (bz $l) $p $t)
+     (level $l)
+     ((brule $k) $bp $bt))
+  (, (exec (b0 ($l $k)) $bp $bt)
+     (exec (bz (S $l)) $p $t)))
+
+; ---------------------------------------------------------------------
+; Collect
+; ---------------------------------------------------------------------
+(exec (zz out) (, (diff $e) (d $e $de)) (, (result $e $de)))
