@@ -143,6 +143,7 @@
 ((rrule zzg pow1)  (, (sraw $e (pow $x 1))) (O (- (sraw $e (pow $x 1))) (+ (s $e $x))))
 ((rrule zzg pow0)  (, (sraw $e (pow $x 0))) (O (- (sraw $e (pow $x 0))) (+ (s $e 1))))
 ((rrule zzg neg0)  (, (sraw $e (neg 0))) (O (- (sraw $e (neg 0))) (+ (s $e 0))))
+((rrule zzg negn)  (, (sraw $e (neg (neg $x)))) (O (- (sraw $e (neg (neg $x)))) (+ (s $e $x))))
 ((rrule zzg foldr) (, (sraw $e $r) (fold $r $v)) (O (- (sraw $e $r)) (+ (s $e $v))))
 
 ; zzh: the default — every candidate that survived the special cases is

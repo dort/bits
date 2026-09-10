@@ -38,6 +38,11 @@
 (diff (cos (- x 2)))
 (solution (cos (- x 2)) (neg (sin (- x 2))))
 
+; chains two collapses: (* (sin (neg x)) (neg 1)) -> (neg (sin (neg x)))
+; via muln, then the cos rule's outer neg cancels via negn
+(diff (cos (neg x)))
+(solution (cos (neg x)) (sin (neg x)))
+
 (diff (pow x 3))
 (solution (pow x 3) (* 3 (pow x 2)))
 

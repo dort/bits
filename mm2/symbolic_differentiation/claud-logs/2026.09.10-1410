@@ -1,0 +1,10 @@
+ Done. The (neg (neg e)) → e rule is in both implementations, verified end-to-end:
+
+  - simplify.mm2: one new zzg rule negn. diff_engine_fused.mm2: the same as a p3 rule. No precedence handling was needed this time — (neg (neg $x)) and (neg 0) are disjoint patterns (compound versus symbol inside the
+    outer neg), so the rule can't race an existing one.
+  - New test case exercising it: (diff (cos (neg x))), which chains both recent rules — the chain-rule product (* (sin (neg x)) (neg 1)) collapses to (neg (sin (neg x))) via muln, and the cos rule's outer neg then
+    cancels via negn, giving the fully reduced (sin (neg x)) (mathematically: −sin(−x)·(−1) = sin(−x)).
+  - Results: both simplifying configurations pass 10/10 with zero MISTAKE facts, the plain-engine suite is untouched at 9/9, and the two implementations remain byte-identical on example.mm2.
+  - Docs: the README's identity list now includes the rule, the limitations bullet's example of uncovered redundancy moved on to same-operand cancellation (- e e) → 0, and the augmented README's exercise bullet now
+    proposes that rule instead — with a note that repeating $x in a pattern is how MM2 expresses "both operands are the same expression" — citing negn as a second worked precedent.
+
