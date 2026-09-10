@@ -1,0 +1,75 @@
+● Done. Integer handling in the engine is now grounded in Rust via the pure sink, verified end-to-end: the example produces 6 correct results and the test suite passes 9/9 cases with no MISTAKE facts.
+
+  Scope assumption I made: "integers handled with pure" means the user-facing integers in expressions. The internal Peano level counters (Z, (S Z), …) stay — they are loop scheduling driven by shortlex priority, not
+  integer data, and converting them would change driver structure with no user-visible benefit. Say the word if you want that conversion too.
+
+  What the grounded phase adds (two one-shot execs tagged (b0 int) and (b0 pow), sitting between decomposition and combination):
+  
+  1. Automatic integer constants. For every (todo $l $e), the call tree (sub_i64 (i64_from_string $e) (i64_from_string $e)) computes e − e and writes (d $e 0). The subtraction exists for its precondition:
+     i64_from_string returns an EvalError on any non-integer symbol or compound expression, and sinks.rs:1169 handles that by skipping the match silently — I verified this in the source before relying on it. So Rust's
+     parser is the integer detector MM2 patterns cannot express, and (const 1), (const 2) declarations are gone from the inputs ((const a) remains for the symbolic parameter).
+  2. The power rule, previously listed as a limitation. (b0 pow) computes (expm1 n m) with m = n − 1 via sub_i64 for every (pow u n) subterm; a new brule pow joins it to build (* (* n (pow u m)) du). Tested: (pow x 3)
+     → (* (* 3 (pow x 2)) 1), chain-rule composition (pow (+ x a) -2) → (* (* -2 (pow (+ x a) -3)) (+ 1 0)) (negative exponents work), and a symbolic exponent degrades to a silently missing result rather than a
+     crash.
+
+  One migration: the grounded execs needed the priority slot between phase A (az) and phase B, and symbol comparison is length-first, so no 2-letter symbol fits between az and b0. Phase B's tags moved from b0/bz to
+  c0/cz; engine, both READMEs' priority tables, and the memory file were updated together.
+
+  Docs: README.md gained the grounded-phase section and updated rule/limitation tables. augmented_README.md gained a first-principles subsection on grounded functions (what "grounded" means, the (O (pure …)) form, why
+  e − e is a detector) placed in walkthrough order, with the worked example re-run against the new engine so every shown fact stays real.
+
+✻ Sautéed for 7m 54s · done 1:23 PM
+
+❯ Do you see a path forward to reduce the redundant parts of the results completely so that (as an example), this particular line from the results of running currently: (result (+ (* x x) (* 2 x)) (+ (+ (* 1 x) (* x  
+  1)) (+ (* 0 x) (* 2 1))))                                                                                                                                                                                              
+  simplifies to remove all the uncalculated sub-expressions (for instance (* 2 1) should just be 2 and (* 1 x) should just be x and to go behond this example (* 0 a) for any a should just be 0, etc...)                
+  
+● Yes — there's a clean path, and it reuses the architecture we already trust. I thought through the failure modes before answering, because the obvious designs break on MM2's two hard constraints (no negation, and
+  patterns can't reach inside nested subterms). Here is the assessment.
+
+  The core design: a second decompose/rebuild pass over each derivative
+
+  Simplification can't be done by rewriting (* 1 x) "wherever it appears" — an MM2 pattern only matches a whole fact, never a subterm at arbitrary depth. But our engine already solved that shape of problem once:
+  decompose top-down, rebuild bottom-up. A simplifier is a structural sibling of the differentiator, run after (zz out):
+
+  1. Seed: for each (result $e $de), put the derivative tree $de into its own todo namespace (stodo/ssub, separate from todo/sub so the differentiator's rules don't re-fire on derivative subterms).
+  2. Decompose the derivative with the same driver pattern, recording its own (slevel l) facts for the sweep count.
+  3. Base cases: (s x x) from (dvar x), (s a a) from (const a), and (s n n) for integer leaves via the same pure-sink parse gate we built last time — the leaf problem is solved identically.
+  4. Rebuild bottom-up, where (s E S) means "E simplifies to S": for a node (op u v) with simplified children su, sv, build the simplified parent — and clean redundancy at the root only, which is sufficient because
+     children are already clean when the parent is assembled. Each level's redundancy is eliminated before the level above ever sees it, so one bottom-up pass fully reduces the tree.
+  5. Collect: join (result $e $de) with (s $de $sd) and replace the result fact (the -/+ sinks).
+
+  On your example the pass proceeds: (* 1 x) → x, (* x 1) → x, (* 0 x) → 0, (* 2 1) → 2; then (+ 0 2) → 2; final result (+ (+ x x) 2). (Going further to (+ (* 2 x) 2) needs a collection rule e + e → 2·e — easy to add,
+  but a scope decision.)
+
+  The one genuinely hard part, and its workaround
+
+  The rebuild rules overlap: "if su is 0, parent is sv" versus the default "parent is (op su sv)". The default is an else-branch — "no special case applied" — which is negation, and MM2 can't express it. Naively
+  writing both produces junk variants that multiply up the tree (I traced this failure mode before ruling the naive design out).
+
+  The workaround is to implement the else-branch by sequencing plus deletion instead of negation. Assembly writes an intermediate fact (sraw E candidate) that parents never read. Then, in strict tag order within each
+  sweep:
+
+  - special-case rules fire first: (sraw $e (+ 0 $x)) → delete the sraw, write (s $e $x); likewise for (+ $x 0), (* 1 $x), (* $x 1), (* 0 $x), (* $x 0), (- $x 0), (/ 0 $x), (/ $x 1), (pow $x 1), (pow $x 0), (neg 0),
+    and an integer-folding rule fed by a pure exec (sum_i64/product_i64) so (+ 2 3) becomes 5;
+  - a finalize rule fires last: any sraw still standing survived every special case, so it is the default — convert it to (s E candidate) unconditionally.
+
+  Whatever the special cases deleted, the finalizer never sees. That is an else-branch built from execution order. The overlapping special cases are confluent (e.g. (* 0 1) reduces to 0 by either rule), so firing
+  order among them doesn't matter. And because parents read only s, never sraw, the re-assembly that happens on later sweeps (saturation re-derives facts) converges to the same clean facts instead of leaking dirty
+  variants — this was the subtle bug in my first two designs, and the sraw/s namespace split is what kills it.
+
+  Alternatives I considered and rejected
+
+  - Simplify during differentiation (make each brule emit simplified output directly): the product/quotient/power rules build multi-level trees in one template, so redundancy appears nested within a single step where
+    root-cleanup can't reach it. Fixing that means splitting every derivative rule into single-level steps — a rewrite of the whole engine for no gain.
+  - Post-process outside MM2 (Python/Rust over the dumped space): trivial, but abandons the goal of doing it in MM2.
+
+  What building it entails
+
+  One new opt-in file simplify.mm2 (~80 lines: decompose rules, ~14 cleanup rules, fold execs, two drivers, seed and collect) concatenated after the engine; tags in the (zz? _) range so it runs after collection and
+  before the tests. One consequence to decide: replacing result facts in place breaks the existing test solutions, which expect unsimplified forms — I'd keep test.mm2 engine-only and add a test_simplify.mm2 with
+  simplified solutions.
+
+  Say go and I'll build and verify it; flag now if you'd rather have (simplified E S) as a separate fact instead of rewriting result in place, or want the e + e → 2·e collection rule included.
+
+✻ Worked for 4m 10s · done 1:36 PM
