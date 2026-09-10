@@ -1,0 +1,16 @@
+ Done. The neg collapse is in both implementations and everything is green: all three test suites pass 9/9, and the two implementations still produce byte-identical results on the example set.
+
+  What changed:
+
+  - simplify.mm2: two new zzg special-case rules, mulnL and mulnR, covering both orientations — (* (neg 1) e) → (neg e) and (* e (neg 1)) → (neg e).
+  - diff_engine_fused.mm2: the same pair as p3 constructor rules.
+  - test_simplify.mm2: the one affected solution updated — the derivative of (* (exp (neg x)) (ln x)) now reads (+ (* (neg (exp (neg x))) (ln x)) (* (exp (neg x)) (/ 1 x))), with the former (* (exp (neg x)) (neg 1))
+    collapsed to (neg (exp (neg x))).
+
+  One interaction needed deliberate handling: (* 0 (neg 1)) matches both the zero-annihilation rule (answer 0) and the new rule (answer (neg 0)). The deletion-based sequencing means the first matching rule wins by
+  removing the candidate, and rule execution order follows the rule name's lexicographic position — so I named the new rules muln*, which sort after mul0*/mul1*, giving zero and one precedence identically in both
+  implementations. I verified this empirically rather than trusting the reasoning: (diff (* a (neg 1))) produces (result (* a (neg 1)) 0) — not (neg 0) — from both engines.
+
+  Docs updated to match: the README's identity list now includes the neg collapse, its limitations section documents the name-ordering precedence mechanism (with (neg (neg e)) → e taking over as the example of an
+  uncovered rule), and the augmented README's exercise bullet now points at mulnL/mulnR as the worked precedent instead of proposing them.
+

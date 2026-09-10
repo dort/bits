@@ -33,7 +33,7 @@
 
 (diff (* (exp (neg x)) (ln x)))
 (solution (* (exp (neg x)) (ln x))
-          (+ (* (* (exp (neg x)) (neg 1)) (ln x)) (* (exp (neg x)) (/ 1 x))))
+          (+ (* (neg (exp (neg x))) (ln x)) (* (exp (neg x)) (/ 1 x))))
 
 (diff (cos (- x 2)))
 (solution (cos (- x 2)) (neg (sin (- x 2))))

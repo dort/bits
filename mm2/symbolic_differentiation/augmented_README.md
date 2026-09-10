@@ -691,9 +691,13 @@ Things worth trying to deepen the picture:
   example `sqrt` with derivative `(/ du (* 2 (sqrt u)))`; the `2` in
   the output needs no declaration.
 - Add a simplification rule both implementations lack — say
-  `(* $x (neg 1)) -> (neg $x)` — as one special-case line in
+  `(neg (neg $x)) -> $x` — as one special-case line in
   `simplify.mm2` (a `zzg` rule) and one in `diff_engine_fused.mm2` (a
-  `p3` rule), then check the two still agree on `example.mm2`.
+  `p3` rule), then check the two still agree on `example.mm2`. For a
+  worked precedent, look at the `mulnL`/`mulnR` rules
+  (`(* $x (neg 1)) -> (neg $x)`) in both files, including how their
+  names are chosen to sort after `mul0*`/`mul1*` so overlaps resolve
+  the same way in both implementations.
 - Run the same input through `simplify.mm2` and through the fused
   engine and diff the `result` lines — they should be identical on
   clean inputs, and Part 7 explains the one case where they may differ.

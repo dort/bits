@@ -133,6 +133,11 @@
 ((rrule zzg mul1R) (, (sraw $e (* $x 1))) (O (- (sraw $e (* $x 1))) (+ (s $e $x))))
 ((rrule zzg mul0L) (, (sraw $e (* 0 $x))) (O (- (sraw $e (* 0 $x))) (+ (s $e 0))))
 ((rrule zzg mul0R) (, (sraw $e (* $x 0))) (O (- (sraw $e (* $x 0))) (+ (s $e 0))))
+; neg collapse: (* (neg 1) e) / (* e (neg 1)) -> (neg e). The muln names
+; sort after mul0/mul1, so on an overlap like (* 0 (neg 1)) the zero
+; rule deletes the candidate first and 0 wins in both implementations.
+((rrule zzg mulnL) (, (sraw $e (* (neg 1) $x))) (O (- (sraw $e (* (neg 1) $x))) (+ (s $e (neg $x)))))
+((rrule zzg mulnR) (, (sraw $e (* $x (neg 1)))) (O (- (sraw $e (* $x (neg 1)))) (+ (s $e (neg $x)))))
 ((rrule zzg div0L) (, (sraw $e (/ 0 $x))) (O (- (sraw $e (/ 0 $x))) (+ (s $e 0))))
 ((rrule zzg div1R) (, (sraw $e (/ $x 1))) (O (- (sraw $e (/ $x 1))) (+ (s $e $x))))
 ((rrule zzg pow1)  (, (sraw $e (pow $x 1))) (O (- (sraw $e (pow $x 1))) (+ (s $e $x))))

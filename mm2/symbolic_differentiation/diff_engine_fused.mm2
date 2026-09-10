@@ -198,6 +198,11 @@
 ((qrule p3 mul1R) (, (mkq (* $x 1))) (O (- (mkq (* $x 1))) (+ (mkd (* $x 1) $x))))
 ((qrule p3 mul0L) (, (mkq (* 0 $x))) (O (- (mkq (* 0 $x))) (+ (mkd (* 0 $x) 0))))
 ((qrule p3 mul0R) (, (mkq (* $x 0))) (O (- (mkq (* $x 0))) (+ (mkd (* $x 0) 0))))
+; neg collapse: (* (neg 1) e) / (* e (neg 1)) -> (neg e). The muln names
+; sort after mul0/mul1, so on an overlap like (* 0 (neg 1)) the zero
+; rule deletes the request first and 0 wins in both implementations.
+((qrule p3 mulnL) (, (mkq (* (neg 1) $x))) (O (- (mkq (* (neg 1) $x))) (+ (mkd (* (neg 1) $x) (neg $x)))))
+((qrule p3 mulnR) (, (mkq (* $x (neg 1)))) (O (- (mkq (* $x (neg 1)))) (+ (mkd (* $x (neg 1)) (neg $x)))))
 ((qrule p3 div0L) (, (mkq (/ 0 $x))) (O (- (mkq (/ 0 $x))) (+ (mkd (/ 0 $x) 0))))
 ((qrule p3 div1R) (, (mkq (/ $x 1))) (O (- (mkq (/ $x 1))) (+ (mkd (/ $x 1) $x))))
 ((qrule p3 pow1)  (, (mkq (pow $x 1))) (O (- (mkq (pow $x 1))) (+ (mkd (pow $x 1) $x))))
