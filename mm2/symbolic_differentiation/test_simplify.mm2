@@ -1,0 +1,54 @@
+; Tests for SIMPLIFIED differentiation results. Two ways to run:
+;   post-process:  cat test_simplify.mm2 diff_engine.mm2 simplify.mm2
+;   fused engine:  cat test_simplify.mm2 diff_engine_fused.mm2
+; (or ./run.sh test_simplify.mm2 simplify.mm2, or
+;  ENGINE=diff_engine_fused.mm2 ./run.sh test_simplify.mm2)
+;
+; Both implementations must produce identical results on these cases:
+; the inputs contain no redundancy of their own, so the one semantic
+; difference between them (the post-process pass also simplifies inside
+; copied input subterms, the fused engine keeps them verbatim) does not
+; show here.
+;
+; Expected output: one (CORRECT EXPR) per case and no MISTAKE facts.
+
+; ---------------- test inputs ----------------
+(dvar x)
+(const a)
+
+(diff x)
+(solution x 1)
+
+(diff 7)
+(solution 7 0)
+
+(diff (+ (* x x) (* 2 x)))
+(solution (+ (* x x) (* 2 x)) (+ (+ x x) 2))
+
+(diff (sin (* x x)))
+(solution (sin (* x x)) (* (cos (* x x)) (+ x x)))
+
+(diff (/ x (+ x a)))
+(solution (/ x (+ x a)) (/ (- (+ x a) x) (* (+ x a) (+ x a))))
+
+(diff (* (exp (neg x)) (ln x)))
+(solution (* (exp (neg x)) (ln x))
+          (+ (* (* (exp (neg x)) (neg 1)) (ln x)) (* (exp (neg x)) (/ 1 x))))
+
+(diff (cos (- x 2)))
+(solution (cos (- x 2)) (neg (sin (- x 2))))
+
+(diff (pow x 3))
+(solution (pow x 3) (* 3 (pow x 2)))
+
+(diff (pow (+ x a) -2))
+(solution (pow (+ x a) -2) (* -2 (pow (+ x a) -3)))
+
+; ---------------- test code ----------------
+; Same symmetric-difference harness as test.mm2; the (zzt _) tags sort
+; after both the engine and either simplifier layer.
+(exec (zzt 0) (, (diff $e) (result $e $de)) (O (+ (MISTAKE $e $de))))
+(exec (zzt 0) (, (diff $e) (solution $e $de)) (O (+ (MISTAKE $e $de))))
+(exec (zzt 1) (, (result $e $de) (solution $e $de)) (O (- (MISTAKE $e $de))))
+(exec (zzt 2) (, (diff $e)) (, (CORRECT $e)))
+(exec (zzt 3) (, (MISTAKE $e $de)) (O (- (CORRECT $e))))

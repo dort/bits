@@ -1,0 +1,161 @@
+; =====================================================================
+; Post-process simplifier for the symbolic differentiation engine
+; =====================================================================
+;
+; Opt-in layer: concatenate AFTER diff_engine.mm2. It rewrites every
+; (result EXPR D) fact in place, replacing D with its simplified form:
+;   (+ 0 e) -> e   (+ e 0) -> e   (- e 0) -> e
+;   (* 1 e) -> e   (* e 1) -> e   (* 0 e) -> 0   (* e 0) -> 0
+;   (/ 0 e) -> 0   (/ e 1) -> e
+;   (pow e 1) -> e (pow e 0) -> 1 (neg 0) -> 0
+;   integer-integer + - * folded by Rust via the pure sink
+;
+; Architecture: a structural sibling of the differentiator, run after
+; its collection step. Every tag is a 3-character zz? symbol, so the
+; whole layer sorts after the engine's 2-character tags and before the
+; test tags (zzt _):
+;
+;   (zza _)  seed each result's derivative into (stodo Z D); base
+;            (s leaf leaf) facts for the dvar and declared constants.
+;   (zzb/zzc _)  decompose D top-down (drule data + driver), recording
+;            (ssub E) per compound subterm and (slevel l) per depth.
+;   (zzd _)  grounded base case: (s n n) for every integer leaf, using
+;            an i64 parse round-trip as the integer detector.
+;   (zze-zzh / zzi _)  rebuild bottom-up, one sweep per (slevel l).
+;            (s E S) means "E simplifies to S". Each sweep runs, in tag
+;            order: assembly (zze) writes the candidate (sraw E (op su sv))
+;            from simplified children; folds (zzf) compute (fold R V) for
+;            integer arithmetic; special cases (zzg) delete a matching
+;            sraw and write the reduced (s E S); the default (zzh)
+;            converts every surviving sraw verbatim. The zzg-then-zzh
+;            sequencing implements the else-branch MM2 cannot express
+;            with negation: whatever the special cases deleted, the
+;            default never sees. Parents match only (s _ _), never
+;            (sraw _ _), so partially reduced forms cannot leak upward.
+;   (zzo _)  replace each (result E D) with (result E S) via a staging
+;            fact, avoiding a delete/re-add race when D = S.
+;
+; The rebuild rule store bakes the instance tag into the data:
+; ((rrule TAG NAME) PATTERNS TEMPLATES), and one driver instantiates all
+; four groups per sweep.
+
+; ---------------------------------------------------------------------
+; Seed and symbolic-leaf base cases
+; ---------------------------------------------------------------------
+(exec (zza dvar) (, (dvar $x)) (, (s $x $x)))
+(exec (zza const) (, (const $c)) (, (s $c $c)))
+(exec (zza seed) (, (result $e $de)) (, (stodo Z $de)))
+
+; ---------------------------------------------------------------------
+; Decomposition rules (both children, pow included: its integer
+; exponent needs an (s n n) fact for the rebuild)
+; ---------------------------------------------------------------------
+((drule sum $l)  (, (stodo $l (+ $u $v)))
+                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (+ $u $v))))
+((drule dif $l)  (, (stodo $l (- $u $v)))
+                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (- $u $v))))
+((drule prod $l) (, (stodo $l (* $u $v)))
+                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (* $u $v))))
+((drule quot $l) (, (stodo $l (/ $u $v)))
+                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (/ $u $v))))
+((drule pow $l)  (, (stodo $l (pow $u $n)))
+                 (, (stodo (S $l) $u) (stodo (S $l) $n) (ssub (pow $u $n))))
+((drule neg $l)  (, (stodo $l (neg $u)))
+                 (, (stodo (S $l) $u) (ssub (neg $u))))
+((drule sin $l)  (, (stodo $l (sin $u)))
+                 (, (stodo (S $l) $u) (ssub (sin $u))))
+((drule cos $l)  (, (stodo $l (cos $u)))
+                 (, (stodo (S $l) $u) (ssub (cos $u))))
+((drule exp $l)  (, (stodo $l (exp $u)))
+                 (, (stodo (S $l) $u) (ssub (exp $u))))
+((drule ln $l)   (, (stodo $l (ln $u)))
+                 (, (stodo (S $l) $u) (ssub (ln $u))))
+
+(exec (zzc Z)
+  (, (exec (zzc $l) $p $t)
+     (stodo $l $_)
+     ((drule $k $l) $dp $dt))
+  (, (exec (zzb ($l $k)) $dp $dt)
+     (exec (zzc (S $l)) $p $t)
+     (slevel $l)))
+
+; ---------------------------------------------------------------------
+; Grounded base case: integer leaves simplify to themselves. The i64
+; parse round-trip is the detector; a non-integer or compound $e fails
+; the parse and the pure sink skips that match.
+; ---------------------------------------------------------------------
+(exec (zzd int)
+  (, (stodo $l $e))
+  (O (pure (s $e $r) $r (i64_to_string (i64_from_string $e)))))
+
+; ---------------------------------------------------------------------
+; Rebuild rule store
+; ---------------------------------------------------------------------
+; zze: assemble the candidate from simplified children
+((rrule zze sum)  (, (ssub (+ $u $v)) (s $u $su) (s $v $sv))
+                  (, (sraw (+ $u $v) (+ $su $sv))))
+((rrule zze dif)  (, (ssub (- $u $v)) (s $u $su) (s $v $sv))
+                  (, (sraw (- $u $v) (- $su $sv))))
+((rrule zze prod) (, (ssub (* $u $v)) (s $u $su) (s $v $sv))
+                  (, (sraw (* $u $v) (* $su $sv))))
+((rrule zze quot) (, (ssub (/ $u $v)) (s $u $su) (s $v $sv))
+                  (, (sraw (/ $u $v) (/ $su $sv))))
+((rrule zze pow)  (, (ssub (pow $u $n)) (s $u $su) (s $n $sn))
+                  (, (sraw (pow $u $n) (pow $su $sn))))
+((rrule zze neg)  (, (ssub (neg $u)) (s $u $su))
+                  (, (sraw (neg $u) (neg $su))))
+((rrule zze sin)  (, (ssub (sin $u)) (s $u $su))
+                  (, (sraw (sin $u) (sin $su))))
+((rrule zze cos)  (, (ssub (cos $u)) (s $u $su))
+                  (, (sraw (cos $u) (cos $su))))
+((rrule zze exp)  (, (ssub (exp $u)) (s $u $su))
+                  (, (sraw (exp $u) (exp $su))))
+((rrule zze ln)   (, (ssub (ln $u)) (s $u $su))
+                  (, (sraw (ln $u) (ln $su))))
+
+; zzf: integer constant folding (result only exists when both parse)
+((rrule zzf fsum) (, (sraw $e (+ $a $b)))
+                  (O (pure (fold (+ $a $b) $v) $v
+                           (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
+((rrule zzf fdif) (, (sraw $e (- $a $b)))
+                  (O (pure (fold (- $a $b) $v) $v
+                           (i64_to_string (sub_i64 (i64_from_string $a) (i64_from_string $b))))))
+((rrule zzf fmul) (, (sraw $e (* $a $b)))
+                  (O (pure (fold (* $a $b) $v) $v
+                           (i64_to_string (product_i64 (i64_from_string $a) (i64_from_string $b))))))
+
+; zzg: special cases — delete the candidate, write the reduced form.
+; Overlapping rules are confluent (they agree wherever they both match).
+((rrule zzg add0L) (, (sraw $e (+ 0 $x))) (O (- (sraw $e (+ 0 $x))) (+ (s $e $x))))
+((rrule zzg add0R) (, (sraw $e (+ $x 0))) (O (- (sraw $e (+ $x 0))) (+ (s $e $x))))
+((rrule zzg dif0R) (, (sraw $e (- $x 0))) (O (- (sraw $e (- $x 0))) (+ (s $e $x))))
+((rrule zzg mul1L) (, (sraw $e (* 1 $x))) (O (- (sraw $e (* 1 $x))) (+ (s $e $x))))
+((rrule zzg mul1R) (, (sraw $e (* $x 1))) (O (- (sraw $e (* $x 1))) (+ (s $e $x))))
+((rrule zzg mul0L) (, (sraw $e (* 0 $x))) (O (- (sraw $e (* 0 $x))) (+ (s $e 0))))
+((rrule zzg mul0R) (, (sraw $e (* $x 0))) (O (- (sraw $e (* $x 0))) (+ (s $e 0))))
+((rrule zzg div0L) (, (sraw $e (/ 0 $x))) (O (- (sraw $e (/ 0 $x))) (+ (s $e 0))))
+((rrule zzg div1R) (, (sraw $e (/ $x 1))) (O (- (sraw $e (/ $x 1))) (+ (s $e $x))))
+((rrule zzg pow1)  (, (sraw $e (pow $x 1))) (O (- (sraw $e (pow $x 1))) (+ (s $e $x))))
+((rrule zzg pow0)  (, (sraw $e (pow $x 0))) (O (- (sraw $e (pow $x 0))) (+ (s $e 1))))
+((rrule zzg neg0)  (, (sraw $e (neg 0))) (O (- (sraw $e (neg 0))) (+ (s $e 0))))
+((rrule zzg foldr) (, (sraw $e $r) (fold $r $v)) (O (- (sraw $e $r)) (+ (s $e $v))))
+
+; zzh: the default — every candidate that survived the special cases is
+; already in simplest form for this rule set.
+((rrule zzh def) (, (sraw $e $r)) (O (- (sraw $e $r)) (+ (s $e $r))))
+
+; Rebuild driver: one full sweep per recorded slevel; the instance tag
+; comes from the rule data, so one driver serves all four groups.
+(exec (zzi Z)
+  (, (exec (zzi $l) $p $t)
+     (slevel $l)
+     ((rrule $g $k) $rp $rt))
+  (, (exec ($g ($l $k)) $rp $rt)
+     (exec (zzi (S $l)) $p $t)))
+
+; ---------------------------------------------------------------------
+; Replace results (staged, so an already-simple D survives)
+; ---------------------------------------------------------------------
+(exec (zzo a) (, (result $e $de) (s $de $sd)) (, (final $e $sd)))
+(exec (zzo b) (, (result $e $de)) (O (- (result $e $de))))
+(exec (zzo c) (, (final $e $sd)) (, (result $e $sd)))

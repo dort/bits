@@ -576,15 +576,30 @@ the `c0 < cz` letter ordering within each round.
 
 ## Part 7 — Reading the output, and why it is not simplified
 
-The engine's answers are correct but verbose: `(+ (* 1 (+ x 2)) (* x (+
-1 0)))` instead of `(+ (* 2 x) 2)`. This is deliberate scope control.
-Simplification — rewriting `(* 1 e)` to `e`, `(+ e 0)` to `e`, folding
-`(+ 1 0)` to `1`, and so on — is a *second* rewriting system: the rules
-must reach subterms nested anywhere inside the result, which requires its
-own decompose/rebuild pass of exactly the same two-phase shape as the
-differentiator. It composes cleanly after the collection step (its tags
-would sort after `(zz out)`), and it is the natural next extension; it is
-just not required for the differentiation itself to be correct.
+The plain engine's answers are correct but verbose: `(+ (* 1 (+ x 2))
+(* x (+ 1 0)))` instead of `(+ (* 2 x) 2)`. Simplification — rewriting
+`(* 1 e)` to `e`, `(+ e 0)` to `e`, folding `(+ 1 0)` to `1`, and so
+on — is a *second* rewriting system: the rules must reach subterms
+nested anywhere inside the result, and an MM2 pattern only ever matches
+a whole fact. This folder ships two implementations of it, side by
+side (the short `README.md` describes both mechanisms):
+
+- `simplify.mm2`, an opt-in layer after the engine that decomposes each
+  result's derivative and rebuilds it bottom-up, cleaning each node's
+  root as it goes (redundancy is always at a root once children are
+  clean);
+- `diff_engine_fused.mm2`, a standalone engine that never writes an
+  unsimplified derivative, building every derivative one node at a time
+  through request/response facts so each node passes through the
+  cleanup rules as it is constructed.
+
+Both rest on one shared trick worth knowing even if you read no further:
+MM2 cannot say "otherwise" (that is negation), so the *else*-branch —
+"no simplification applied, keep the node as built" — is implemented by
+execution order. Special-case rules fire first and **delete** the
+candidate fact they reduce; a later default rule converts every
+candidate that survived. Sequencing plus deletion substitutes for the
+missing negation.
 
 Two other limitations, and their reasons:
 
@@ -647,9 +662,13 @@ From this folder (the `mork` binary must be built; see the wiki's
 "Getting started" page):
 
 ```
-./run.sh                  # differentiate the examples in example.mm2
-./run.sh test.mm2         # run the test suite
-./run.sh yourfile.mm2     # your own input
+./run.sh                                  # examples, unsimplified results
+./run.sh test.mm2                         # test suite, unsimplified
+./run.sh example.mm2 simplify.mm2         # simplified via the post-process layer
+./run.sh test_simplify.mm2 simplify.mm2   # simplified-results test suite
+ENGINE=diff_engine_fused.mm2 ./run.sh     # simplified via the fused engine
+ENGINE=diff_engine_fused.mm2 ./run.sh test_simplify.mm2
+./run.sh yourfile.mm2                     # your own input
 ```
 
 A minimal input file (the integer `3` needs no declaration):
@@ -671,10 +690,13 @@ Things worth trying to deepen the picture:
 - Add a new unary operator: one `arule` line, one `brule` line — for
   example `sqrt` with derivative `(/ du (* 2 (sqrt u)))`; the `2` in
   the output needs no declaration.
-- Extend the grounded phase: a `pure` exec calling `sum_i64` or
-  `product_i64` on the pieces of a `(+ n m)` or `(* n m)` subterm whose
-  arguments both parse as integers would fold constants in the input,
-  the first step toward a simplifier.
+- Add a simplification rule both implementations lack — say
+  `(* $x (neg 1)) -> (neg $x)` — as one special-case line in
+  `simplify.mm2` (a `zzg` rule) and one in `diff_engine_fused.mm2` (a
+  `p3` rule), then check the two still agree on `example.mm2`.
+- Run the same input through `simplify.mm2` and through the fused
+  engine and diff the `result` lines — they should be identical on
+  clean inputs, and Part 7 explains the one case where they may differ.
 - Run with `--steps N` (`mork run file --steps N`) for increasing N and
   diff the outputs to watch the space evolve one `exec` at a time; the
   script in `bits/bash_diff_util/mork_step_diff.sh` automates this.

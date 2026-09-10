@@ -1,0 +1,24 @@
+● Both implementations are built, verified, and live side by side. All three test configurations pass 9/9 with zero MISTAKE facts, and — the strongest check — the two implementations produce byte-identical result sets
+  on example.mm2. Your example line now reads:
+
+  (result (+ (* x x) (* 2 x)) (+ (+ x x) 2))
+
+  Implementation 1 — simplify.mm2 (post-process, the recommended path). An opt-in layer concatenated after diff_engine.mm2, living in the 3-character (zz? _) tag range so it runs after collection and before tests. It
+  seeds each result's derivative into its own stodo/ssub namespace, decomposes top-down, grounds integer leaves with an i64 parse round-trip, and rebuilds bottom-up one sweep per depth. The else-branch MM2 can't
+  express as negation is done by sequencing: special-case rules ((+ 0 x)→x, (* 1 x)→x, (* 0 x)→0, (/ x 1)→x, (pow x 1)→x, (pow x 0)→1, (neg 0)→0, plus Rust integer folding of + - *) delete the candidate sraw fact they
+  reduce, and a final default converts every survivor verbatim. Parents read only finished (s E S) facts, never candidates, so partial forms can't leak upward. It rewrites result facts in place via a staging fact, so
+  an already-simple derivative survives the swap.
+
+  Implementation 2 — diff_engine_fused.mm2 (simplify-during-differentiation). A standalone engine that never writes an unsimplified derivative. Since the plain combination rules build multi-level trees in one template
+  (nesting redundancy where root cleanup can't reach), every derivative is instead constructed one node at a time through smart-constructor facts: (mkq E) requests the simplified form of a node with
+  already-simplified children, (mkd E S) answers it, and the same special-then-default deletion sequence resolves each request. Chains run up to three requests deep (quotient, power), so the driver runs four
+  construction rounds per depth level, sequenced by baking round and phase symbols into the instance tag (c0 ((l r ph) k)). One semantic difference, documented: input subterms copied verbatim into derivatives (the u
+  in (* (cos u) du)) aren't simplified by the fused engine, while the post-process pass simplifies everything it walks — invisible on clean inputs, which is why both pass the shared test_simplify.mm2.
+
+  Before writing either, I probed two previously unexercised mechanisms and both work: mixed (O (- old) (+ new)) sinks fire per match, and stored rules with O/pure templates survive driver capture intact.
+
+  Also updated: run.sh now takes extra layer files and an ENGINE= override (all invocations shown in the README), test_simplify.mm2 is shared by both implementations, both READMEs document the two designs and the
+  sequencing-for-negation trick, and the memory file records that trick for future MM2 work.
+
+  Remaining redundancy is what the rule set doesn't cover — (+ x x) stays rather than becoming (* 2 x), and (* e (neg 1)) isn't collapsed to (neg e). Each is one more special-case line in either implementation if you
+  want them.

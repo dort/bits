@@ -9,15 +9,26 @@ file additionally uses the `+`/`-` sinks for set difference.
 ## Files
 
 - `diff_engine.mm2` — the engine (rules only, no data)
+- `simplify.mm2` — opt-in post-process simplifier: concatenated after the
+  engine, it rewrites each `(result E D)` in place with D simplified
+- `diff_engine_fused.mm2` — standalone alternative engine that fuses
+  simplification into the differentiation rewriting itself, never writing
+  an unsimplified derivative (see "Two simplification implementations")
 - `example.mm2` — sample inputs
-- `test.mm2` — test suite in the wiki's `MISTAKE`/`CORRECT` style
-- `run.sh` — concatenates an input file with the engine and runs `mork run`
+- `test.mm2` — test suite for unsimplified results (plain engine only)
+- `test_simplify.mm2` — test suite for simplified results, shared by both
+  simplification implementations
+- `run.sh` — concatenates input + engine (+ optional layers), runs `mork run`
 
 ## Usage
 
 ```
-./run.sh                # example.mm2: prints (result EXPR D) facts
-./run.sh test.mm2       # expect one (CORRECT EXPR) per case, no MISTAKE
+./run.sh                                  # plain engine, unsimplified results
+./run.sh test.mm2                         # expect CORRECT per case, no MISTAKE
+./run.sh example.mm2 simplify.mm2         # post-process simplification
+./run.sh test_simplify.mm2 simplify.mm2   # simplified-results suite
+ENGINE=diff_engine_fused.mm2 ./run.sh example.mm2        # fused engine
+ENGINE=diff_engine_fused.mm2 ./run.sh test_simplify.mm2  # same suite, fused
 ```
 
 Input facts:
@@ -116,13 +127,55 @@ Ordering across levels therefore cannot rely on the level numeral inside
 a tag; correctness here only needs "all of this level's rule execs before
 the next driver", which the `a0 < az` symbol ordering provides.
 
+## Two simplification implementations
+
+Both eliminate the redundancy the derivative rules generate —
+`(+ 0 e) -> e`, `(* 1 e) -> e`, `(* 0 e) -> 0`, `(/ e 1) -> e`,
+`(pow e 1) -> e`, `(pow e 0) -> 1`, `(neg 0) -> 0`, and integer `+ - *`
+folded by Rust — turning e.g. the derivative of `(+ (* x x) (* 2 x))`
+from `(+ (+ (* 1 x) (* x 1)) (+ (* 0 x) (* 2 1)))` into `(+ (+ x x) 2)`.
+Both must pass `test_simplify.mm2` with identical answers, and they
+produce byte-identical result sets on `example.mm2`.
+
+Each needs an else-branch — "no special case applied, keep the built
+form" — which MM2 cannot express as negation. Both implement it by
+**sequencing plus deletion**: special-case rules fire first and delete
+the candidate fact they reduce; a later default rule converts every
+surviving candidate verbatim. Whatever the special cases deleted, the
+default never sees.
+
+**`simplify.mm2` (post-process).** A structural sibling of the engine,
+running after `(zz out)` in the 3-character `(zz? _)` tag range: seed
+each result's derivative into its own `stodo`/`ssub` namespace,
+decompose top-down, ground integer leaves with an i64 parse round-trip,
+then rebuild bottom-up one sweep per recorded `slevel`. Assembly writes
+a candidate `(sraw E (op su sv))` from simplified children; parents
+match only the finished `(s E S)` facts, never `sraw`, so partially
+reduced forms cannot leak upward. Because children are clean before a
+parent is assembled, redundancy is always at the candidate's root where
+one cleanup pass can see it.
+
+**`diff_engine_fused.mm2` (fused).** The plain engine's combination
+rules build multi-level trees in one template (the product rule writes
+`(+ (* du v) (* u dv))` at once), so nested redundancy appears where no
+root-level cleanup can reach it. The fused engine therefore builds every
+derivative one level at a time through smart-constructor facts:
+`(mkq E)` requests the simplified form of a single node whose children
+are already simplified, and `(mkd E S)` answers it, keyed by the
+request. A derivative is a chain of requests (product: `du*v`, `u*dv`,
+then their sum; quotient and power chain three deep), so the combination
+driver runs four construction rounds per depth level — logic, folds,
+special cases, default per round — instead of the plain engine's one
+sweep. Semantic difference from the post-process pair: input subterms
+copied verbatim into a derivative (the `u` inside `(* (cos u) du)`) are
+not simplified; the post-process pass simplifies everything it walks.
+
 ## Limitations / possible extensions
 
-- Output is unsimplified: `(* 1 x)`, `(+ ... 0)` etc. remain. A
-  simplification pass fits the same decompose/rebuild architecture and
-  could be chained after `(zz out)`; the grounded phase's constant
-  detection would let it fold integer arithmetic with `sum_i64` and
-  `product_i64`.
+- Remaining redundancy is what the rule set does not cover: no
+  like-term collection (`(+ x x)` stays, rather than `(* 2 x)`), no
+  `(* e (neg 1)) -> (neg e)`, no trigonometric identities. Each is one
+  more special-case rule in whichever implementation.
 - `(pow u n)` requires an i64 literal exponent. A symbolic exponent gets
   no `expm1` fact, so the subterm silently produces no derivative
   (`d(u^v) = u^v·(v·du/u + ln(u)·dv)` would need the general rule).
