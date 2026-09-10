@@ -31,6 +31,11 @@
 (diff (/ x (+ x a)))
 (solution (/ x (+ x a)) (/ (- (+ x a) x) (* (+ x a) (+ x a))))
 
+; cascades: numerator (- x x) -> 0 via difxx, then (/ 0 (* x x)) -> 0
+; via div0L; d(x/x) = d(1) = 0
+(diff (/ x x))
+(solution (/ x x) 0)
+
 (diff (* (exp (neg x)) (ln x)))
 (solution (* (exp (neg x)) (ln x))
           (+ (* (neg (exp (neg x))) (ln x)) (* (exp (neg x)) (/ 1 x))))

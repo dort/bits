@@ -194,6 +194,9 @@
 ((qrule p3 add0L) (, (mkq (+ 0 $x))) (O (- (mkq (+ 0 $x))) (+ (mkd (+ 0 $x) $x))))
 ((qrule p3 add0R) (, (mkq (+ $x 0))) (O (- (mkq (+ $x 0))) (+ (mkd (+ $x 0) $x))))
 ((qrule p3 dif0R) (, (mkq (- $x 0))) (O (- (mkq (- $x 0))) (+ (mkd (- $x 0) $x))))
+; same-operand cancellation: the repeated $x makes the rule fire only
+; when both operands are the same expression (equality by unification)
+((qrule p3 difxx) (, (mkq (- $x $x))) (O (- (mkq (- $x $x))) (+ (mkd (- $x $x) 0))))
 ((qrule p3 mul1L) (, (mkq (* 1 $x))) (O (- (mkq (* 1 $x))) (+ (mkd (* 1 $x) $x))))
 ((qrule p3 mul1R) (, (mkq (* $x 1))) (O (- (mkq (* $x 1))) (+ (mkd (* $x 1) $x))))
 ((qrule p3 mul0L) (, (mkq (* 0 $x))) (O (- (mkq (* 0 $x))) (+ (mkd (* 0 $x) 0))))

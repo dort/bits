@@ -1,0 +1,9 @@
+Done. The (- $x $x) → 0 rule is in both implementations, verified end-to-end:
+
+  - simplify.mm2: new zzg rule difxx; diff_engine_fused.mm2: the same as a p3 rule. The repeated $x in the pattern is what expresses "both operands are the same expression" — unification supplies the equality test. No
+    precedence handling was needed: every overlap with the existing (- $x 0) rule and the integer fold agrees on 0, so any firing order yields the same answer.
+  - New test case: (diff (/ x x)) with solution 0. It cascades through the new rule — the quotient numerator (- (* 1 x) (* x 1)) becomes (- x x) → 0 via difxx, then (/ 0 (* x x)) → 0 via the existing zero-numerator
+    rule — matching the calculus fact that x/x = 1 has derivative 0.
+  - Results: both simplifying configurations pass 11/11 with zero MISTAKE facts, the plain-engine suite stays 9/9, and both implementations remain byte-identical on example.mm2.
+  - Docs: the README identity list now includes (- e e) -> 0, the uncovered-redundancy example advanced to same-operand division (/ e e) -> 1, and the augmented README's exercise bullet now proposes that rule, citing
+    difxx as the worked precedent for the repeated-variable trick.
