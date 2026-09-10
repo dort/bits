@@ -36,6 +36,11 @@
 (diff (/ x x))
 (solution (/ x x) 0)
 
+; cascades: (* (exp x) 1) -> (exp x) via mul1R, then the ln rule's
+; (/ (exp x) (exp x)) -> 1 via divxx; ln(exp x) = x, so d = 1
+(diff (ln (exp x)))
+(solution (ln (exp x)) 1)
+
 (diff (* (exp (neg x)) (ln x)))
 (solution (* (exp (neg x)) (ln x))
           (+ (* (neg (exp (neg x))) (ln x)) (* (exp (neg x)) (/ 1 x))))

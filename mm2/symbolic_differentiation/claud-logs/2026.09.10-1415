@@ -1,0 +1,11 @@
+Done. The (/ $x $x) → 1 rule is in both implementations, verified end-to-end:
+
+  - simplify.mm2: new zzg rule divxx; diff_engine_fused.mm2: the same as a p3 rule — both using the repeated-$x unification trick from difxx.
+  - One overlap needed a precedence decision: (/ 0 0) matches both div0L (→ 0) and divxx (→ 1). Since 0/0 is mathematically undefined, either answer is defensible — what matters is that both implementations agree, and
+    the div0L name sorts before divxx in both, so 0 wins. Confirmed empirically, not just by reasoning: (diff (/ x 0)), whose derivative reduces through (- 0 0) → 0 over (* 0 0) → 0 to exactly (/ 0 0), produces
+    (result (/ x 0) 0) from both engines. The benign overlap (/ 1 1) agrees on 1 either way.
+  - New test case: (diff (ln (exp x))) with solution 1 — since ln(eˣ) = x, the derivative must fully collapse: (* (exp x) 1) → (exp x) via mul1R, then the ln rule's (/ (exp x) (exp x)) → 1 via divxx.
+  - Results: both simplifying configurations pass 12/12 with zero MISTAKE facts, the plain suite stays 9/9, and both implementations remain byte-identical on example.mm2.                                   
+  - Docs: identity list updated, the uncovered-redundancy example advanced to constant evaluation of unary functions ((ln 1) → 0, (exp 0) → 1), and the augmented README's exercise bullet now proposes those, citing
+    difxx/divxx as precedents and noting how the divxx name is ordered so the (/ 0 0) overlap resolves consistently.
+

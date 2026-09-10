@@ -131,8 +131,9 @@ the next driver", which the `a0 < az` symbol ordering provides.
 
 Both eliminate the redundancy the derivative rules generate —
 `(+ 0 e) -> e`, `(* 1 e) -> e`, `(* 0 e) -> 0`, `(* e (neg 1)) -> (neg e)`,
-`(- e e) -> 0`, `(/ e 1) -> e`, `(pow e 1) -> e`, `(pow e 0) -> 1`,
-`(neg 0) -> 0`, `(neg (neg e)) -> e`, and integer `+ - *` folded by Rust — turning e.g. the derivative of `(+ (* x x) (* 2 x))`
+`(- e e) -> 0`, `(/ e 1) -> e`, `(/ e e) -> 1`, `(pow e 1) -> e`,
+`(pow e 0) -> 1`, `(neg 0) -> 0`, `(neg (neg e)) -> e`, and integer
+`+ - *` folded by Rust — turning e.g. the derivative of `(+ (* x x) (* 2 x))`
 from `(+ (+ (* 1 x) (* x 1)) (+ (* 0 x) (* 2 1)))` into `(+ (+ x x) 2)`.
 Both must pass `test_simplify.mm2` with identical answers, and they
 produce byte-identical result sets on `example.mm2`.
@@ -174,8 +175,9 @@ not simplified; the post-process pass simplifies everything it walks.
 
 - Remaining redundancy is what the rule set does not cover: no
   like-term collection (`(+ x x)` stays, rather than `(* 2 x)`), no
-  same-operand division (`(/ e e) -> 1`), no trigonometric identities.
-  Each is one more special-case rule in whichever implementation. When a new rule's
+  constant evaluation of the unary functions (`(ln 1) -> 0`,
+  `(exp 0) -> 1`), no trigonometric identities. Each is one more
+  special-case rule in whichever implementation. When a new rule's
   pattern overlaps an existing one with a different answer, the rule
   name's lexicographic position decides the winner (first match deletes
   the candidate): the `muln*` neg-collapse rules sort after `mul0*`/

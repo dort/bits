@@ -691,17 +691,17 @@ Things worth trying to deepen the picture:
   example `sqrt` with derivative `(/ du (* 2 (sqrt u)))`; the `2` in
   the output needs no declaration.
 - Add a simplification rule both implementations lack — say
-  `(/ $x $x) -> 1`, where repeating `$x` in the pattern makes the rule
-  fire only when both operands are the *same* expression (unification
-  gives equality tests for free) — as one special-case line in
+  `(ln 1) -> 0` or `(exp 0) -> 1` — as one special-case line in
   `simplify.mm2` (a `zzg` rule) and one in `diff_engine_fused.mm2` (a
   `p3` rule), then check the two still agree on `example.mm2`. For
-  worked precedents, look at the `difxx` rule (`(- $x $x) -> 0`, the
-  same repeated-variable trick), the `negn` rule
-  (`(neg (neg $x)) -> $x`), and the `mulnL`/`mulnR` rules
-  (`(* $x (neg 1)) -> (neg $x)`) — including how the `muln` names are
-  chosen to sort after `mul0*`/`mul1*` so overlaps resolve the same way
-  in both implementations.
+  worked precedents, look at the `difxx`/`divxx` rules
+  (`(- $x $x) -> 0`, `(/ $x $x) -> 1`, where repeating `$x` in the
+  pattern makes the rule fire only when both operands are the *same*
+  expression — unification gives equality tests for free), the `negn`
+  rule (`(neg (neg $x)) -> $x`), and the `mulnL`/`mulnR` rules
+  (`(* $x (neg 1)) -> (neg $x)`) — including how the `muln` and `divxx`
+  names are chosen to sort after their `0`/`1` siblings so overlaps
+  like `(/ 0 0)` resolve the same way in both implementations.
 - Run the same input through `simplify.mm2` and through the fused
   engine and diff the `result` lines — they should be identical on
   clean inputs, and Part 7 explains the one case where they may differ.

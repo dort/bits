@@ -208,6 +208,10 @@
 ((qrule p3 mulnR) (, (mkq (* $x (neg 1)))) (O (- (mkq (* $x (neg 1)))) (+ (mkd (* $x (neg 1)) (neg $x)))))
 ((qrule p3 div0L) (, (mkq (/ 0 $x))) (O (- (mkq (/ 0 $x))) (+ (mkd (/ 0 $x) 0))))
 ((qrule p3 div1R) (, (mkq (/ $x 1))) (O (- (mkq (/ $x 1))) (+ (mkd (/ $x 1) $x))))
+; same-operand division (equality by unification, as in difxx). On the
+; undefined overlap (/ 0 0) the div0L name sorts first, so 0 wins in
+; both implementations.
+((qrule p3 divxx) (, (mkq (/ $x $x))) (O (- (mkq (/ $x $x))) (+ (mkd (/ $x $x) 1))))
 ((qrule p3 pow1)  (, (mkq (pow $x 1))) (O (- (mkq (pow $x 1))) (+ (mkd (pow $x 1) $x))))
 ((qrule p3 pow0)  (, (mkq (pow $x 0))) (O (- (mkq (pow $x 0))) (+ (mkd (pow $x 0) 1))))
 ((qrule p3 neg0)  (, (mkq (neg 0))) (O (- (mkq (neg 0))) (+ (mkd (neg 0) 0))))

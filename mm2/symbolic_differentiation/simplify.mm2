@@ -143,6 +143,10 @@
 ((rrule zzg mulnR) (, (sraw $e (* $x (neg 1)))) (O (- (sraw $e (* $x (neg 1)))) (+ (s $e (neg $x)))))
 ((rrule zzg div0L) (, (sraw $e (/ 0 $x))) (O (- (sraw $e (/ 0 $x))) (+ (s $e 0))))
 ((rrule zzg div1R) (, (sraw $e (/ $x 1))) (O (- (sraw $e (/ $x 1))) (+ (s $e $x))))
+; same-operand division (equality by unification, as in difxx). On the
+; undefined overlap (/ 0 0) the div0L name sorts first, so 0 wins in
+; both implementations.
+((rrule zzg divxx) (, (sraw $e (/ $x $x))) (O (- (sraw $e (/ $x $x))) (+ (s $e 1))))
 ((rrule zzg pow1)  (, (sraw $e (pow $x 1))) (O (- (sraw $e (pow $x 1))) (+ (s $e $x))))
 ((rrule zzg pow0)  (, (sraw $e (pow $x 0))) (O (- (sraw $e (pow $x 0))) (+ (s $e 1))))
 ((rrule zzg neg0)  (, (sraw $e (neg 0))) (O (- (sraw $e (neg 0))) (+ (s $e 0))))
