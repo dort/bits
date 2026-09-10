@@ -1,10 +1,12 @@
 ; Example inputs for the symbolic differentiation engine.
 ; Concatenate with diff_engine.mm2 and run:
 ;   cat example.mm2 diff_engine.mm2 > /tmp/eval.mm2 && mork run /tmp/eval.mm2
+;
+; Integer literals (1, 2, 3, ...) need no declaration: the engine's
+; grounded phase recognizes them with Rust's i64 parser. Only non-integer
+; leaves besides the dvar need a (const _) declaration.
 
 (dvar x)
-(const 1)
-(const 2)
 (const a)
 
 ; d/dx (x*x + 2*x)        = (1*x + x*1) + (0*x + 2*1)
@@ -18,3 +20,9 @@
 
 ; d/dx exp(neg(x)) * ln(x)
 (diff (* (exp (neg x)) (ln x)))
+
+; d/dx x^3                = (3 * x^2) * 1               [power rule,
+(diff (pow x 3))                                       ; 3-1 via Rust]
+
+; d/dx (x+a)^2            = (2 * (x+a)^1) * (1+0)       [power + chain]
+(diff (pow (+ x a) 2))

@@ -8,9 +8,9 @@
 ; removes the corresponding CORRECT fact.
 
 ; ---------------- test inputs ----------------
+; Integer literals need no (const _) declaration: the engine's grounded
+; phase recognizes them with Rust's i64 parser.
 (dvar x)
-(const 1)
-(const 2)
 (const a)
 
 (diff x)
@@ -31,6 +31,18 @@
 
 (diff (cos (- x 2)))
 (solution (cos (- x 2)) (neg (* (sin (- x 2)) (- 1 0))))
+
+; power rule with the exponent decrement computed by Rust (sub_i64)
+(diff (pow x 3))
+(solution (pow x 3) (* (* 3 (pow x 2)) 1))
+
+; power rule composed with the chain rule, and a negative exponent
+(diff (pow (+ x a) -2))
+(solution (pow (+ x a) -2) (* (* -2 (pow (+ x a) -3)) (+ 1 0)))
+
+; integer literal as its own diff root, no declaration needed
+(diff 7)
+(solution 7 0)
 
 ; ---------------- test code ----------------
 ; MISTAKE = (result U solution) \ (result /\ solution), per diff root.

@@ -4,19 +4,21 @@
 ;
 ; Input facts (supplied in a separate file, concatenated before running):
 ;   (dvar x)        the variable of differentiation (exactly one)
-;   (const c)       every other leaf symbol appearing in expressions
-;                   (numeric literals, parameters, other variables)
+;   (const c)       every non-integer leaf symbol other than the dvar
+;                   (named parameters, other variables). Integer literals
+;                   need no declaration: the grounded phase below detects
+;                   them by parsing with Rust's i64 parser.
 ;   (diff EXPR)     an expression to differentiate (any number of these)
 ;
 ; Output facts:
 ;   (result EXPR D) where D = dEXPR/dx, unsimplified
 ;
 ; Supported operators:
-;   binary:  (+ u v) (- u v) (* u v) (/ u v)
+;   binary:  (+ u v) (- u v) (* u v) (/ u v) (pow u n)  [n an i64 literal]
 ;   unary:   (neg u) (sin u) (cos u) (exp u) (ln u)
 ;
-; Architecture (two reflective phases; priorities order them by shortlex
-; on the exec tag: (0 _) < (a0 _) < (az _) < (b0 _) < (bz _) < (zz _)):
+; Architecture (priorities order the phases by shortlex on the exec tag:
+; (0 _) < (a0 _) < (az _) < (b0 _) < (c0 _) < (cz _) < (zz _)):
 ;
 ;   Setup    (0 _)   base derivative facts (d x 1), (d c 0); seed (todo Z EXPR).
 ;   Phase A  (a_ _)  top-down decomposition. A self-recreating driver walks
@@ -24,7 +26,13 @@
 ;                    data below, producing (todo (S l) child) and (sub E)
 ;                    for every subterm E, plus one (level l) fact per depth.
 ;                    It stops when a level produces no todo facts.
-;   Phase B  (b_ _)  bottom-up combination. The driver runs one full sweep
+;   Grounded (b0 _)  integer arithmetic via the pure sink (Rust functions).
+;                    One exec writes (d n 0) for every integer leaf, one
+;                    writes (expm1 n m) with m = n - 1 for every (pow u n)
+;                    exponent. A failed parse (symbolic exponent, compound
+;                    subterm) is skipped per match by the pure sink, so
+;                    these execs never crash on non-integer input.
+;   Phase B  (c_ _)  bottom-up combination. The driver runs one full sweep
 ;                    of the brule data per (level l) fact. Each sweep joins
 ;                    child derivatives (d u du) into parent derivatives, so
 ;                    after k sweeps all subterms of height <= k are done;
@@ -60,6 +68,10 @@
                  (, (todo (S $l) $u) (sub (exp $u))))
 ((arule ln $l)   (, (todo $l (ln $u)))
                  (, (todo (S $l) $u) (sub (ln $u))))
+; pow decomposes only its base: the exponent is an integer literal, not a
+; subexpression to differentiate.
+((arule pow $l)  (, (todo $l (pow $u $n)))
+                 (, (todo (S $l) $u) (sub (pow $u $n))))
 
 ; Phase A driver: while any todo exists at level $l, instantiate every
 ; arule at $l (tag (a0 ($l $k)) outranks the next driver (az (S $l))),
@@ -71,6 +83,25 @@
   (, (exec (a0 ($l $k)) $ap $at)
      (exec (az (S $l)) $p $t)
      (level $l)))
+
+; ---------------------------------------------------------------------
+; Grounded integer arithmetic (pure sink, Rust i64 functions)
+; ---------------------------------------------------------------------
+; Fires once, after phase A has recorded every todo/sub fact. Each match
+; whose leaf fails to parse as an i64 is skipped by the pure sink
+; (kernel/src/sinks.rs handles the EvalError by dropping that match).
+
+; (d n 0) for every integer leaf n: n - n evaluates iff n parses.
+(exec (b0 int)
+  (, (todo $l $e))
+  (O (pure (d $e $z) $z
+           (i64_to_string (sub_i64 (i64_from_string $e) (i64_from_string $e))))))
+
+; (expm1 n m) with m = n - 1 for every pow exponent n.
+(exec (b0 pow)
+  (, (sub (pow $u $n)))
+  (O (pure (expm1 $n $m) $m
+           (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
 
 ; ---------------------------------------------------------------------
 ; Phase B: combination rules, stored as data (level-free)
@@ -93,14 +124,19 @@
               (, (d (exp $u) (* (exp $u) $du))))
 ((brule ln)   (, (sub (ln $u)) (d $u $du))
               (, (d (ln $u) (/ $du $u))))
+; power rule: d(u^n) = n * u^(n-1) * du, with n-1 taken from the grounded
+; (expm1 n m) fact; a pow with a non-integer exponent has no expm1 fact
+; and produces no derivative.
+((brule pow)  (, (sub (pow $u $n)) (expm1 $n $m) (d $u $du))
+              (, (d (pow $u $n) (* (* $n (pow $u $m)) $du))))
 
 ; Phase B driver: one full sweep of all brules per recorded level.
-(exec (bz Z)
-  (, (exec (bz $l) $p $t)
+(exec (cz Z)
+  (, (exec (cz $l) $p $t)
      (level $l)
      ((brule $k) $bp $bt))
-  (, (exec (b0 ($l $k)) $bp $bt)
-     (exec (bz (S $l)) $p $t)))
+  (, (exec (c0 ($l $k)) $bp $bt)
+     (exec (cz (S $l)) $p $t)))
 
 ; ---------------------------------------------------------------------
 ; Collect

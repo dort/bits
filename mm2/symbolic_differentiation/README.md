@@ -1,8 +1,10 @@
 # Symbolic differentiation in MM2
 
 Computes exact derivatives of expression trees by forward rewriting in the
-MORK space. No Rust extensions, no sources/sinks in the engine itself (the
-test file uses the `+`/`-` sinks for set difference).
+MORK space. Integer handling is grounded: integer leaves are recognized and
+the power rule's exponent decrement is computed by Rust i64 functions via
+the `pure` sink (`kernel/src/pure.rs`), not by Peano encodings. The test
+file additionally uses the `+`/`-` sinks for set difference.
 
 ## Files
 
@@ -22,18 +24,24 @@ Input facts:
 
 ```
 (dvar x)          ; the variable of differentiation (exactly one)
-(const 2)         ; every other leaf symbol used in expressions
+(const a)         ; every non-integer leaf symbol besides the dvar
 (diff EXPR)       ; an expression to differentiate (any number)
 ```
+
+Integer literals (`2`, `-7`, ...) need no declaration: the grounded phase
+detects them by parsing with Rust's i64 parser.
 
 Output: `(result EXPR D)` with D unsimplified, e.g.
 
 ```
 (diff (sin (* x x)))
 => (result (sin (* x x)) (* (cos (* x x)) (+ (* 1 x) (* x 1))))
+(diff (pow x 3))
+=> (result (pow x 3) (* (* 3 (pow x 2)) 1))
 ```
 
-Supported operators: binary `+ - * /`, unary `neg sin cos exp ln`.
+Supported operators: binary `+ - * /` and `(pow u n)` with an i64 literal
+exponent, unary `neg sin cos exp ln`.
 
 ## How it works
 
@@ -44,6 +52,17 @@ replaces the recursion with two saturation phases over subterm facts.
 **Setup** (`(0 _)` tags). `(d $x 1)` for the diff variable, `(d $c 0)` for
 each declared constant, and `(todo Z EXPR)` seeding each diff root at
 depth level `Z`.
+
+**Grounded integer arithmetic** (`(b0 _)` tags, between the phases). Two
+one-shot execs call Rust i64 functions through the `pure` sink. One writes
+`(d n 0)` for every integer leaf, using the call tree
+`(sub_i64 (i64_from_string $e) (i64_from_string $e))` — n − n, which
+evaluates iff `$e` parses as an i64. The other writes `(expm1 n m)` with
+m = n − 1 for every `(pow u n)` exponent. The sink drops any match whose
+evaluation errors (`sinks.rs` catches the `EvalError` and continues), so
+compound subterms and non-integer symbols are skipped rather than
+crashing; a `pow` with a symbolic exponent therefore gets no `expm1` fact
+and silently produces no derivative.
 
 **Phase A — top-down decomposition** (`(a0 _)`, `(az _)` tags). A
 self-recreating driver (the Reachability P1 pattern) walks depth levels.
@@ -56,10 +75,12 @@ compound subterm, and one `(level l)` fact. The driver's continuation
 condition is `(todo $l $_)`: when a level generates no todos (all leaves),
 the driver writes nothing and the loop ends.
 
-**Phase B — bottom-up combination** (`(b0 _)`, `(bz _)` tags). Combination
+**Phase B — bottom-up combination** (`(c0 _)`, `(cz _)` tags). Combination
 rules are also stored as data, level-free: from `(sub (+ $u $v))` and the
 child derivatives `(d $u $du)`, `(d $v $dv)`, write
-`(d (+ $u $v) (+ $du $dv))`. One sweep of all rules only joins subterms
+`(d (+ $u $v) (+ $du $dv))`; the `pow` rule additionally joins the
+grounded `(expm1 $n $m)` fact to build
+`(d (pow $u $n) (* (* $n (pow $u $m)) $du))`. One sweep of all rules only joins subterms
 whose children already have `d` facts, so sweeps must repeat once per tree
 level — but MM2 has no negation, so "no new fact was derived" is not
 expressible as a stopping condition. Instead the driver runs exactly one
@@ -78,14 +99,16 @@ All tags here are arity-2 expressions, so order is lexicographic on the
 first element:
 
 ```
-(0 _) < (a0 _) < (az _) < (b0 _) < (bz _) < (zz _) < (zzt _)
-setup   A rules  A driver B rules  B driver collect  tests
+(0 _) < (a0 _) < (az _) < (b0 _)  < (c0 _) < (cz _) < (zz _) < (zzt _)
+setup   A rules  A driver grounded B rules  B driver collect  tests
 ```
 
-Within a phase, the spawned rule tag (`a0`/`b0`) deliberately sorts before
-the driver tag (`az`/`bz`) so each level's rule instances run before the
+Within a phase, the spawned rule tag (`a0`/`c0`) deliberately sorts before
+the driver tag (`az`/`cz`) so each level's rule instances run before the
 driver advances to the next level — the same trick the Counter Machine
-uses (`(JZ n)` sorts before `(clocked n)`).
+uses (`(JZ n)` sorts before `(clocked n)`). The grounded execs sit at
+`(b0 _)`: after every phase-A exec (so all `todo`/`sub` facts exist) and
+before every phase-B sweep (so `expm1` and integer `d` facts are ready).
 
 One trap this layout avoids: Peano numerals sort *deeper-first* under
 shortlex (an expression outranks a symbol, so `(S Z)` outranks `Z`).
@@ -97,10 +120,14 @@ the next driver", which the `a0 < az` symbol ordering provides.
 
 - Output is unsimplified: `(* 1 x)`, `(+ ... 0)` etc. remain. A
   simplification pass fits the same decompose/rebuild architecture and
-  could be chained after `(zz out)`.
-- `(pow u n)` with the power rule needs arithmetic on the exponent
-  (Peano or the `pure` numeric sinks) and is not included.
-- Leaves must be declared via `(dvar _)`/`(const _)`: MM2 patterns cannot
-  test "is a symbol" and the engine does not use negation, so undeclared
-  leaves simply never get a base `(d leaf _)` fact and the affected root
-  produces no result.
+  could be chained after `(zz out)`; the grounded phase's constant
+  detection would let it fold integer arithmetic with `sum_i64` and
+  `product_i64`.
+- `(pow u n)` requires an i64 literal exponent. A symbolic exponent gets
+  no `expm1` fact, so the subterm silently produces no derivative
+  (`d(u^v) = u^v·(v·du/u + ln(u)·dv)` would need the general rule).
+- Non-integer leaves must still be declared via `(dvar _)`/`(const _)`:
+  MM2 patterns cannot test "is a symbol" and the engine does not use
+  negation, so an undeclared symbolic leaf never gets a base `(d leaf _)`
+  fact and the affected root produces no result. Integer leaves are
+  exempt because the grounded phase identifies them by parsing.

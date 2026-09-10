@@ -127,16 +127,22 @@ rate; the overall response is the product of the two rates.
 | expression | its derivative | rule name in the code |
 |---|---|---|
 | `x` (the diff variable) | `1` | base case |
-| any declared constant `c` | `0` | base case |
+| any constant `c` (integer literal or declared symbol) | `0` | base case |
 | `(+ u v)` | `(+ du dv)` | `sum` |
 | `(- u v)` | `(- du dv)` | `dif` |
 | `(* u v)` | `(+ (* du v) (* u dv))` | `prod` |
 | `(/ u v)` | `(/ (- (* du v) (* u dv)) (* v v))` | `quot` |
+| `(pow u n)` (uⁿ, integer n) | `(* (* n (pow u m)) du)` with m = n−1 | `pow` |
 | `(neg u)` (negation, −u) | `(neg du)` | `neg` |
 | `(sin u)` | `(* (cos u) du)` | `sin` |
 | `(cos u)` | `(neg (* (sin u) du))` | `cos` |
 | `(exp u)` (eᵘ) | `(* (exp u) du)` | `exp` |
 | `(ln u)` (natural logarithm) | `(/ du u)` | `ln` |
+
+The `pow` line is the one place a rule must *compute with numbers* rather
+than only rearrange formulas: it needs the new exponent m = n−1. Part 5
+shows how that subtraction is delegated to a real Rust function instead
+of being encoded in formulas.
 
 You do not need to understand *why* the sin/cos/exp/ln lines are what
 they are (those are standard calculus facts); what matters for this
@@ -230,8 +236,10 @@ Three properties of `exec` shape the whole design of this project:
    from the space, whether or not anything matched. There is no built-in
    loop. To iterate, an `exec` must *write a new `exec` into the space* —
    programs schedule their own future steps as data.
-2. **Writes only add facts** (with a narrow exception: `O`-form sinks can
-   remove facts; the test harness uses this, the engine itself does not).
+2. **Writes only add facts** (with a narrow exception: templates written
+   in the `O` form invoke *sinks*, which can also remove facts or run
+   computations while writing; the test harness uses the removal sink,
+   and the engine uses the `pure` computation sink described in Part 5).
    The space is a set, so writing a fact that already exists changes
    nothing. Computation is *saturation*: facts accumulate until no rule
    produces anything new.
@@ -246,13 +254,13 @@ When several `exec` facts are present, MORK repeatedly picks the one
 whose TAG comes first in a "shortlex" ordering: an expression tag beats a
 plain symbol tag; between expressions, fewer elements beats more; at
 equal length, elements are compared left to right, and symbols compare by
-length then alphabetically (so `0 < a0 < az < b0 < bz < zz` for the tags
-this project uses — shorter first, then dictionary order).
+length then alphabetically (so `0 < a0 < az < b0 < c0 < cz < zz` for the
+tags this project uses — shorter first, then dictionary order).
 
 Priority is therefore the *only* sequencing mechanism in MM2. This
 project encodes its entire phase structure — setup, then decomposition,
-then combination, then collection, then tests — purely in the spelling of
-its tags.
+then grounded arithmetic, then combination, then collection, then tests —
+purely in the spelling of its tags.
 
 ### One more instrument: rules as data
 
@@ -287,11 +295,15 @@ stack would manage the order of work. MM2 has no functions and no call
 stack — only pattern matching over the space and the ability to add
 facts.
 
-The engine replaces the recursion with two sweeps over explicit facts:
+The engine replaces the recursion with two sweeps over explicit facts,
+with a grounded-arithmetic step between them:
 
 - **Phase A** walks the tree *top-down*, recording every subterm as a
   fact. This is the "unwinding" half of the recursion: it discovers all
   the work.
+- **The grounded phase** calls real Rust integer functions to produce
+  the facts that need actual arithmetic: a zero derivative for every
+  integer leaf, and the decremented exponent for every `pow`.
 - **Phase B** walks *bottom-up*, repeatedly applying the rule table to
   attach a derivative fact to every recorded subterm, starting from the
   leaves. This is the "returning" half: it assembles the answers.
@@ -300,18 +312,20 @@ Everything below follows one real run. Input:
 
 ```
 (dvar x)                  ; differentiate with respect to x
-(const 2)                 ; 2 is a constant leaf
 (diff (* x (+ x 2)))      ; the expression to differentiate
 ```
 
+Note there is no declaration for the leaf `2` — the grounded phase will
+recognize it as an integer on its own. A non-integer parameter (like `a`
+in `(+ x a)`) would still need a `(const a)` declaration.
+
 ### Setup (tags `(0 dvar)`, `(0 const)`, `(0 root)`)
 
-Three `exec`s fire first (their tags start with `0`, which sorts before
-everything else) and write the base facts:
+The setup `exec`s fire first (their tags start with `0`, which sorts
+before everything else) and write the base facts:
 
 ```
 (d x 1)                   ; base case: derivative of the variable is 1
-(d 2 0)                   ; base case: derivative of a constant is 0
 (todo Z (* x (+ x 2)))    ; "the root expression is at depth zero"
 ```
 
@@ -367,9 +381,67 @@ driver only continues by re-creating itself, and it only re-creates
 itself while its pattern still matches. When the work runs out, the loop
 simply fails to perpetuate itself.
 
-Phase A has now left in the space: a `(sub E)` fact for every compound
-subterm, and `(level ...)` facts counting the depths — here three of
-them: `Z`, `(S Z)`, `(S (S Z))`. Both are consumed by Phase B.
+Phase A has now left in the space: a `(todo ...)` fact for every subterm
+including leaves, a `(sub E)` fact for every compound subterm, and
+`(level ...)` facts counting the depths — here three of them: `Z`,
+`(S Z)`, `(S (S Z))`.
+
+### The grounded phase: real Rust arithmetic (tags `(b0 int)`, `(b0 pow)`)
+
+So far every "number" the engine has touched was just an inert symbol or
+a Peano numeral — structure to be pattern-matched, never calculated with.
+But two jobs genuinely require arithmetic on integers:
+
+1. recognizing that a leaf like `2` or `-7` is a constant (so its
+   derivative is `0`) without forcing the user to declare every literal;
+2. the power rule, which must turn the exponent n into n−1.
+
+MM2 delegates such jobs to **grounded functions**: real Rust functions,
+compiled into MORK (`kernel/src/pure.rs`), that an `exec` can call
+through the `pure` sink. "Grounded" is the standard term for the point
+where a symbolic system touches actual computation — the symbol `3` stops
+being three characters of structure and becomes the machine integer 3.
+The sink's template form is
+
+```
+(O (pure TEMPLATE VAR CALLTREE))
+```
+
+meaning: for each pattern match, evaluate CALLTREE (a nest of Rust
+function calls with the matched variables substituted in), bind the
+result to VAR, and write TEMPLATE into the space. The engine's integer
+exec is:
+
+```
+(exec (b0 int)
+  (, (todo $l $e))
+  (O (pure (d $e $z) $z
+           (i64_to_string (sub_i64 (i64_from_string $e) (i64_from_string $e))))))
+```
+
+Read the call tree inside-out: parse the leaf `$e` as a 64-bit integer,
+subtract it from itself, print the result. For `$e = 2` that computes
+2 − 2 and writes `(d 2 0)`. The subtraction is not there for its result —
+it is there for its *precondition*: `i64_from_string` **fails** on
+anything that is not an integer literal (the symbol `x`, a compound
+expression), and the sink's contract on failure is to silently skip that
+one match and write nothing (`kernel/src/sinks.rs` catches the error and
+continues). So "e − e" acts as an integer-detector with the Rust parser
+as the judge, and the only leaves that get a zero derivative are the
+ones that really are integers. In our run this writes exactly one fact:
+
+```
+(d 2 0)                   ; from Rust: 2 parses, 2 - 2 = 0
+```
+
+A second exec of the same shape, `(b0 pow)`, computes the power rule's
+exponent: for every `(sub (pow $u $n))` it evaluates n − 1 with
+`sub_i64` and writes `(expm1 $n $m)` — for example `(expm1 3 2)`. Our
+walkthrough expression has no `pow`, so it writes nothing here.
+
+Both execs fire exactly once, and their tag `(b0 _)` places them after
+every Phase A exec (all `todo`/`sub` facts exist) and before every
+Phase B sweep (the facts are ready when the rules need them).
 
 ### Phase B: bottom-up combination
 
@@ -396,8 +468,8 @@ not enough, because a rule can only fire when its children's derivatives
 already exist. Watch the example:
 
 - **Sweep 1:** the `prod` rule needs `(d (+ x 2) $dv)`, which does not
-  exist yet, so it fails. The `sum` rule finds `(d x 1)` and `(d 2 0)`
-  and writes `(d (+ x 2) (+ 1 0))`.
+  exist yet, so it fails. The `sum` rule finds `(d x 1)` from setup and
+  `(d 2 0)` from the grounded phase, and writes `(d (+ x 2) (+ 1 0))`.
 - **Sweep 2:** now the `prod` rule finds `(d x 1)` and
   `(d (+ x 2) (+ 1 0))` and writes
   `(d (* x (+ x 2)) (+ (* 1 (+ x 2)) (* x (+ 1 0))))`.
@@ -416,7 +488,7 @@ until a sweep adds nothing new" — cannot be expressed, because no pattern
 can detect the *absence* of change. The engine instead runs a number of
 sweeps that is *known in advance to be enough*:
 
-> Phase B's driver (tag `(bz Z)`) runs **exactly one sweep per
+> Phase B's driver (tag `(cz Z)`) runs **exactly one sweep per
 > `(level l)` fact** that Phase A recorded.
 
 Phase A recorded one level per depth of the tree, so the count is
@@ -430,7 +502,7 @@ match fails and the driver does not re-create itself.
 
 Like Phase A's driver, it launches each sweep by reflectively
 instantiating the stored `brule` facts into live `exec`s tagged
-`(b0 ($l $k))`.
+`(c0 ($l $k))`.
 
 ### Collection (tag `(zz out)`)
 
@@ -471,7 +543,7 @@ loop, its continuation condition is operator-independent ("any todo at
 this depth" / "a level fact for this sweep"), and it re-instantiates
 *all* stored rules every round, whether or not they will match.
 
-### Why the tags are spelled `a0`, `az`, `b0`, `bz`
+### Why the tags are spelled `a0`, `az`, `b0`, `c0`, `cz`
 
 Within one Phase A round, the freshly spawned rule instances (tagged
 `(a0 ...)`) must run *before* the driver's next copy (tagged
@@ -480,8 +552,12 @@ depth-(l+1) todos are created by the depth-l rules. If the driver ran
 first it would find nothing and the loop would die after one round. The
 tag spelling forces the right order: `a0` and `az` are both 2-letter
 symbols, and at equal length symbols compare alphabetically, so
-`a0 < az` and the rules win. The same holds for `b0 < bz` in Phase B,
-and the leading letters sequence the phases: `0... < a... < b... < zz`.
+`a0 < az` and the rules win. The same holds for `c0 < cz` in Phase B,
+and the leading letters sequence the phases:
+`0... < a... < b0 < c... < zz`. The grounded execs hold the `b0` slot
+between the phases; when they were added, Phase B's tags moved from
+`b0`/`bz` to `c0`/`cz` because no 2-letter symbol sorts between `az`
+and `b0`.
 
 ### Why the round counter never appears where it would need to sort
 
@@ -490,11 +566,11 @@ sweep's Peano number and let priority order the sweeps. This fails
 because of how shortlex treats Peano numerals: an expression outranks a
 symbol, so `(S Z)` outranks `Z`, and in general **deeper Peano numerals
 sort first** — priority would run the sweeps in *reverse*. The engine
-avoids the trap: the level numeral inside a tag like `(b0 ((S Z) sum))`
+avoids the trap: the level numeral inside a tag like `(c0 ((S Z) sum))`
 serves only to make the tag *distinct* (the space is a set — two sweeps
 with identical tags would collapse into one), never to order rounds.
 Ordering comes solely from the driver spawning one sweep at a time and
-the `b0 < bz` letter ordering within each round.
+the `c0 < cz` letter ordering within each round.
 
 ---
 
@@ -512,18 +588,23 @@ just not required for the differentiation itself to be correct.
 
 Two other limitations, and their reasons:
 
-- **Every leaf must be declared** via `(dvar x)` or `(const c)`. An MM2
-  pattern cannot ask "is this a bare symbol?" (a variable like `$u`
-  matches leaves and compound expressions alike), and without negation
-  the engine cannot detect "leaf with no base fact" to warn about it. An
-  undeclared leaf simply never receives a `(d leaf _)` fact, so every
-  subterm containing it silently stays underivable and the affected
-  `(diff ...)` produces no `(result ...)`. If a result is missing, check
-  the declarations first.
-- **No power rule** `(pow u n)`. Its derivative `n·u^(n−1)·du` needs
-  arithmetic on the exponent (computing n−1), which means either Peano
-  arithmetic rules or MORK's `pure` numeric sinks — both doable, neither
-  free, so it is left out of this version.
+- **Every non-integer leaf must be declared** via `(dvar x)` or
+  `(const c)`. An MM2 pattern cannot ask "is this a bare symbol?" (a
+  variable like `$u` matches leaves and compound expressions alike), and
+  without negation the engine cannot detect "leaf with no base fact" to
+  warn about it. An undeclared symbolic leaf simply never receives a
+  `(d leaf _)` fact, so every subterm containing it silently stays
+  underivable and the affected `(diff ...)` produces no `(result ...)`.
+  If a result is missing, check the declarations first. Integer leaves
+  are exempt: the grounded phase identifies them with the Rust i64
+  parser, which *can* tell a leaf from a compound and an integer from a
+  name — the judgment MM2 patterns cannot make is delegated to Rust.
+- **The power rule requires an integer literal exponent.** `(pow u 3)`
+  works; `(pow u a)` gets no `(expm1 a _)` fact (the Rust parse of `a`
+  fails and the pure sink skips the match), so that subterm silently
+  produces no derivative. The fully general rule for `u` raised to a
+  *varying* power `v` is `d(u^v) = u^v·(v·du/u + ln(u)·dv)` and could be
+  added as one more `brule`.
 
 ---
 
@@ -571,11 +652,10 @@ From this folder (the `mork` binary must be built; see the wiki's
 ./run.sh yourfile.mm2     # your own input
 ```
 
-A minimal input file:
+A minimal input file (the integer `3` needs no declaration):
 
 ```
 (dvar x)
-(const 3)
 (diff (* 3 (sin x)))
 ```
 
@@ -584,11 +664,17 @@ Things worth trying to deepen the picture:
 - Add a new expression to `example.mm2` and predict, before running, how
   many `(level ...)` facts Phase A will record and which sweep of
   Phase B will produce the root's `d` fact.
-- Delete a `(const ...)` declaration and watch the corresponding
-  `result` silently disappear (Part 7 explains why).
+- Differentiate an expression containing an undeclared *symbolic* leaf
+  (say `(diff (* b x))` with no `(const b)`) and watch its `result`
+  silently fail to appear (Part 7 explains why); then try `(pow x b)`
+  and see the same silence from the failed Rust parse of `b`.
 - Add a new unary operator: one `arule` line, one `brule` line — for
-  example `sqrt` with derivative `(/ du (* 2 (sqrt u)))`, plus
-  `(const 2)` in the input.
+  example `sqrt` with derivative `(/ du (* 2 (sqrt u)))`; the `2` in
+  the output needs no declaration.
+- Extend the grounded phase: a `pure` exec calling `sum_i64` or
+  `product_i64` on the pieces of a `(+ n m)` or `(* n m)` subterm whose
+  arguments both parse as integers would fold constants in the input,
+  the first step toward a simplifier.
 - Run with `--steps N` (`mork run file --steps N`) for increasing N and
   diff the outputs to watch the space evolve one `exec` at a time; the
   script in `bits/bash_diff_util/mork_step_diff.sh` automates this.
