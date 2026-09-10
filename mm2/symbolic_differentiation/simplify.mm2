@@ -141,11 +141,20 @@
 ; rule deletes the candidate first and 0 wins in both implementations.
 ((rrule zzg mulnL) (, (sraw $e (* (neg 1) $x))) (O (- (sraw $e (* (neg 1) $x))) (+ (s $e (neg $x)))))
 ((rrule zzg mulnR) (, (sraw $e (* $x (neg 1)))) (O (- (sraw $e (* $x (neg 1)))) (+ (s $e (neg $x)))))
+; division by zero is UNDEFINED, and UNDEFINED is contagious: any node
+; with an UNDEFINED child is UNDEFINED (the variable-head patterns $f
+; cover every operator). These four rules have 4-character names, and
+; shorter symbols sort first, so they take precedence over every
+; 5-character rule below: (/ 0 0) is UNDEFINED (not div0L's 0) and
+; (* 0 UNDEFINED) is UNDEFINED (not mul0L's 0).
+((rrule zzg divZ) (, (sraw $e (/ $x 0))) (O (- (sraw $e (/ $x 0))) (+ (s $e UNDEFINED))))
+((rrule zzg undL) (, (sraw $e ($f UNDEFINED $x))) (O (- (sraw $e ($f UNDEFINED $x))) (+ (s $e UNDEFINED))))
+((rrule zzg undR) (, (sraw $e ($f $x UNDEFINED))) (O (- (sraw $e ($f $x UNDEFINED))) (+ (s $e UNDEFINED))))
+((rrule zzg undU) (, (sraw $e ($f UNDEFINED))) (O (- (sraw $e ($f UNDEFINED))) (+ (s $e UNDEFINED))))
 ((rrule zzg div0L) (, (sraw $e (/ 0 $x))) (O (- (sraw $e (/ 0 $x))) (+ (s $e 0))))
 ((rrule zzg div1R) (, (sraw $e (/ $x 1))) (O (- (sraw $e (/ $x 1))) (+ (s $e $x))))
-; same-operand division (equality by unification, as in difxx). On the
-; undefined overlap (/ 0 0) the div0L name sorts first, so 0 wins in
-; both implementations.
+; same-operand division (equality by unification, as in difxx); divZ
+; above already owns (/ 0 0)
 ((rrule zzg divxx) (, (sraw $e (/ $x $x))) (O (- (sraw $e (/ $x $x))) (+ (s $e 1))))
 ((rrule zzg pow1)  (, (sraw $e (pow $x 1))) (O (- (sraw $e (pow $x 1))) (+ (s $e $x))))
 ((rrule zzg pow0)  (, (sraw $e (pow $x 0))) (O (- (sraw $e (pow $x 0))) (+ (s $e 1))))

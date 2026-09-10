@@ -698,10 +698,14 @@ Things worth trying to deepen the picture:
   (`(- $x $x) -> 0`, `(/ $x $x) -> 1`, where repeating `$x` in the
   pattern makes the rule fire only when both operands are the *same*
   expression — unification gives equality tests for free), the `negn`
-  rule (`(neg (neg $x)) -> $x`), and the `mulnL`/`mulnR` rules
-  (`(* $x (neg 1)) -> (neg $x)`) — including how the `muln` and `divxx`
-  names are chosen to sort after their `0`/`1` siblings so overlaps
-  like `(/ 0 0)` resolve the same way in both implementations.
+  rule (`(neg (neg $x)) -> $x`), the `mulnL`/`mulnR` rules
+  (`(* $x (neg 1)) -> (neg $x)`, named to sort after `mul0*`/`mul1*` so
+  overlaps resolve the same way in both implementations), and the
+  `divZ`/`und*` rules (`(/ $x 0) -> UNDEFINED` plus its contagion,
+  whose 4-character names sort before every 5-character rule so
+  division by zero outranks everything, and whose `($f UNDEFINED $x)`
+  patterns put a variable in operator position to cover all operators
+  at once).
 - Run the same input through `simplify.mm2` and through the fused
   engine and diff the `result` lines — they should be identical on
   clean inputs, and Part 7 explains the one case where they may differ.

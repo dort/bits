@@ -41,6 +41,15 @@
 (diff (ln (exp x)))
 (solution (ln (exp x)) 1)
 
+; division by zero: the quotient rule's denominator (* 0 0) -> 0 makes
+; the derivative (/ 0 0), which divZ turns into UNDEFINED
+(diff (/ x 0))
+(solution (/ x 0) UNDEFINED)
+
+; UNDEFINED is contagious: (+ 1 UNDEFINED) -> UNDEFINED via undR
+(diff (+ x (/ x 0)))
+(solution (+ x (/ x 0)) UNDEFINED)
+
 (diff (* (exp (neg x)) (ln x)))
 (solution (* (exp (neg x)) (ln x))
           (+ (* (neg (exp (neg x))) (ln x)) (* (exp (neg x)) (/ 1 x))))

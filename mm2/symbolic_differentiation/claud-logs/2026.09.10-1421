@@ -1,0 +1,18 @@
+ Done. Division by zero now produces UNDEFINED in both implementations, with full upward propagation, verified end-to-end:
+
+  The rules (mirrored in simplify.mm2 as zzg rules and diff_engine_fused.mm2 as p3 rules):
+  - divZ: (/ $x 0) → UNDEFINED — covering (/ 0 0), which previously fell to div0L's 0.
+  - undL/undR/undU: UNDEFINED is contagious — any node with an UNDEFINED child becomes UNDEFINED. Rather than 15 per-operator rules, these use a variable in operator position (($f UNDEFINED $x) and mirrors), which I
+    probed first since it was unproven in MORK: it unifies correctly, so three rules cover all ten operators.
+  
+  Precedence, by construction: the four new rule names are 4 characters, and shorter symbols sort first, so they outrank every 5-character special rule. That ordering is what makes the semantics right: (/ 0 0) hits
+  divZ before div0L can answer 0, and (* 0 UNDEFINED) hits undR before mul0L can swallow the error back to 0 — without the propagation rules winning first, the zero-annihilation rule would silently discard
+  undefinedness in nested expressions.
+
+  Verification:
+  - Two new test cases: (diff (/ x 0)) → UNDEFINED (the quotient rule's denominator (* 0 0) → 0 makes the derivative (/ 0 0)), and (diff (+ x (/ x 0))) → UNDEFINED (contagion through the enclosing sum).
+  - Both simplifying configurations pass 14/14 with zero MISTAKE facts; the plain suite stays 9/9; both implementations remain byte-identical on example.mm2.
+  - The earlier probe input now returns (result (/ x 0) UNDEFINED) from both engines, replacing the 0 you objected to.
+
+  Docs updated in both READMEs (the identity list now describes the error-value semantics and the name-length precedence lever; the augmented README's exercise bullet cites divZ/und* as worked precedents), and the
+  memory file records the two newly verified techniques: variable-head patterns, and rule-name length as a precedence mechanism.

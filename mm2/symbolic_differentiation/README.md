@@ -133,7 +133,12 @@ Both eliminate the redundancy the derivative rules generate —
 `(+ 0 e) -> e`, `(* 1 e) -> e`, `(* 0 e) -> 0`, `(* e (neg 1)) -> (neg e)`,
 `(- e e) -> 0`, `(/ e 1) -> e`, `(/ e e) -> 1`, `(pow e 1) -> e`,
 `(pow e 0) -> 1`, `(neg 0) -> 0`, `(neg (neg e)) -> e`, and integer
-`+ - *` folded by Rust — turning e.g. the derivative of `(+ (* x x) (* 2 x))`
+`+ - *` folded by Rust. Division by zero is not an identity but an
+error value: `(/ e 0) -> UNDEFINED` — `(/ 0 0)` included — and
+`UNDEFINED` is contagious, collapsing every enclosing expression (three
+variable-head rules, `($f UNDEFINED $x)` and mirrors, cover all
+operators; their 4-character names sort before every other special rule
+so nothing like `(* 0 e) -> 0` can swallow an `UNDEFINED` first) — turning e.g. the derivative of `(+ (* x x) (* 2 x))`
 from `(+ (+ (* 1 x) (* x 1)) (+ (* 0 x) (* 2 1)))` into `(+ (+ x x) 2)`.
 Both must pass `test_simplify.mm2` with identical answers, and they
 produce byte-identical result sets on `example.mm2`.
