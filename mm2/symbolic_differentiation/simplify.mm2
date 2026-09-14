@@ -1,75 +1,76 @@
 ; =====================================================================
-; Post-process simplifier for the symbolic differentiation engine
+; Post-process simplifier — clean (typed-AST) representation
 ; =====================================================================
 ;
-; Opt-in layer: concatenate AFTER diff_engine.mm2. It rewrites every
-; (result EXPR D) fact in place, replacing D with its simplified form:
-;   (+ 0 e) -> e   (+ e 0) -> e   (- e 0) -> e
-;   (* 1 e) -> e   (* e 1) -> e   (* 0 e) -> 0   (* e 0) -> 0
-;   (/ 0 e) -> 0   (/ e 1) -> e
-;   (pow e 1) -> e (pow e 0) -> 1 (neg 0) -> 0
-;   integer-integer + - * folded by Rust via the pure sink
+; Opt-in layer: concatenate AFTER diff_engine.mm2. Rewrites every
+; (result EXPR D) in place with D simplified:
+;   (add (num 0) e) -> e            (sub e (num 0)) -> e
+;   (sub e e) -> (num 0)            (mul (num 0) e) -> (num 0)
+;   (mul (num 1) e) -> e            (mul (num -1) e) -> (neg e)
+;   (div (num 0) e) -> (num 0)      (div e (num 1)) -> e
+;   (div e e) -> (num 1)            (div e (num 0)) -> UNDEFINED
+;   (pow e (num 1)) -> e            (pow e (num 0)) -> (num 1)
+;   (neg (num n)) -> (num -n)       (neg (neg e)) -> e
+;   integer add/sub/mul folded by Rust; UNDEFINED is contagious.
 ;
-; Architecture: a structural sibling of the differentiator, run after
-; its collection step. Every tag is a 3-character zz? symbol, so the
-; whole layer sorts after the engine's 2-character tags and before the
-; test tags (zzt _):
+; This is a CLEAN rule set in the Prolog sense: no default rule, no
+; deletion-ordered else-branches, no classify-by-parse-failure. Every
+; simplified value is classified once by pattern into reified dispatch
+; facts, and every constructor's rules enumerate a total case analysis
+; over those facts; overlapping rules always agree, so the whole layer
+; is monotonic saturation.
 ;
-;   (zza _)  seed each result's derivative into (stodo Z D); base
-;            (s leaf leaf) facts for the dvar and declared constants.
-;   (zzb/zzc _)  decompose D top-down (drule data + driver), recording
-;            (ssub E) per compound subterm and (slevel l) per depth.
-;   (zzd _)  grounded base case: (s n n) for every integer leaf, using
-;            an i64 parse round-trip as the integer detector.
-;   (zze-zzh / zzi _)  rebuild bottom-up, one sweep per (slevel l).
-;            (s E S) means "E simplifies to S". Each sweep runs, in tag
-;            order: assembly (zze) writes the candidate (sraw E (op su sv))
-;            from simplified children; folds (zzf) compute (fold R V) for
-;            integer arithmetic; special cases (zzg) delete a matching
-;            sraw and write the reduced (s E S); the default (zzh)
-;            converts every surviving sraw verbatim. The zzg-then-zzh
-;            sequencing implements the else-branch MM2 cannot express
-;            with negation: whatever the special cases deleted, the
-;            default never sees. Parents match only (s _ _), never
-;            (sraw _ _), so partially reduced forms cannot leak upward.
-;   (zzo _)  replace each (result E D) with (result E S) via a staging
-;            fact, avoiding a delete/re-add race when D = S.
+; Dispatch facts (computed each sweep, phase zze, chained by rule name):
+;   (val V)        V occurs as a simplified value
+;   (ctor V c)     V's constructor tag (head symbol; variable-head
+;                  pattern covers all binary constructors at once)
+;   (isexpr V)     ctor is a compound or symbolic leaf (not num)
+;   (def V)        V is any well-formed value (num or isexpr) — i.e.
+;                  not UNDEFINED
+;   (zn V NZ|Z)    (on V NO|O)   (mn V NM|M)
+;                  V = (num n): n nonzero / one / minus-one tests,
+;                  grounded in Rust via the pure sink's ifnz
+;   (vne A B)      A and B are structurally different values, via the
+;                  != source — the complement of unification, used by
+;                  the sub/div build rules whose identity siblings
+;                  (sub e e), (div e e) own the equal case
 ;
-; The rebuild rule store bakes the instance tag into the data:
-; ((rrule TAG NAME) PATTERNS TEMPLATES), and one driver instantiates all
-; four groups per sweep.
+; Tags (3-character zz?, after the engine's 2-character tags, before
+; the (zzt _) tests):
+;   (zza _) seed   (zzb/zzc _) decompose   (zzd _) leaf s-facts
+;   (zze _) classify   (zzf _) construct   (zzi _) sweep driver
+;   (zzo _) replace results
+; (s E S) means "E simplifies to S"; one sweep per (slevel l) fact.
 
 ; ---------------------------------------------------------------------
-; Seed and symbolic-leaf base cases
+; Seed
 ; ---------------------------------------------------------------------
-(exec (zza dvar) (, (dvar $x)) (, (s $x $x)))
-(exec (zza const) (, (const $c)) (, (s $c $c)))
 (exec (zza seed) (, (result $e $de)) (, (stodo Z $de)))
 
 ; ---------------------------------------------------------------------
-; Decomposition rules (both children, pow included: its integer
-; exponent needs an (s n n) fact for the rebuild)
+; Decomposition (pow's exponent decomposes too: its (num n) needs
+; classification for the pow dispatch)
 ; ---------------------------------------------------------------------
-((drule sum $l)  (, (stodo $l (+ $u $v)))
-                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (+ $u $v))))
-((drule dif $l)  (, (stodo $l (- $u $v)))
-                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (- $u $v))))
-((drule prod $l) (, (stodo $l (* $u $v)))
-                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (* $u $v))))
-((drule quot $l) (, (stodo $l (/ $u $v)))
-                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (/ $u $v))))
-((drule pow $l)  (, (stodo $l (pow $u $n)))
-                 (, (stodo (S $l) $u) (stodo (S $l) $n) (ssub (pow $u $n))))
-((drule neg $l)  (, (stodo $l (neg $u)))
-                 (, (stodo (S $l) $u) (ssub (neg $u))))
-((drule sin $l)  (, (stodo $l (sin $u)))
-                 (, (stodo (S $l) $u) (ssub (sin $u))))
-((drule cos $l)  (, (stodo $l (cos $u)))
-                 (, (stodo (S $l) $u) (ssub (cos $u))))
-((drule exp $l)  (, (stodo $l (exp $u)))
-                 (, (stodo (S $l) $u) (ssub (exp $u))))
-((drule ln $l)   (, (stodo $l (ln $u)))
-                 (, (stodo (S $l) $u) (ssub (ln $u))))
+((drule add $l) (, (stodo $l (add $u $v)))
+                (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (add $u $v))))
+((drule sub $l) (, (stodo $l (sub $u $v)))
+                (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (sub $u $v))))
+((drule mul $l) (, (stodo $l (mul $u $v)))
+                (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (mul $u $v))))
+((drule div $l) (, (stodo $l (div $u $v)))
+                (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (div $u $v))))
+((drule pow $l) (, (stodo $l (pow $u (num $n))))
+                (, (stodo (S $l) $u) (stodo (S $l) (num $n)) (ssub (pow $u (num $n)))))
+((drule neg $l) (, (stodo $l (neg $u)))
+                (, (stodo (S $l) $u) (ssub (neg $u))))
+((drule sin $l) (, (stodo $l (sin $u)))
+                (, (stodo (S $l) $u) (ssub (sin $u))))
+((drule cos $l) (, (stodo $l (cos $u)))
+                (, (stodo (S $l) $u) (ssub (cos $u))))
+((drule exp $l) (, (stodo $l (exp $u)))
+                (, (stodo (S $l) $u) (ssub (exp $u))))
+((drule ln $l)  (, (stodo $l (ln $u)))
+                (, (stodo (S $l) $u) (ssub (ln $u))))
 
 (exec (zzc Z)
   (, (exec (zzc $l) $p $t)
@@ -80,94 +81,196 @@
      (slevel $l)))
 
 ; ---------------------------------------------------------------------
-; Grounded base case: integer leaves simplify to themselves. The i64
-; parse round-trip is the detector; a non-integer or compound $e fails
-; the parse and the pure sink skips that match.
+; Leaf base cases: dispatch by constructor, one-shot each
 ; ---------------------------------------------------------------------
-(exec (zzd int)
-  (, (stodo $l $e))
-  (O (pure (s $e $r) $r (i64_to_string (i64_from_string $e)))))
+(exec (zzd cst) (, (stodo $l (cst $c))) (, (s (cst $c) (cst $c))))
+(exec (zzd num) (, (stodo $l (num $n))) (, (s (num $n) (num $n))))
+(exec (zzd var) (, (stodo $l (var $x))) (, (s (var $x) (var $x))))
 
 ; ---------------------------------------------------------------------
-; Rebuild rule store
+; Classification rule store (phase zze). Within a sweep the instances
+; run in rule-name order, so the dependency chain aval -> c* -> iex ->
+; jdf* -> nz* -> zne resolves inside one sweep.
 ; ---------------------------------------------------------------------
-; zze: assemble the candidate from simplified children
-((rrule zze sum)  (, (ssub (+ $u $v)) (s $u $su) (s $v $sv))
-                  (, (sraw (+ $u $v) (+ $su $sv))))
-((rrule zze dif)  (, (ssub (- $u $v)) (s $u $su) (s $v $sv))
-                  (, (sraw (- $u $v) (- $su $sv))))
-((rrule zze prod) (, (ssub (* $u $v)) (s $u $su) (s $v $sv))
-                  (, (sraw (* $u $v) (* $su $sv))))
-((rrule zze quot) (, (ssub (/ $u $v)) (s $u $su) (s $v $sv))
-                  (, (sraw (/ $u $v) (/ $su $sv))))
-((rrule zze pow)  (, (ssub (pow $u $n)) (s $u $su) (s $n $sn))
-                  (, (sraw (pow $u $n) (pow $su $sn))))
-((rrule zze neg)  (, (ssub (neg $u)) (s $u $su))
-                  (, (sraw (neg $u) (neg $su))))
-((rrule zze sin)  (, (ssub (sin $u)) (s $u $su))
-                  (, (sraw (sin $u) (sin $su))))
-((rrule zze cos)  (, (ssub (cos $u)) (s $u $su))
-                  (, (sraw (cos $u) (cos $su))))
-((rrule zze exp)  (, (ssub (exp $u)) (s $u $su))
-                  (, (sraw (exp $u) (exp $su))))
-((rrule zze ln)   (, (ssub (ln $u)) (s $u $su))
-                  (, (sraw (ln $u) (ln $su))))
+((rrule zze aval) (, (s $_ $v)) (, (val $v)))
 
-; zzf: integer constant folding (result only exists when both parse)
-((rrule zzf fsum) (, (sraw $e (+ $a $b)))
-                  (O (pure (fold (+ $a $b) $v) $v
-                           (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
-((rrule zzf fdif) (, (sraw $e (- $a $b)))
-                  (O (pure (fold (- $a $b) $v) $v
-                           (i64_to_string (sub_i64 (i64_from_string $a) (i64_from_string $b))))))
-((rrule zzf fmul) (, (sraw $e (* $a $b)))
-                  (O (pure (fold (* $a $b) $v) $v
-                           (i64_to_string (product_i64 (i64_from_string $a) (i64_from_string $b))))))
+((rrule zze cbin) (, (val ($f $a $b))) (, (ctor ($f $a $b) $f)))
+((rrule zze ccst) (, (val (cst $c))) (, (ctor (cst $c) cst)))
+((rrule zze ccos) (, (val (cos $u))) (, (ctor (cos $u) cos)))
+((rrule zze cexp) (, (val (exp $u))) (, (ctor (exp $u) exp)))
+((rrule zze clnn)  (, (val (ln $u)))  (, (ctor (ln $u) ln)))
+((rrule zze cneg) (, (val (neg $u))) (, (ctor (neg $u) neg)))
+((rrule zze cnum) (, (val (num $n))) (, (ctor (num $n) num)))
+((rrule zze csin) (, (val (sin $u))) (, (ctor (sin $u) sin)))
+((rrule zze cvar) (, (val (var $x))) (, (ctor (var $x) var)))
 
-; zzg: special cases — delete the candidate, write the reduced form.
-; Overlapping rules are confluent (they agree wherever they both match).
-((rrule zzg add0L) (, (sraw $e (+ 0 $x))) (O (- (sraw $e (+ 0 $x))) (+ (s $e $x))))
-((rrule zzg add0R) (, (sraw $e (+ $x 0))) (O (- (sraw $e (+ $x 0))) (+ (s $e $x))))
-((rrule zzg dif0R) (, (sraw $e (- $x 0))) (O (- (sraw $e (- $x 0))) (+ (s $e $x))))
-; same-operand cancellation: the repeated $x makes the rule fire only
-; when both operands are the same expression (equality by unification)
-((rrule zzg difxx) (, (sraw $e (- $x $x))) (O (- (sraw $e (- $x $x))) (+ (s $e 0))))
-((rrule zzg mul1L) (, (sraw $e (* 1 $x))) (O (- (sraw $e (* 1 $x))) (+ (s $e $x))))
-((rrule zzg mul1R) (, (sraw $e (* $x 1))) (O (- (sraw $e (* $x 1))) (+ (s $e $x))))
-((rrule zzg mul0L) (, (sraw $e (* 0 $x))) (O (- (sraw $e (* 0 $x))) (+ (s $e 0))))
-((rrule zzg mul0R) (, (sraw $e (* $x 0))) (O (- (sraw $e (* $x 0))) (+ (s $e 0))))
-; neg collapse: (* (neg 1) e) / (* e (neg 1)) -> (neg e). The muln names
-; sort after mul0/mul1, so on an overlap like (* 0 (neg 1)) the zero
-; rule deletes the candidate first and 0 wins in both implementations.
-((rrule zzg mulnL) (, (sraw $e (* (neg 1) $x))) (O (- (sraw $e (* (neg 1) $x))) (+ (s $e (neg $x)))))
-((rrule zzg mulnR) (, (sraw $e (* $x (neg 1)))) (O (- (sraw $e (* $x (neg 1)))) (+ (s $e (neg $x)))))
-; division by zero is UNDEFINED, and UNDEFINED is contagious: any node
-; with an UNDEFINED child is UNDEFINED (the variable-head patterns $f
-; cover every operator). These four rules have 4-character names, and
-; shorter symbols sort first, so they take precedence over every
-; 5-character rule below: (/ 0 0) is UNDEFINED (not div0L's 0) and
-; (* 0 UNDEFINED) is UNDEFINED (not mul0L's 0).
-((rrule zzg divZ) (, (sraw $e (/ $x 0))) (O (- (sraw $e (/ $x 0))) (+ (s $e UNDEFINED))))
-((rrule zzg undL) (, (sraw $e ($f UNDEFINED $x))) (O (- (sraw $e ($f UNDEFINED $x))) (+ (s $e UNDEFINED))))
-((rrule zzg undR) (, (sraw $e ($f $x UNDEFINED))) (O (- (sraw $e ($f $x UNDEFINED))) (+ (s $e UNDEFINED))))
-((rrule zzg undU) (, (sraw $e ($f UNDEFINED))) (O (- (sraw $e ($f UNDEFINED))) (+ (s $e UNDEFINED))))
-((rrule zzg div0L) (, (sraw $e (/ 0 $x))) (O (- (sraw $e (/ 0 $x))) (+ (s $e 0))))
-((rrule zzg div1R) (, (sraw $e (/ $x 1))) (O (- (sraw $e (/ $x 1))) (+ (s $e $x))))
-; same-operand division (equality by unification, as in difxx); divZ
-; above already owns (/ 0 0)
-((rrule zzg divxx) (, (sraw $e (/ $x $x))) (O (- (sraw $e (/ $x $x))) (+ (s $e 1))))
-((rrule zzg pow1)  (, (sraw $e (pow $x 1))) (O (- (sraw $e (pow $x 1))) (+ (s $e $x))))
-((rrule zzg pow0)  (, (sraw $e (pow $x 0))) (O (- (sraw $e (pow $x 0))) (+ (s $e 1))))
-((rrule zzg neg0)  (, (sraw $e (neg 0))) (O (- (sraw $e (neg 0))) (+ (s $e 0))))
-((rrule zzg negn)  (, (sraw $e (neg (neg $x)))) (O (- (sraw $e (neg (neg $x)))) (+ (s $e $x))))
-((rrule zzg foldr) (, (sraw $e $r) (fold $r $v)) (O (- (sraw $e $r)) (+ (s $e $v))))
+((rrule zze iexp)  (, (ctor $v $c) (exprtag $c)) (, (isexpr $v)))
+((rrule zze jdfe) (, (isexpr $v)) (, (def $v)))
+((rrule zze jdfn) (, (ctor $v num)) (, (def $v)))
 
-; zzh: the default — every candidate that survived the special cases is
-; already in simplest form for this rule set.
-((rrule zzh def) (, (sraw $e $r)) (O (- (sraw $e $r)) (+ (s $e $r))))
+((rrule zze nzmm) (, (val (num $n)))
+                 (O (pure (mn (num $n) $r) $r
+                          (ifnz (sum_i64 (i64_from_string $n) (i64_one)) then NM else M))))
+((rrule zze nzoo) (, (val (num $n)))
+                 (O (pure (on (num $n) $r) $r
+                          (ifnz (sub_i64 (i64_from_string $n) (i64_one)) then NO else O))))
+((rrule zze nzzz) (, (val (num $n)))
+                 (O (pure (zn (num $n) $r) $r
+                          (ifnz (i64_from_string $n) then NZ else Z))))
 
-; Rebuild driver: one full sweep per recorded slevel; the instance tag
-; comes from the rule data, so one driver serves all four groups.
+((rrule zze znee) (I (!= (val $x) (val $y))) (, (vne $x $y)))
+
+; constructor-tag sets, as data
+(exprtag add) (exprtag sub) (exprtag mul) (exprtag div) (exprtag pow)
+(exprtag neg) (exprtag sin) (exprtag cos) (exprtag exp) (exprtag ln)
+(exprtag var) (exprtag cst)
+; tags under which a neg is built verbatim (everything except num,
+; owned by the neg fold, and neg, owned by double-negation)
+(negtag add) (negtag sub) (negtag mul) (negtag div) (negtag pow)
+(negtag sin) (negtag cos) (negtag exp) (negtag ln)
+(negtag var) (negtag cst)
+
+; ---------------------------------------------------------------------
+; Constructor rule store (phase zzf): total case analysis per operator
+; ---------------------------------------------------------------------
+; add: (num,num) fold | zero drops | (num!=0,expr) (expr,num!=0)
+;      (expr,expr) build | UNDEFINED contagion
+((rrule zzf addf)  (, (ssub (add $u $v)) (s $u (num $a)) (s $v (num $b)))
+                   (O (pure (s (add $u $v) (num $r)) $r
+                            (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
+((rrule zzf addzL) (, (ssub (add $u $v)) (s $u (num 0)) (s $v $b) (isexpr $b))
+                   (, (s (add $u $v) $b)))
+((rrule zzf addzR) (, (ssub (add $u $v)) (s $v (num 0)) (s $u $a) (isexpr $a))
+                   (, (s (add $u $v) $a)))
+((rrule zzf addbL) (, (ssub (add $u $v)) (s $u $a) (zn $a NZ) (s $v $b) (isexpr $b))
+                   (, (s (add $u $v) (add $a $b))))
+((rrule zzf addbR) (, (ssub (add $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ))
+                   (, (s (add $u $v) (add $a $b))))
+((rrule zzf addbE) (, (ssub (add $u $v)) (s $u $a) (isexpr $a) (s $v $b) (isexpr $b))
+                   (, (s (add $u $v) (add $a $b))))
+((rrule zzf adduL) (, (ssub (add $u $v)) (s $u UNDEFINED) (s $v $b) (val $b))
+                   (, (s (add $u $v) UNDEFINED)))
+((rrule zzf adduR) (, (ssub (add $u $v)) (s $v UNDEFINED) (s $u $a) (val $a))
+                   (, (s (add $u $v) UNDEFINED)))
+
+; sub: fold | minus-zero | same-operand (equality by unification) |
+;      builds (the (expr,expr) build requires vne: the complement of
+;      the same-operand rule) | contagion
+((rrule zzf subf)  (, (ssub (sub $u $v)) (s $u (num $a)) (s $v (num $b)))
+                   (O (pure (s (sub $u $v) (num $r)) $r
+                            (i64_to_string (sub_i64 (i64_from_string $a) (i64_from_string $b))))))
+((rrule zzf subzR) (, (ssub (sub $u $v)) (s $v (num 0)) (s $u $a) (isexpr $a))
+                   (, (s (sub $u $v) $a)))
+((rrule zzf subxx) (, (ssub (sub $u $v)) (s $u $x) (s $v $x) (isexpr $x))
+                   (, (s (sub $u $v) (num 0))))
+((rrule zzf subbL) (, (ssub (sub $u $v)) (s $u $a) (ctor $a num) (s $v $b) (isexpr $b))
+                   (, (s (sub $u $v) (sub $a $b))))
+((rrule zzf subbR) (, (ssub (sub $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ))
+                   (, (s (sub $u $v) (sub $a $b))))
+((rrule zzf subbE) (, (ssub (sub $u $v)) (s $u $a) (isexpr $a) (s $v $b) (isexpr $b) (vne $a $b))
+                   (, (s (sub $u $v) (sub $a $b))))
+((rrule zzf subuL) (, (ssub (sub $u $v)) (s $u UNDEFINED) (s $v $b) (val $b))
+                   (, (s (sub $u $v) UNDEFINED)))
+((rrule zzf subuR) (, (ssub (sub $u $v)) (s $v UNDEFINED) (s $u $a) (val $a))
+                   (, (s (sub $u $v) UNDEFINED)))
+
+; mul: fold | zero | one | minus-one collapses to neg | builds
+;      ((num,expr) builds need the num outside {0,1,-1}: zn/on/mn) |
+;      contagion
+((rrule zzf mulf)  (, (ssub (mul $u $v)) (s $u (num $a)) (s $v (num $b)))
+                   (O (pure (s (mul $u $v) (num $r)) $r
+                            (i64_to_string (product_i64 (i64_from_string $a) (i64_from_string $b))))))
+((rrule zzf mulzL) (, (ssub (mul $u $v)) (s $u (num 0)) (s $v $b) (isexpr $b))
+                   (, (s (mul $u $v) (num 0))))
+((rrule zzf mulzR) (, (ssub (mul $u $v)) (s $v (num 0)) (s $u $a) (isexpr $a))
+                   (, (s (mul $u $v) (num 0))))
+((rrule zzf mul1L) (, (ssub (mul $u $v)) (s $u (num 1)) (s $v $b) (isexpr $b))
+                   (, (s (mul $u $v) $b)))
+((rrule zzf mul1R) (, (ssub (mul $u $v)) (s $v (num 1)) (s $u $a) (isexpr $a))
+                   (, (s (mul $u $v) $a)))
+((rrule zzf mulmL) (, (ssub (mul $u $v)) (s $u (num -1)) (s $v $b) (isexpr $b))
+                   (, (s (mul $u $v) (neg $b))))
+((rrule zzf mulmR) (, (ssub (mul $u $v)) (s $v (num -1)) (s $u $a) (isexpr $a))
+                   (, (s (mul $u $v) (neg $a))))
+((rrule zzf mulbL) (, (ssub (mul $u $v)) (s $u $a) (zn $a NZ) (on $a NO) (mn $a NM) (s $v $b) (isexpr $b))
+                   (, (s (mul $u $v) (mul $a $b))))
+((rrule zzf mulbR) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ) (on $b NO) (mn $b NM))
+                   (, (s (mul $u $v) (mul $a $b))))
+((rrule zzf mulbE) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (isexpr $b))
+                   (, (s (mul $u $v) (mul $a $b))))
+((rrule zzf muluL) (, (ssub (mul $u $v)) (s $u UNDEFINED) (s $v $b) (val $b))
+                   (, (s (mul $u $v) UNDEFINED)))
+((rrule zzf muluR) (, (ssub (mul $u $v)) (s $v UNDEFINED) (s $u $a) (val $a))
+                   (, (s (mul $u $v) UNDEFINED)))
+
+; div: zero denominator is UNDEFINED (any numerator, including
+;      UNDEFINED) | zero numerator | unit denominator | same-operand |
+;      builds | contagion. No integer folding: exact division is not
+;      closed over the integers.
+((rrule zzf divz)  (, (ssub (div $u $v)) (s $v (num 0)) (s $u $a) (val $a))
+                   (, (s (div $u $v) UNDEFINED)))
+((rrule zzf div0a) (, (ssub (div $u $v)) (s $u (num 0)) (s $v $b) (isexpr $b))
+                   (, (s (div $u $v) (num 0))))
+((rrule zzf div0b) (, (ssub (div $u $v)) (s $u (num 0)) (s $v $b) (zn $b NZ))
+                   (, (s (div $u $v) (num 0))))
+((rrule zzf div1)  (, (ssub (div $u $v)) (s $v (num 1)) (s $u $a) (def $a))
+                   (, (s (div $u $v) $a)))
+((rrule zzf divxE) (, (ssub (div $u $v)) (s $u $x) (s $v $x) (isexpr $x))
+                   (, (s (div $u $v) (num 1))))
+((rrule zzf divxN) (, (ssub (div $u $v)) (s $u $x) (s $v $x) (zn $x NZ))
+                   (, (s (div $u $v) (num 1))))
+((rrule zzf divbNN) (, (ssub (div $u $v)) (s $u $a) (zn $a NZ) (s $v $b) (zn $b NZ) (on $b NO) (vne $a $b))
+                    (, (s (div $u $v) (div $a $b))))
+((rrule zzf divbNE) (, (ssub (div $u $v)) (s $u $a) (zn $a NZ) (s $v $b) (isexpr $b))
+                    (, (s (div $u $v) (div $a $b))))
+((rrule zzf divbEN) (, (ssub (div $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ) (on $b NO))
+                    (, (s (div $u $v) (div $a $b))))
+((rrule zzf divbEE) (, (ssub (div $u $v)) (s $u $a) (isexpr $a) (s $v $b) (isexpr $b) (vne $a $b))
+                    (, (s (div $u $v) (div $a $b))))
+((rrule zzf divuL) (, (ssub (div $u $v)) (s $u UNDEFINED) (s $v $b) (val $b))
+                   (, (s (div $u $v) UNDEFINED)))
+((rrule zzf divuR) (, (ssub (div $u $v)) (s $v UNDEFINED) (s $u $a) (val $a))
+                   (, (s (div $u $v) UNDEFINED)))
+
+; pow: exponent 1 | exponent 0 | build (exponent outside {0,1}) |
+;      contagion. The exponent was decomposed, so its (num n) carries
+;      zn/on facts.
+((rrule zzf pow1) (, (ssub (pow $u (num 1))) (s $u $a) (def $a))
+                  (, (s (pow $u (num 1)) $a)))
+((rrule zzf pow0) (, (ssub (pow $u (num 0))) (s $u $a) (def $a))
+                  (, (s (pow $u (num 0)) (num 1))))
+((rrule zzf powb) (, (ssub (pow $u (num $n))) (s $u $a) (def $a) (zn (num $n) NZ) (on (num $n) NO))
+                  (, (s (pow $u (num $n)) (pow $a (num $n)))))
+((rrule zzf powu) (, (ssub (pow $u (num $n))) (s $u UNDEFINED))
+                  (, (s (pow $u (num $n)) UNDEFINED)))
+
+; neg: (num n) folds to (num -n) | double negation cancels | any other
+;      constructor builds (negtag = every tag but num and neg) |
+;      contagion
+((rrule zzf negf) (, (ssub (neg $u)) (s $u (num $a)))
+                  (O (pure (s (neg $u) (num $r)) $r
+                           (i64_to_string (sub_i64 (i64_from_string 0) (i64_from_string $a))))))
+((rrule zzf negn) (, (ssub (neg $u)) (s $u (neg $x)))
+                  (, (s (neg $u) $x)))
+((rrule zzf negb) (, (ssub (neg $u)) (s $u $a) (ctor $a $c) (negtag $c))
+                  (, (s (neg $u) (neg $a))))
+((rrule zzf negu) (, (ssub (neg $u)) (s $u UNDEFINED))
+                  (, (s (neg $u) UNDEFINED)))
+
+; sin/cos/exp/ln: no identities — build over any defined value |
+;      contagion
+((rrule zzf sinb) (, (ssub (sin $u)) (s $u $a) (def $a)) (, (s (sin $u) (sin $a))))
+((rrule zzf sinu) (, (ssub (sin $u)) (s $u UNDEFINED)) (, (s (sin $u) UNDEFINED)))
+((rrule zzf cosb) (, (ssub (cos $u)) (s $u $a) (def $a)) (, (s (cos $u) (cos $a))))
+((rrule zzf cosu) (, (ssub (cos $u)) (s $u UNDEFINED)) (, (s (cos $u) UNDEFINED)))
+((rrule zzf expb) (, (ssub (exp $u)) (s $u $a) (def $a)) (, (s (exp $u) (exp $a))))
+((rrule zzf expu) (, (ssub (exp $u)) (s $u UNDEFINED)) (, (s (exp $u) UNDEFINED)))
+((rrule zzf lnb)  (, (ssub (ln $u)) (s $u $a) (def $a)) (, (s (ln $u) (ln $a))))
+((rrule zzf lnu)  (, (ssub (ln $u)) (s $u UNDEFINED)) (, (s (ln $u) UNDEFINED)))
+
+; ---------------------------------------------------------------------
+; Sweep driver: one classify+construct sweep per recorded slevel
+; ---------------------------------------------------------------------
 (exec (zzi Z)
   (, (exec (zzi $l) $p $t)
      (slevel $l)

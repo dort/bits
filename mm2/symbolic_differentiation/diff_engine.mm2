@@ -1,81 +1,75 @@
 ; =====================================================================
-; Symbolic differentiation engine in MM2
+; Symbolic differentiation engine in MM2 — clean (typed-AST) representation
 ; =====================================================================
 ;
-; Input facts (supplied in a separate file, concatenated before running):
-;   (dvar x)        the variable of differentiation (exactly one)
-;   (const c)       every non-integer leaf symbol other than the dvar
-;                   (named parameters, other variables). Integer literals
-;                   need no declaration: the grounded phase below detects
-;                   them by parsing with Rust's i64 parser.
-;   (diff EXPR)     an expression to differentiate (any number of these)
+; Expressions are a strongly typed AST: every case has its own
+; constructor, so every rule dispatches by pattern (unification) alone —
+; no catch-all defaults, no classify-by-parse-failure ("clean" rather
+; than "defaulty" representation, in the Prolog sense).
 ;
-; Output facts:
-;   (result EXPR D) where D = dEXPR/dx, unsimplified
+;   leaves:     (num N)   integer literal, N an i64 symbol
+;               (var x)   THE variable of differentiation (one per
+;                         program; its name is documentation)
+;               (cst c)   any other symbolic leaf (parameters, other
+;                         variables): derivative 0
+;   compounds:  (add u v) (sub u v) (mul u v) (div u v)
+;               (pow u (num N))         [exponent embedded, an i64]
+;               (neg u) (sin u) (cos u) (exp u) (ln u)
 ;
-; Supported operators:
-;   binary:  (+ u v) (- u v) (* u v) (/ u v) (pow u n)  [n an i64 literal]
-;   unary:   (neg u) (sin u) (cos u) (exp u) (ln u)
+; Input facts:  (diff EXPR)      any number of them; nothing else — the
+;                                AST is self-describing, so the old
+;                                (dvar _) / (const _) declarations and
+;                                the parse-every-todo integer detector
+;                                are gone.
+; Output facts: (result EXPR D)  where D = dEXPR/dx, unsimplified
 ;
 ; Architecture (priorities order the phases by shortlex on the exec tag:
 ; (0 _) < (a0 _) < (az _) < (b0 _) < (c0 _) < (cz _) < (zz _)):
 ;
-;   Setup    (0 _)   base derivative facts (d x 1), (d c 0); seed (todo Z EXPR).
-;   Phase A  (a_ _)  top-down decomposition. A self-recreating driver walks
-;                    depth levels; at each level it instantiates the arule
-;                    data below, producing (todo (S l) child) and (sub E)
-;                    for every subterm E, plus one (level l) fact per depth.
-;                    It stops when a level produces no todo facts.
-;   Grounded (b0 _)  integer arithmetic via the pure sink (Rust functions).
-;                    One exec writes (d n 0) for every integer leaf, one
-;                    writes (expm1 n m) with m = n - 1 for every (pow u n)
-;                    exponent. A failed parse (symbolic exponent, compound
-;                    subterm) is skipped per match by the pure sink, so
-;                    these execs never crash on non-integer input.
-;   Phase B  (c_ _)  bottom-up combination. The driver runs one full sweep
-;                    of the brule data per (level l) fact. Each sweep joins
-;                    child derivatives (d u du) into parent derivatives, so
-;                    after k sweeps all subterms of height <= k are done;
-;                    the number of levels equals tree depth + 1, which is
-;                    exactly enough sweeps to reach the root.
-;   Collect  (zz _)  copy the root derivatives into (result EXPR D).
+;   Setup    (0 _)   seed (todo Z EXPR) per diff root.
+;   Phase A  (a_ _)  top-down decomposition. A self-recreating driver
+;                    walks depth levels, instantiating the arule data,
+;                    producing (todo (S l) child) and (sub E) per
+;                    subterm, plus one (level l) fact per depth.
+;   Bases    (b0 _)  base derivatives, each a one-shot exec dispatching
+;                    on a leaf constructor: (num _) -> 0, (var _) -> 1,
+;                    (cst _) -> 0. The only pure-sink call is the pow
+;                    exponent decrement (expm1), real arithmetic whose
+;                    argument the (num $n) pattern guarantees to parse.
+;   Phase B  (c_ _)  bottom-up combination, one sweep of the brule data
+;                    per (level l) fact.
+;   Collect  (zz _)  copy root derivatives into (result EXPR D).
 
 ; ---------------------------------------------------------------------
 ; Setup
 ; ---------------------------------------------------------------------
-(exec (0 dvar) (, (dvar $x)) (, (d $x 1)))
-(exec (0 const) (, (const $c)) (, (d $c 0)))
 (exec (0 root) (, (diff $e)) (, (todo Z $e)))
 
 ; ---------------------------------------------------------------------
-; Phase A: decomposition rules, stored as data parameterized by level $l
+; Phase A: decomposition rules, parameterized by level $l
 ; ---------------------------------------------------------------------
-((arule sum $l)  (, (todo $l (+ $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (+ $u $v))))
-((arule dif $l)  (, (todo $l (- $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (- $u $v))))
-((arule prod $l) (, (todo $l (* $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (* $u $v))))
-((arule quot $l) (, (todo $l (/ $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (/ $u $v))))
-((arule neg $l)  (, (todo $l (neg $u)))
-                 (, (todo (S $l) $u) (sub (neg $u))))
-((arule sin $l)  (, (todo $l (sin $u)))
-                 (, (todo (S $l) $u) (sub (sin $u))))
-((arule cos $l)  (, (todo $l (cos $u)))
-                 (, (todo (S $l) $u) (sub (cos $u))))
-((arule exp $l)  (, (todo $l (exp $u)))
-                 (, (todo (S $l) $u) (sub (exp $u))))
-((arule ln $l)   (, (todo $l (ln $u)))
-                 (, (todo (S $l) $u) (sub (ln $u))))
-; pow decomposes only its base: the exponent is an integer literal, not a
-; subexpression to differentiate.
-((arule pow $l)  (, (todo $l (pow $u $n)))
-                 (, (todo (S $l) $u) (sub (pow $u $n))))
+((arule add $l) (, (todo $l (add $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (add $u $v))))
+((arule sub $l) (, (todo $l (sub $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (sub $u $v))))
+((arule mul $l) (, (todo $l (mul $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (mul $u $v))))
+((arule div $l) (, (todo $l (div $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (div $u $v))))
+; pow decomposes only its base; the exponent is part of the constructor
+((arule pow $l) (, (todo $l (pow $u (num $n))))
+                (, (todo (S $l) $u) (sub (pow $u (num $n)))))
+((arule neg $l) (, (todo $l (neg $u)))
+                (, (todo (S $l) $u) (sub (neg $u))))
+((arule sin $l) (, (todo $l (sin $u)))
+                (, (todo (S $l) $u) (sub (sin $u))))
+((arule cos $l) (, (todo $l (cos $u)))
+                (, (todo (S $l) $u) (sub (cos $u))))
+((arule exp $l) (, (todo $l (exp $u)))
+                (, (todo (S $l) $u) (sub (exp $u))))
+((arule ln $l)  (, (todo $l (ln $u)))
+                (, (todo (S $l) $u) (sub (ln $u))))
 
-; Phase A driver: while any todo exists at level $l, instantiate every
-; arule at $l (tag (a0 ($l $k)) outranks the next driver (az (S $l))),
-; record (level $l), and re-create the driver for the next level.
 (exec (az Z)
   (, (exec (az $l) $p $t)
      (todo $l $_)
@@ -85,52 +79,43 @@
      (level $l)))
 
 ; ---------------------------------------------------------------------
-; Grounded integer arithmetic (pure sink, Rust i64 functions)
+; Base derivatives: dispatch on leaf constructors, one-shot each
 ; ---------------------------------------------------------------------
-; Fires once, after phase A has recorded every todo/sub fact. Each match
-; whose leaf fails to parse as an i64 is skipped by the pure sink
-; (kernel/src/sinks.rs handles the EvalError by dropping that match).
+(exec (b0 cst) (, (todo $l (cst $c))) (, (d (cst $c) (num 0))))
+(exec (b0 num) (, (todo $l (num $n))) (, (d (num $n) (num 0))))
+(exec (b0 var) (, (todo $l (var $x))) (, (d (var $x) (num 1))))
 
-; (d n 0) for every integer leaf n: n - n evaluates iff n parses.
-(exec (b0 int)
-  (, (todo $l $e))
-  (O (pure (d $e $z) $z
-           (i64_to_string (sub_i64 (i64_from_string $e) (i64_from_string $e))))))
-
-; (expm1 n m) with m = n - 1 for every pow exponent n.
+; pow exponent decrement, m = n - 1, computed by Rust; the (num $n)
+; pattern guarantees the argument parses
 (exec (b0 pow)
-  (, (sub (pow $u $n)))
-  (O (pure (expm1 $n $m) $m
+  (, (sub (pow $u (num $n))))
+  (O (pure (expm1 (num $n) (num $m)) $m
            (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
 
 ; ---------------------------------------------------------------------
 ; Phase B: combination rules, stored as data (level-free)
 ; ---------------------------------------------------------------------
-((brule sum)  (, (sub (+ $u $v)) (d $u $du) (d $v $dv))
-              (, (d (+ $u $v) (+ $du $dv))))
-((brule dif)  (, (sub (- $u $v)) (d $u $du) (d $v $dv))
-              (, (d (- $u $v) (- $du $dv))))
-((brule prod) (, (sub (* $u $v)) (d $u $du) (d $v $dv))
-              (, (d (* $u $v) (+ (* $du $v) (* $u $dv)))))
-((brule quot) (, (sub (/ $u $v)) (d $u $du) (d $v $dv))
-              (, (d (/ $u $v) (/ (- (* $du $v) (* $u $dv)) (* $v $v)))))
-((brule neg)  (, (sub (neg $u)) (d $u $du))
-              (, (d (neg $u) (neg $du))))
-((brule sin)  (, (sub (sin $u)) (d $u $du))
-              (, (d (sin $u) (* (cos $u) $du))))
-((brule cos)  (, (sub (cos $u)) (d $u $du))
-              (, (d (cos $u) (neg (* (sin $u) $du)))))
-((brule exp)  (, (sub (exp $u)) (d $u $du))
-              (, (d (exp $u) (* (exp $u) $du))))
-((brule ln)   (, (sub (ln $u)) (d $u $du))
-              (, (d (ln $u) (/ $du $u))))
-; power rule: d(u^n) = n * u^(n-1) * du, with n-1 taken from the grounded
-; (expm1 n m) fact; a pow with a non-integer exponent has no expm1 fact
-; and produces no derivative.
-((brule pow)  (, (sub (pow $u $n)) (expm1 $n $m) (d $u $du))
-              (, (d (pow $u $n) (* (* $n (pow $u $m)) $du))))
+((brule add) (, (sub (add $u $v)) (d $u $du) (d $v $dv))
+             (, (d (add $u $v) (add $du $dv))))
+((brule sub) (, (sub (sub $u $v)) (d $u $du) (d $v $dv))
+             (, (d (sub $u $v) (sub $du $dv))))
+((brule mul) (, (sub (mul $u $v)) (d $u $du) (d $v $dv))
+             (, (d (mul $u $v) (add (mul $du $v) (mul $u $dv)))))
+((brule div) (, (sub (div $u $v)) (d $u $du) (d $v $dv))
+             (, (d (div $u $v) (div (sub (mul $du $v) (mul $u $dv)) (mul $v $v)))))
+((brule pow) (, (sub (pow $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du))
+             (, (d (pow $u (num $n)) (mul (mul (num $n) (pow $u (num $m))) $du))))
+((brule neg) (, (sub (neg $u)) (d $u $du))
+             (, (d (neg $u) (neg $du))))
+((brule sin) (, (sub (sin $u)) (d $u $du))
+             (, (d (sin $u) (mul (cos $u) $du))))
+((brule cos) (, (sub (cos $u)) (d $u $du))
+             (, (d (cos $u) (neg (mul (sin $u) $du)))))
+((brule exp) (, (sub (exp $u)) (d $u $du))
+             (, (d (exp $u) (mul (exp $u) $du))))
+((brule ln)  (, (sub (ln $u)) (d $u $du))
+             (, (d (ln $u) (div $du $u))))
 
-; Phase B driver: one full sweep of all brules per recorded level.
 (exec (cz Z)
   (, (exec (cz $l) $p $t)
      (level $l)

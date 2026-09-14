@@ -1,10 +1,31 @@
 # Symbolic differentiation in MM2
 
 Computes exact derivatives of expression trees by forward rewriting in the
-MORK space. Integer handling is grounded: integer leaves are recognized and
-the power rule's exponent decrement is computed by Rust i64 functions via
-the `pure` sink (`kernel/src/pure.rs`), not by Peano encodings. The test
-file additionally uses the `+`/`-` sinks for set difference.
+MORK space, over a **clean (strongly typed) AST**: every case of the
+expression grammar has its own constructor, so every rule dispatches by
+pattern (unification) alone. There are no catch-all default rules, no
+deletion-ordered else-branches, and no classify-by-parse-failure — the
+"clean rather than defaulty representation" discipline from Prolog
+practice. Integer arithmetic (constant folding, the power rule's exponent
+decrement, zero/one tests) is grounded in Rust via the `pure` sink.
+
+## The AST
+
+```
+leaves:     (num N)    integer literal, N an i64 symbol
+            (var x)    THE variable of differentiation (one per program;
+                       the name is documentation)
+            (cst c)    any other symbolic leaf (parameters, other
+                       variables): derivative 0
+compounds:  (add u v) (sub u v) (mul u v) (div u v)
+            (pow u (num N))     exponent embedded, an i64 literal
+            (neg u) (sin u) (cos u) (exp u) (ln u)
+```
+
+The AST is self-describing, so the input is just `(diff EXPR)` facts —
+the old `(dvar _)` / `(const _)` declarations are gone, and so is the
+old integer detector that pushed every subterm through Rust's parser
+and relied on parse failure to filter.
 
 ## Files
 
@@ -13,7 +34,7 @@ file additionally uses the `+`/`-` sinks for set difference.
   engine, it rewrites each `(result E D)` in place with D simplified
 - `diff_engine_fused.mm2` — standalone alternative engine that fuses
   simplification into the differentiation rewriting itself, never writing
-  an unsimplified derivative (see "Two simplification implementations")
+  an unsimplified derivative
 - `example.mm2` — sample inputs
 - `test.mm2` — test suite for unsimplified results (plain engine only)
 - `test_simplify.mm2` — test suite for simplified results, shared by both
@@ -31,167 +52,147 @@ ENGINE=diff_engine_fused.mm2 ./run.sh example.mm2        # fused engine
 ENGINE=diff_engine_fused.mm2 ./run.sh test_simplify.mm2  # same suite, fused
 ```
 
-Input facts:
+Output: `(result EXPR D)`, e.g.
 
 ```
-(dvar x)          ; the variable of differentiation (exactly one)
-(const a)         ; every non-integer leaf symbol besides the dvar
-(diff EXPR)       ; an expression to differentiate (any number)
+(diff (pow (var x) (num 3)))
+=> plain:      (result (pow (var x) (num 3)) (mul (mul (num 3) (pow (var x) (num 2))) (num 1)))
+=> simplified: (result (pow (var x) (num 3)) (mul (num 3) (pow (var x) (num 2))))
 ```
 
-Integer literals (`2`, `-7`, ...) need no declaration: the grounded phase
-detects them by parsing with Rust's i64 parser.
+## How the differentiator works
 
-Output: `(result EXPR D)` with D unsimplified, e.g.
-
-```
-(diff (sin (* x x)))
-=> (result (sin (* x x)) (* (cos (* x x)) (+ (* 1 x) (* x 1))))
-(diff (pow x 3))
-=> (result (pow x 3) (* (* 3 (pow x 2)) 1))
-```
-
-Supported operators: binary `+ - * /` and `(pow u n)` with an i64 literal
-exponent, unary `neg sin cos exp ln`.
-
-## How it works
-
-Differentiation is structural recursion, but MM2 has no call stack — only
-pattern matching against the space and monotonic writes. The engine
+Differentiation is structural recursion, but MM2 has no call stack —
+only pattern matching against the space and monotonic writes. The engine
 replaces the recursion with two saturation phases over subterm facts.
 
-**Setup** (`(0 _)` tags). `(d $x 1)` for the diff variable, `(d $c 0)` for
-each declared constant, and `(todo Z EXPR)` seeding each diff root at
-depth level `Z`.
-
-**Grounded integer arithmetic** (`(b0 _)` tags, between the phases). Two
-one-shot execs call Rust i64 functions through the `pure` sink. One writes
-`(d n 0)` for every integer leaf, using the call tree
-`(sub_i64 (i64_from_string $e) (i64_from_string $e))` — n − n, which
-evaluates iff `$e` parses as an i64. The other writes `(expm1 n m)` with
-m = n − 1 for every `(pow u n)` exponent. The sink drops any match whose
-evaluation errors (`sinks.rs` catches the `EvalError` and continues), so
-compound subterms and non-integer symbols are skipped rather than
-crashing; a `pow` with a symbolic exponent therefore gets no `expm1` fact
-and silently produces no derivative.
+**Setup** (`(0 _)` tag). `(todo Z EXPR)` seeds each diff root at depth
+level `Z` (a Peano numeral).
 
 **Phase A — top-down decomposition** (`(a0 _)`, `(az _)` tags). A
-self-recreating driver (the Reachability P1 pattern) walks depth levels.
-Decomposition rules are stored as data — `((arule $k $l) PATTERNS
-TEMPLATES)` — and the driver instantiates all of them at the current level
-by unifying `$l` (the Counter Machine pattern), because a per-operator
-loop would die on any level where its operator happens not to occur. Each
-level produces `(todo (S l) child)` for every child, `(sub E)` for every
-compound subterm, and one `(level l)` fact. The driver's continuation
-condition is `(todo $l $_)`: when a level generates no todos (all leaves),
-the driver writes nothing and the loop ends.
+self-recreating driver (the wiki's Reachability P1 pattern) walks depth
+levels. Decomposition rules are stored as data — `((arule $k $l)
+PATTERNS TEMPLATES)` — and the driver instantiates all of them at the
+current level by unifying `$l` (the Counter Machine pattern), because a
+per-operator loop would die on any level where its operator happens not
+to occur. Each level produces `(todo (S l) child)` per child, `(sub E)`
+per compound subterm, and one `(level l)` fact. The loop ends when a
+level generates no todos.
 
-**Phase B — bottom-up combination** (`(c0 _)`, `(cz _)` tags). Combination
-rules are also stored as data, level-free: from `(sub (+ $u $v))` and the
-child derivatives `(d $u $du)`, `(d $v $dv)`, write
-`(d (+ $u $v) (+ $du $dv))`; the `pow` rule additionally joins the
-grounded `(expm1 $n $m)` fact to build
-`(d (pow $u $n) (* (* $n (pow $u $m)) $du))`. One sweep of all rules only joins subterms
-whose children already have `d` facts, so sweeps must repeat once per tree
-level — but MM2 has no negation, so "no new fact was derived" is not
-expressible as a stopping condition. Instead the driver runs exactly one
-full sweep per `(level l)` fact recorded in phase A. The level count is
-tree depth + 1, and after k sweeps every subterm of height ≤ k has its
-derivative, so this count always suffices and the loop terminates by
-running out of level facts.
+**Base derivatives** (`(b0 _)` tags). One-shot execs dispatching on the
+leaf constructors: `(num _) -> (num 0)`, `(var _) -> (num 1)`,
+`(cst _) -> (num 0)`. The only `pure` call here is the power rule's
+exponent decrement — `(expm1 (num n) (num n-1))` via `sub_i64` — real
+arithmetic whose argument the `(num $n)` pattern guarantees to parse.
+
+**Phase B — bottom-up combination** (`(c0 _)`, `(cz _)` tags).
+Combination rules stored as data join child derivatives into parent
+derivatives (`(d E DE)` facts). One sweep of all rules per `(level l)`
+fact: MM2 has no negation, so "nothing new was derived" is not
+expressible, but the level count is tree depth + 1 and each sweep
+completes at least one more height layer, so the count always suffices.
 
 **Collect** (`(zz _)` tag). `(diff $e)` joined with `(d $e $de)` yields
 `(result $e $de)`.
 
-### Priority layout
+## The two simplification implementations
 
-MM2 selects the highest-priority `exec` by shortlex order on the tag.
-All tags here are arity-2 expressions, so order is lexicographic on the
-first element:
+Both eliminate the redundancy the derivative rules generate:
+`(add (num 0) e) -> e`, `(mul (num 1) e) -> e`, `(mul (num 0) e) ->
+(num 0)`, `(mul (num -1) e) -> (neg e)`, `(sub e (num 0)) -> e`,
+`(sub e e) -> (num 0)`, `(div (num 0) e) -> (num 0)`, `(div e (num 1))
+-> e`, `(div e e) -> (num 1)`, `(pow e (num 1)) -> e`, `(pow e (num 0))
+-> (num 1)`, `(neg (num n)) -> (num -n)`, `(neg (neg e)) -> e`, integer
+`add`/`sub`/`mul` folded by Rust. Division by zero is an error value:
+`(div e (num 0)) -> UNDEFINED`, `(div (num 0) (num 0))` included, and
+`UNDEFINED` is contagious — any node over it collapses to it. Both pass
+`test_simplify.mm2` and produce byte-identical result sets.
+
+### Clean dispatch instead of an else-branch
+
+A smart constructor's hard case is the *default*: "no simplification
+applied, keep the node as built" — the complement of the special cases,
+which naive pattern matching cannot express. The previous version
+implemented it defaultily (special-case rules deleted the candidate they
+reduced; a later catch-all converted survivors — dispatch by execution
+order and deletion). This version enumerates the complement as patterns
+over reified classification facts, computed for every simplified value:
 
 ```
-(0 _) < (a0 _) < (az _) < (b0 _)  < (c0 _) < (cz _) < (zz _) < (zzt _)
-setup   A rules  A driver grounded B rules  B driver collect  tests
+(val V)       V occurs as a value
+(ctor V c)    V's constructor tag; one variable-head rule
+              (val ($f $a $b)) -> (ctor ($f $a $b) $f) covers every
+              binary constructor, one literal rule per 2-element one
+(isexpr V)    ctor is anything but num     [(exprtag c) membership data]
+(def V)       num or isexpr — i.e. not UNDEFINED
+(zn V NZ|Z)   (on V NO|O)  (mn V NM|M)
+              for V = (num n): n nonzero / not-one / not-minus-one,
+              computed by Rust (the pure sink's ifnz on n, n-1, n+1)
+(vne A B)     A, B structurally different, from the != source — the
+              complement of unification, used by the build rules whose
+              identity siblings (sub e e) / (div e e) own the equal case
 ```
 
-Within a phase, the spawned rule tag (`a0`/`c0`) deliberately sorts before
-the driver tag (`az`/`cz`) so each level's rule instances run before the
-driver advances to the next level — the same trick the Counter Machine
-uses (`(JZ n)` sorts before `(clocked n)`). The grounded execs sit at
-`(b0 _)`: after every phase-A exec (so all `todo`/`sub` facts exist) and
-before every phase-B sweep (so `expm1` and integer `d` facts are ready).
+With these, every constructor's rule set is a **total case analysis**:
+e.g. `mul`'s left operand is either `(num 0)`, `(num 1)`, `(num -1)`
+(literal patterns), a number outside those (`zn`/`on`/`mn` all negative),
+an `isexpr`, or `UNDEFINED` — six disjoint cases, each with its own
+rule, and the few overlapping pairs (a fold and a zero rule both
+matching `(mul (num 0) (num 5))`) always **agree**, so duplicates
+collapse in the set-based space. Nothing is ever deleted; the whole
+simplifier is monotonic saturation. Set membership is data
+(`(exprtag c)`, `(negtag c)` facts), not code.
 
-One trap this layout avoids: Peano numerals sort *deeper-first* under
-shortlex (an expression outranks a symbol, so `(S Z)` outranks `Z`).
-Ordering across levels therefore cannot rely on the level numeral inside
-a tag; correctness here only needs "all of this level's rule execs before
-the next driver", which the `a0 < az` symbol ordering provides.
+### `simplify.mm2` (post-process)
 
-## Two simplification implementations
+A structural sibling of the engine, running after `(zz out)` in the
+3-character `(zz? _)` tag range: seed each result's derivative into its
+own `stodo`/`ssub` namespace, decompose top-down, emit leaf base cases
+`(s leaf leaf)` by constructor dispatch, then rebuild bottom-up — one
+classify sweep (`zze`) plus one construct sweep (`zzf`) per recorded
+`slevel`. `(s E S)` means "E simplifies to S"; because children are
+clean before a parent is assembled, redundancy is always at the root of
+the node being built, where the case analysis sees it.
 
-Both eliminate the redundancy the derivative rules generate —
-`(+ 0 e) -> e`, `(* 1 e) -> e`, `(* 0 e) -> 0`, `(* e (neg 1)) -> (neg e)`,
-`(- e e) -> 0`, `(/ e 1) -> e`, `(/ e e) -> 1`, `(pow e 1) -> e`,
-`(pow e 0) -> 1`, `(neg 0) -> 0`, `(neg (neg e)) -> e`, and integer
-`+ - *` folded by Rust. Division by zero is not an identity but an
-error value: `(/ e 0) -> UNDEFINED` — `(/ 0 0)` included — and
-`UNDEFINED` is contagious, collapsing every enclosing expression (three
-variable-head rules, `($f UNDEFINED $x)` and mirrors, cover all
-operators; their 4-character names sort before every other special rule
-so nothing like `(* 0 e) -> 0` can swallow an `UNDEFINED` first) — turning e.g. the derivative of `(+ (* x x) (* 2 x))`
-from `(+ (+ (* 1 x) (* x 1)) (+ (* 0 x) (* 2 1)))` into `(+ (+ x x) 2)`.
-Both must pass `test_simplify.mm2` with identical answers, and they
-produce byte-identical result sets on `example.mm2`.
+### `diff_engine_fused.mm2` (fused)
 
-Each needs an else-branch — "no special case applied, keep the built
-form" — which MM2 cannot express as negation. Both implement it by
-**sequencing plus deletion**: special-case rules fire first and delete
-the candidate fact they reduce; a later default rule converts every
-surviving candidate verbatim. Whatever the special cases deleted, the
-default never sees.
+The plain engine's combination rules build multi-level trees in one
+template (the product rule writes `(add (mul du v) (mul u dv))` at
+once), so nested redundancy appears where no root-level rule set can
+reach it. The fused engine builds every derivative one node at a time
+through smart-constructor facts: `(mkq E)` requests the simplified form
+of a node whose children are already simplified, `(mkd E S)` answers,
+keyed by the request. Requests persist (nothing deletes them); the same
+total case analysis resolves each to exactly one answer. Chains run up
+to three requests deep (quotient, power), so the driver runs four
+logic/classify/resolve rounds per depth level, sequenced by tags
+`(c0 ((l r ph) k))` that sort round-major then phase-major. Semantic
+difference from the post-process pair: input subterms copied verbatim
+into derivatives (the `u` in `(mul (cos u) du)`) are not simplified.
 
-**`simplify.mm2` (post-process).** A structural sibling of the engine,
-running after `(zz out)` in the 3-character `(zz? _)` tag range: seed
-each result's derivative into its own `stodo`/`ssub` namespace,
-decompose top-down, ground integer leaves with an i64 parse round-trip,
-then rebuild bottom-up one sweep per recorded `slevel`. Assembly writes
-a candidate `(sraw E (op su sv))` from simplified children; parents
-match only the finished `(s E S)` facts, never `sraw`, so partially
-reduced forms cannot leak upward. Because children are clean before a
-parent is assembled, redundancy is always at the candidate's root where
-one cleanup pass can see it.
+### One scheduling rule worth knowing
 
-**`diff_engine_fused.mm2` (fused).** The plain engine's combination
-rules build multi-level trees in one template (the product rule writes
-`(+ (* du v) (* u dv))` at once), so nested redundancy appears where no
-root-level cleanup can reach it. The fused engine therefore builds every
-derivative one level at a time through smart-constructor facts:
-`(mkq E)` requests the simplified form of a single node whose children
-are already simplified, and `(mkd E S)` answers it, keyed by the
-request. A derivative is a chain of requests (product: `du*v`, `u*dv`,
-then their sum; quotient and power chain three deep), so the combination
-driver runs four construction rounds per depth level — logic, folds,
-special cases, default per round — instead of the plain engine's one
-sweep. Semantic difference from the post-process pair: input subterms
-copied verbatim into a derivative (the `u` inside `(* (cos u) du)`) are
-not simplified; the post-process pass simplifies everything it walks.
+Within a sweep, rule instances execute in rule-name order, and MM2
+compares symbols **length-first**. The classification chain (`aval` →
+`c***` → `iexp` → `jdf*` → `nz**` → `znee`) therefore uses uniform
+4-character names in lexicographic chain order; a 3-character name
+anywhere in the chain would jump the queue and delay its stage by a full
+sweep, starving deep expressions of their sweep budget (this exact bug
+occurred during development and surfaced as one missing result on the
+deepest example).
 
 ## Limitations / possible extensions
 
+- One variable of differentiation per program: `(var _)` *is* that
+  variable. Multiple simultaneous variables would need a marker joined
+  through every rule, and "some other variable" is precisely a
+  disequality — expressible now via the `!=` source if wanted.
 - Remaining redundancy is what the rule set does not cover: no
-  like-term collection (`(+ x x)` stays, rather than `(* 2 x)`), no
-  constant evaluation of the unary functions (`(ln 1) -> 0`,
-  `(exp 0) -> 1`), no trigonometric identities. Each is one more
-  special-case rule in whichever implementation. When a new rule's
-  pattern overlaps an existing one with a different answer, the rule
-  name's lexicographic position decides the winner (first match deletes
-  the candidate): the `muln*` neg-collapse rules sort after `mul0*`/
-  `mul1*`, so `(* 0 (neg 1))` folds to `0`, not `(neg 0)`.
-- `(pow u n)` requires an i64 literal exponent. A symbolic exponent gets
-  no `expm1` fact, so the subterm silently produces no derivative
-  (`d(u^v) = u^v·(v·du/u + ln(u)·dv)` would need the general rule).
-- Non-integer leaves must still be declared via `(dvar _)`/`(const _)`:
-  MM2 patterns cannot test "is a symbol" and the engine does not use
-  negation, so an undeclared symbolic leaf never gets a base `(d leaf _)`
-  fact and the affected root produces no result. Integer leaves are
-  exempt because the grounded phase identifies them by parsing.
+  like-term collection (`(add (var x) (var x))` stays, rather than
+  `(mul (num 2) (var x))`), no constant evaluation of the unary
+  functions (`(ln (num 1)) -> (num 0)`), no trigonometric identities.
+  Each new identity is: its rule, plus a narrowing of the build rules'
+  case analysis so the two stay disjoint or agreeing.
+- `(pow u E)` requires a literal `(num N)` exponent — a symbolic
+  exponent is a different derivative rule (`u^v` needs `ln`), not a
+  missing case of this one.

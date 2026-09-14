@@ -1,79 +1,77 @@
 ; =====================================================================
-; Symbolic differentiation with FUSED simplification in MM2
+; Symbolic differentiation with FUSED simplification — clean (typed-AST)
 ; =====================================================================
 ;
-; A standalone alternative to diff_engine.mm2 + simplify.mm2: instead of
-; building raw derivatives and simplifying afterward, this engine never
-; writes an unsimplified derivative at all. Same inputs, same outputs
-; on redundancy-free inputs:
-;   (dvar x) (const c)... (diff EXPR)  ->  (result EXPR D), D simplified
+; A standalone alternative to diff_engine.mm2 + simplify.mm2 that never
+; writes an unsimplified derivative. Same typed AST, same inputs, same
+; outputs on redundancy-free inputs:
+;   leaves (num N) (var x) (cst c); compounds (add/sub/mul/div u v),
+;   (pow u (num N)), (neg/sin/cos/exp/ln u); input (diff EXPR);
+;   output (result EXPR D) with D simplified.
 ;
 ; One semantic difference from the post-process pair: input subterms
-; copied verbatim into a derivative (the u in (* (cos u) du)) are NOT
-; simplified here, while the post-process pass simplifies everything it
-; sees. On inputs with no redundancy of their own the outputs are
-; identical.
+; copied verbatim into a derivative (the u in (mul (cos u) du)) are NOT
+; simplified here; the post-process pass simplifies everything it walks.
 ;
-; Why the fused form needs different machinery: the plain engine's
-; combination rules build multi-level trees in one template (the product
-; rule writes (+ (* du v) (* u dv)) at once), so redundancy like
-; (* 1 v) appears NESTED where no root-level cleanup can reach it. This
-; engine therefore builds every derivative one level at a time through
-; smart-constructor facts:
-;   (mkq E)    a request: "construct the simplified form of E, whose
-;              children are already simplified"
-;   (mkd E S)  the response, keyed by the original request
-; Constructor resolution reuses the sequenced else-branch from
-; simplify.mm2: special cases delete the mkq they reduce, integer folds
-; are computed by Rust via the pure sink, and a final default converts
-; every surviving mkq verbatim.
+; Every derivative is built one node at a time through smart-constructor
+; facts — (mkq E) requests the simplified form of a node whose children
+; are already simplified values, (mkd E S) answers it, keyed by the
+; request — because the plain engine's combination templates build
+; multi-level trees whose nested redundancy no root-level rule set can
+; reach. Like simplify.mm2, resolution is CLEAN: no default rule, no
+; deletions — a total case analysis over reified dispatch facts, with
+; overlapping rules always agreeing. Requests persist; answers are
+; monotonic.
 ;
-; A combination is a chain of requests (product: t1 = du*v, t2 = u*dv,
-; then t1+t2; quotient and power chain three deep), so each depth level
-; runs FOUR construction rounds instead of one sweep — enough for the
-; longest chain plus its completion. The driver crosses (level l) with
-; the (round r) facts and the phase symbols baked into the rule store:
-; instance tags (c0 ((l r ph) k)) sort round-major then phase-major, so
-; each round runs logic (p1), folds (p2), special cases (p3), default
-; (p4) in order before the next round starts.
+; Dispatch facts (phase p2 below): (val V), (ctor V c), (isexpr V),
+; (def V), (zn/on/mn V ...) via the pure sink's ifnz, and (vne A B) via
+; the != source — see simplify.mm2's header for their meanings. Values
+; here are everything appearing as an mkq argument (which covers d and
+; mkd values and verbatim input subterms alike).
 ;
-; Phase layout by shortlex on the exec tag:
-;   (0 _)   setup: (d x 1), (d c 0), (todo Z EXPR)
-;   (a0/az _)  top-down decomposition (identical to diff_engine.mm2)
-;   (b0 _)  grounded: (d n 0) for integer leaves, (expm1 n m) for pow
-;   (c0/cz _)  fused bottom-up combination via mkq/mkd
-;   (zz _)  collect (result EXPR D)
+; Combination phases per construction round, baked into the rule store
+; as ((qrule PHASE NAME) P T):
+;   p1  derivative logic: issue requests, complete (d E DE) facts
+;   p2  classify request-argument values (rule names are uniform
+;       4-character symbols so the dependency chain aval->ctor->isexpr
+;       ->def->zn/on/mn->vne runs in name order inside one round —
+;       symbol priority is length-first, so mixed lengths would reorder
+;       the chain)
+;   p3  resolve requests into (mkd E S)
+; A derivative is a chain of up to three requests plus its completion
+; (quotient, power), so the driver runs FOUR rounds per depth level:
+; instance tags (c0 ((l r ph) k)) sort round-major then phase-major.
+;
+; Phase layout: (0 _) < (a0/az _) < (b0 _) < (c0/cz _) < (zz _).
 
 ; ---------------------------------------------------------------------
 ; Setup
 ; ---------------------------------------------------------------------
-(exec (0 dvar) (, (dvar $x)) (, (d $x 1)))
-(exec (0 const) (, (const $c)) (, (d $c 0)))
 (exec (0 root) (, (diff $e)) (, (todo Z $e)))
 
 ; ---------------------------------------------------------------------
 ; Phase A: decomposition (identical to diff_engine.mm2)
 ; ---------------------------------------------------------------------
-((arule sum $l)  (, (todo $l (+ $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (+ $u $v))))
-((arule dif $l)  (, (todo $l (- $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (- $u $v))))
-((arule prod $l) (, (todo $l (* $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (* $u $v))))
-((arule quot $l) (, (todo $l (/ $u $v)))
-                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (/ $u $v))))
-((arule pow $l)  (, (todo $l (pow $u $n)))
-                 (, (todo (S $l) $u) (sub (pow $u $n))))
-((arule neg $l)  (, (todo $l (neg $u)))
-                 (, (todo (S $l) $u) (sub (neg $u))))
-((arule sin $l)  (, (todo $l (sin $u)))
-                 (, (todo (S $l) $u) (sub (sin $u))))
-((arule cos $l)  (, (todo $l (cos $u)))
-                 (, (todo (S $l) $u) (sub (cos $u))))
-((arule exp $l)  (, (todo $l (exp $u)))
-                 (, (todo (S $l) $u) (sub (exp $u))))
-((arule ln $l)   (, (todo $l (ln $u)))
-                 (, (todo (S $l) $u) (sub (ln $u))))
+((arule add $l) (, (todo $l (add $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (add $u $v))))
+((arule sub $l) (, (todo $l (sub $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (sub $u $v))))
+((arule mul $l) (, (todo $l (mul $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (mul $u $v))))
+((arule div $l) (, (todo $l (div $u $v)))
+                (, (todo (S $l) $u) (todo (S $l) $v) (sub (div $u $v))))
+((arule pow $l) (, (todo $l (pow $u (num $n))))
+                (, (todo (S $l) $u) (sub (pow $u (num $n)))))
+((arule neg $l) (, (todo $l (neg $u)))
+                (, (todo (S $l) $u) (sub (neg $u))))
+((arule sin $l) (, (todo $l (sin $u)))
+                (, (todo (S $l) $u) (sub (sin $u))))
+((arule cos $l) (, (todo $l (cos $u)))
+                (, (todo (S $l) $u) (sub (cos $u))))
+((arule exp $l) (, (todo $l (exp $u)))
+                (, (todo (S $l) $u) (sub (exp $u))))
+((arule ln $l)  (, (todo $l (ln $u)))
+                (, (todo (S $l) $u) (sub (ln $u))))
 
 (exec (az Z)
   (, (exec (az $l) $p $t)
@@ -84,72 +82,69 @@
      (level $l)))
 
 ; ---------------------------------------------------------------------
-; Grounded integer arithmetic (identical to diff_engine.mm2)
+; Base derivatives (identical to diff_engine.mm2)
 ; ---------------------------------------------------------------------
-(exec (b0 int)
-  (, (todo $l $e))
-  (O (pure (d $e $z) $z
-           (i64_to_string (sub_i64 (i64_from_string $e) (i64_from_string $e))))))
+(exec (b0 cst) (, (todo $l (cst $c))) (, (d (cst $c) (num 0))))
+(exec (b0 num) (, (todo $l (num $n))) (, (d (num $n) (num 0))))
+(exec (b0 var) (, (todo $l (var $x))) (, (d (var $x) (num 1))))
 
 (exec (b0 pow)
-  (, (sub (pow $u $n)))
-  (O (pure (expm1 $n $m) $m
+  (, (sub (pow $u (num $n))))
+  (O (pure (expm1 (num $n) (num $m)) $m
            (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
 
 ; ---------------------------------------------------------------------
-; Fused combination: rule store ((qrule PHASE NAME) PATTERNS TEMPLATES)
+; p1: derivative logic — request chains and completions
 ; ---------------------------------------------------------------------
-; --- p1: derivative logic — issue construction requests, then complete
-;     the (d E DE) fact once the chain's final response exists.
-((qrule p1 sumq) (, (sub (+ $u $v)) (d $u $du) (d $v $dv))
-                 (, (mkq (+ $du $dv))))
-((qrule p1 sumd) (, (sub (+ $u $v)) (d $u $du) (d $v $dv)
-                    (mkd (+ $du $dv) $r))
-                 (, (d (+ $u $v) $r)))
+((qrule p1 addq) (, (sub (add $u $v)) (d $u $du) (d $v $dv))
+                 (, (mkq (add $du $dv))))
+((qrule p1 addd) (, (sub (add $u $v)) (d $u $du) (d $v $dv)
+                    (mkd (add $du $dv) $r))
+                 (, (d (add $u $v) $r)))
 
-((qrule p1 difq) (, (sub (- $u $v)) (d $u $du) (d $v $dv))
-                 (, (mkq (- $du $dv))))
-((qrule p1 difd) (, (sub (- $u $v)) (d $u $du) (d $v $dv)
-                    (mkd (- $du $dv) $r))
-                 (, (d (- $u $v) $r)))
+((qrule p1 subq) (, (sub (sub $u $v)) (d $u $du) (d $v $dv))
+                 (, (mkq (sub $du $dv))))
+((qrule p1 subd) (, (sub (sub $u $v)) (d $u $du) (d $v $dv)
+                    (mkd (sub $du $dv) $r))
+                 (, (d (sub $u $v) $r)))
 
-((qrule p1 prodq1) (, (sub (* $u $v)) (d $u $du) (d $v $dv))
-                   (, (mkq (* $du $v)) (mkq (* $u $dv))))
-((qrule p1 prodq2) (, (sub (* $u $v)) (d $u $du) (d $v $dv)
-                      (mkd (* $du $v) $r1) (mkd (* $u $dv) $r2))
-                   (, (mkq (+ $r1 $r2))))
-((qrule p1 prodd)  (, (sub (* $u $v)) (d $u $du) (d $v $dv)
-                      (mkd (* $du $v) $r1) (mkd (* $u $dv) $r2)
-                      (mkd (+ $r1 $r2) $r))
-                   (, (d (* $u $v) $r)))
+((qrule p1 mulq1) (, (sub (mul $u $v)) (d $u $du) (d $v $dv))
+                  (, (mkq (mul $du $v)) (mkq (mul $u $dv))))
+((qrule p1 mulq2) (, (sub (mul $u $v)) (d $u $du) (d $v $dv)
+                     (mkd (mul $du $v) $r1) (mkd (mul $u $dv) $r2))
+                  (, (mkq (add $r1 $r2))))
+((qrule p1 muld)  (, (sub (mul $u $v)) (d $u $du) (d $v $dv)
+                     (mkd (mul $du $v) $r1) (mkd (mul $u $dv) $r2)
+                     (mkd (add $r1 $r2) $r))
+                  (, (d (mul $u $v) $r)))
 
-((qrule p1 quotq1) (, (sub (/ $u $v)) (d $u $du) (d $v $dv))
-                   (, (mkq (* $du $v)) (mkq (* $u $dv)) (mkq (* $v $v))))
-((qrule p1 quotq2) (, (sub (/ $u $v)) (d $u $du) (d $v $dv)
-                      (mkd (* $du $v) $r1) (mkd (* $u $dv) $r2))
-                   (, (mkq (- $r1 $r2))))
-((qrule p1 quotq3) (, (sub (/ $u $v)) (d $u $du) (d $v $dv)
-                      (mkd (* $du $v) $r1) (mkd (* $u $dv) $r2)
-                      (mkd (- $r1 $r2) $r3) (mkd (* $v $v) $r4))
-                   (, (mkq (/ $r3 $r4))))
-((qrule p1 quotd)  (, (sub (/ $u $v)) (d $u $du) (d $v $dv)
-                      (mkd (* $du $v) $r1) (mkd (* $u $dv) $r2)
-                      (mkd (- $r1 $r2) $r3) (mkd (* $v $v) $r4)
-                      (mkd (/ $r3 $r4) $r))
-                   (, (d (/ $u $v) $r)))
+((qrule p1 divq1) (, (sub (div $u $v)) (d $u $du) (d $v $dv))
+                  (, (mkq (mul $du $v)) (mkq (mul $u $dv)) (mkq (mul $v $v))))
+((qrule p1 divq2) (, (sub (div $u $v)) (d $u $du) (d $v $dv)
+                     (mkd (mul $du $v) $r1) (mkd (mul $u $dv) $r2))
+                  (, (mkq (sub $r1 $r2))))
+((qrule p1 divq3) (, (sub (div $u $v)) (d $u $du) (d $v $dv)
+                     (mkd (mul $du $v) $r1) (mkd (mul $u $dv) $r2)
+                     (mkd (sub $r1 $r2) $r3) (mkd (mul $v $v) $r4))
+                  (, (mkq (div $r3 $r4))))
+((qrule p1 divd)  (, (sub (div $u $v)) (d $u $du) (d $v $dv)
+                     (mkd (mul $du $v) $r1) (mkd (mul $u $dv) $r2)
+                     (mkd (sub $r1 $r2) $r3) (mkd (mul $v $v) $r4)
+                     (mkd (div $r3 $r4) $r))
+                  (, (d (div $u $v) $r)))
 
-((qrule p1 powq1) (, (sub (pow $u $n)) (expm1 $n $m) (d $u $du))
-                  (, (mkq (pow $u $m))))
-((qrule p1 powq2) (, (sub (pow $u $n)) (expm1 $n $m) (d $u $du)
-                     (mkd (pow $u $m) $r1))
-                  (, (mkq (* $n $r1))))
-((qrule p1 powq3) (, (sub (pow $u $n)) (expm1 $n $m) (d $u $du)
-                     (mkd (pow $u $m) $r1) (mkd (* $n $r1) $r2))
-                  (, (mkq (* $r2 $du))))
-((qrule p1 powd)  (, (sub (pow $u $n)) (expm1 $n $m) (d $u $du)
-                     (mkd (pow $u $m) $r1) (mkd (* $n $r1) $r2)
-                     (mkd (* $r2 $du) $r))
-                  (, (d (pow $u $n) $r)))
+((qrule p1 powq1) (, (sub (pow $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du))
+                  (, (mkq (pow $u (num $m)))))
+((qrule p1 powq2) (, (sub (pow $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du)
+                     (mkd (pow $u (num $m)) $r1))
+                  (, (mkq (mul (num $n) $r1))))
+((qrule p1 powq3) (, (sub (pow $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du)
+                     (mkd (pow $u (num $m)) $r1) (mkd (mul (num $n) $r1) $r2))
+                  (, (mkq (mul $r2 $du))))
+((qrule p1 powd)  (, (sub (pow $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du)
+                     (mkd (pow $u (num $m)) $r1) (mkd (mul (num $n) $r1) $r2)
+                     (mkd (mul $r2 $du) $r))
+                  (, (d (pow $u (num $n)) $r)))
 
 ((qrule p1 negq) (, (sub (neg $u)) (d $u $du))
                  (, (mkq (neg $du))))
@@ -157,88 +152,194 @@
                  (, (d (neg $u) $r)))
 
 ((qrule p1 sinq) (, (sub (sin $u)) (d $u $du))
-                 (, (mkq (* (cos $u) $du))))
-((qrule p1 sind) (, (sub (sin $u)) (d $u $du) (mkd (* (cos $u) $du) $r))
+                 (, (mkq (mul (cos $u) $du))))
+((qrule p1 sind) (, (sub (sin $u)) (d $u $du) (mkd (mul (cos $u) $du) $r))
                  (, (d (sin $u) $r)))
 
 ((qrule p1 cosq1) (, (sub (cos $u)) (d $u $du))
-                  (, (mkq (* (sin $u) $du))))
-((qrule p1 cosq2) (, (sub (cos $u)) (d $u $du) (mkd (* (sin $u) $du) $r1))
+                  (, (mkq (mul (sin $u) $du))))
+((qrule p1 cosq2) (, (sub (cos $u)) (d $u $du) (mkd (mul (sin $u) $du) $r1))
                   (, (mkq (neg $r1))))
-((qrule p1 cosd)  (, (sub (cos $u)) (d $u $du) (mkd (* (sin $u) $du) $r1)
+((qrule p1 cosd)  (, (sub (cos $u)) (d $u $du) (mkd (mul (sin $u) $du) $r1)
                      (mkd (neg $r1) $r))
                   (, (d (cos $u) $r)))
 
 ((qrule p1 expq) (, (sub (exp $u)) (d $u $du))
-                 (, (mkq (* (exp $u) $du))))
-((qrule p1 expd) (, (sub (exp $u)) (d $u $du) (mkd (* (exp $u) $du) $r))
+                 (, (mkq (mul (exp $u) $du))))
+((qrule p1 expd) (, (sub (exp $u)) (d $u $du) (mkd (mul (exp $u) $du) $r))
                  (, (d (exp $u) $r)))
 
 ((qrule p1 lnq) (, (sub (ln $u)) (d $u $du))
-                (, (mkq (/ $du $u))))
-((qrule p1 lnd) (, (sub (ln $u)) (d $u $du) (mkd (/ $du $u) $r))
+                (, (mkq (div $du $u))))
+((qrule p1 lnd) (, (sub (ln $u)) (d $u $du) (mkd (div $du $u) $r))
                 (, (d (ln $u) $r)))
 
-; --- p2: integer constant folding on pending requests
-((qrule p2 fsum) (, (mkq (+ $a $b)))
-                 (O (pure (fold (+ $a $b) $v) $v
-                          (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
-((qrule p2 fdif) (, (mkq (- $a $b)))
-                 (O (pure (fold (- $a $b) $v) $v
-                          (i64_to_string (sub_i64 (i64_from_string $a) (i64_from_string $b))))))
-((qrule p2 fmul) (, (mkq (* $a $b)))
-                 (O (pure (fold (* $a $b) $v) $v
-                          (i64_to_string (product_i64 (i64_from_string $a) (i64_from_string $b))))))
+; ---------------------------------------------------------------------
+; p2: classification (uniform 4-character names, chain in name order)
+; ---------------------------------------------------------------------
+((qrule p2 avaB) (, (mkq ($f $a $b))) (, (val $a) (val $b)))
+((qrule p2 avaU) (, (mkq ($f $a))) (, (val $a)))
 
-; --- p3: special-case constructors — delete the request they reduce
-((qrule p3 add0L) (, (mkq (+ 0 $x))) (O (- (mkq (+ 0 $x))) (+ (mkd (+ 0 $x) $x))))
-((qrule p3 add0R) (, (mkq (+ $x 0))) (O (- (mkq (+ $x 0))) (+ (mkd (+ $x 0) $x))))
-((qrule p3 dif0R) (, (mkq (- $x 0))) (O (- (mkq (- $x 0))) (+ (mkd (- $x 0) $x))))
-; same-operand cancellation: the repeated $x makes the rule fire only
-; when both operands are the same expression (equality by unification)
-((qrule p3 difxx) (, (mkq (- $x $x))) (O (- (mkq (- $x $x))) (+ (mkd (- $x $x) 0))))
-((qrule p3 mul1L) (, (mkq (* 1 $x))) (O (- (mkq (* 1 $x))) (+ (mkd (* 1 $x) $x))))
-((qrule p3 mul1R) (, (mkq (* $x 1))) (O (- (mkq (* $x 1))) (+ (mkd (* $x 1) $x))))
-((qrule p3 mul0L) (, (mkq (* 0 $x))) (O (- (mkq (* 0 $x))) (+ (mkd (* 0 $x) 0))))
-((qrule p3 mul0R) (, (mkq (* $x 0))) (O (- (mkq (* $x 0))) (+ (mkd (* $x 0) 0))))
-; neg collapse: (* (neg 1) e) / (* e (neg 1)) -> (neg e). The muln names
-; sort after mul0/mul1, so on an overlap like (* 0 (neg 1)) the zero
-; rule deletes the request first and 0 wins in both implementations.
-((qrule p3 mulnL) (, (mkq (* (neg 1) $x))) (O (- (mkq (* (neg 1) $x))) (+ (mkd (* (neg 1) $x) (neg $x)))))
-((qrule p3 mulnR) (, (mkq (* $x (neg 1)))) (O (- (mkq (* $x (neg 1)))) (+ (mkd (* $x (neg 1)) (neg $x)))))
-; division by zero is UNDEFINED, and UNDEFINED is contagious: any node
-; with an UNDEFINED child is UNDEFINED (the variable-head patterns $f
-; cover every operator). These four rules have 4-character names, and
-; shorter symbols sort first, so they take precedence over every
-; 5-character rule below: (/ 0 0) is UNDEFINED (not div0L's 0) and
-; (* 0 UNDEFINED) is UNDEFINED (not mul0L's 0).
-((qrule p3 divZ) (, (mkq (/ $x 0))) (O (- (mkq (/ $x 0))) (+ (mkd (/ $x 0) UNDEFINED))))
-((qrule p3 undL) (, (mkq ($f UNDEFINED $x))) (O (- (mkq ($f UNDEFINED $x))) (+ (mkd ($f UNDEFINED $x) UNDEFINED))))
-((qrule p3 undR) (, (mkq ($f $x UNDEFINED))) (O (- (mkq ($f $x UNDEFINED))) (+ (mkd ($f $x UNDEFINED) UNDEFINED))))
-((qrule p3 undU) (, (mkq ($f UNDEFINED))) (O (- (mkq ($f UNDEFINED))) (+ (mkd ($f UNDEFINED) UNDEFINED))))
-((qrule p3 div0L) (, (mkq (/ 0 $x))) (O (- (mkq (/ 0 $x))) (+ (mkd (/ 0 $x) 0))))
-((qrule p3 div1R) (, (mkq (/ $x 1))) (O (- (mkq (/ $x 1))) (+ (mkd (/ $x 1) $x))))
-; same-operand division (equality by unification, as in difxx); divZ
-; above already owns (/ 0 0)
-((qrule p3 divxx) (, (mkq (/ $x $x))) (O (- (mkq (/ $x $x))) (+ (mkd (/ $x $x) 1))))
-((qrule p3 pow1)  (, (mkq (pow $x 1))) (O (- (mkq (pow $x 1))) (+ (mkd (pow $x 1) $x))))
-((qrule p3 pow0)  (, (mkq (pow $x 0))) (O (- (mkq (pow $x 0))) (+ (mkd (pow $x 0) 1))))
-((qrule p3 neg0)  (, (mkq (neg 0))) (O (- (mkq (neg 0))) (+ (mkd (neg 0) 0))))
-((qrule p3 negn)  (, (mkq (neg (neg $x)))) (O (- (mkq (neg (neg $x)))) (+ (mkd (neg (neg $x)) $x))))
-((qrule p3 foldr) (, (mkq $q) (fold $q $v)) (O (- (mkq $q)) (+ (mkd $q $v))))
+((qrule p2 cbin) (, (val ($f $a $b))) (, (ctor ($f $a $b) $f)))
+((qrule p2 ccst) (, (val (cst $c))) (, (ctor (cst $c) cst)))
+((qrule p2 ccos) (, (val (cos $u))) (, (ctor (cos $u) cos)))
+((qrule p2 cexp) (, (val (exp $u))) (, (ctor (exp $u) exp)))
+((qrule p2 clnn) (, (val (ln $u)))  (, (ctor (ln $u) ln)))
+((qrule p2 cneg) (, (val (neg $u))) (, (ctor (neg $u) neg)))
+((qrule p2 cnum) (, (val (num $n))) (, (ctor (num $n) num)))
+((qrule p2 csin) (, (val (sin $u))) (, (ctor (sin $u) sin)))
+((qrule p2 cvar) (, (val (var $x))) (, (ctor (var $x) var)))
 
-; --- p4: the default — a surviving request is already in simplest form
-((qrule p4 def) (, (mkq $q)) (O (- (mkq $q)) (+ (mkd $q $q))))
+((qrule p2 iexp) (, (ctor $v $c) (exprtag $c)) (, (isexpr $v)))
+((qrule p2 jdfe) (, (isexpr $v)) (, (def $v)))
+((qrule p2 jdfn) (, (ctor $v num)) (, (def $v)))
 
-; Construction rounds per level: four, enough for the deepest chain
-; (quotient/power: three requests, then completion).
+((qrule p2 nzmm) (, (val (num $n)))
+                 (O (pure (mn (num $n) $r) $r
+                          (ifnz (sum_i64 (i64_from_string $n) (i64_one)) then NM else M))))
+((qrule p2 nzoo) (, (val (num $n)))
+                 (O (pure (on (num $n) $r) $r
+                          (ifnz (sub_i64 (i64_from_string $n) (i64_one)) then NO else O))))
+((qrule p2 nzzz) (, (val (num $n)))
+                 (O (pure (zn (num $n) $r) $r
+                          (ifnz (i64_from_string $n) then NZ else Z))))
+
+((qrule p2 znee) (I (!= (val $x) (val $y))) (, (vne $x $y)))
+
+(exprtag add) (exprtag sub) (exprtag mul) (exprtag div) (exprtag pow)
+(exprtag neg) (exprtag sin) (exprtag cos) (exprtag exp) (exprtag ln)
+(exprtag var) (exprtag cst)
+(negtag add) (negtag sub) (negtag mul) (negtag div) (negtag pow)
+(negtag sin) (negtag cos) (negtag exp) (negtag ln)
+(negtag var) (negtag cst)
+
+; ---------------------------------------------------------------------
+; p3: resolve requests — total case analysis per constructor (the same
+; rule set as simplify.mm2's zzf phase, on requests instead of subterms)
+; ---------------------------------------------------------------------
+((qrule p3 addf)  (, (mkq (add (num $a) (num $b))))
+                  (O (pure (mkd (add (num $a) (num $b)) (num $r)) $r
+                           (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
+((qrule p3 addzL) (, (mkq (add (num 0) $b)) (isexpr $b))
+                  (, (mkd (add (num 0) $b) $b)))
+((qrule p3 addzR) (, (mkq (add $a (num 0))) (isexpr $a))
+                  (, (mkd (add $a (num 0)) $a)))
+((qrule p3 addbL) (, (mkq (add $a $b)) (zn $a NZ) (isexpr $b))
+                  (, (mkd (add $a $b) (add $a $b))))
+((qrule p3 addbR) (, (mkq (add $a $b)) (isexpr $a) (zn $b NZ))
+                  (, (mkd (add $a $b) (add $a $b))))
+((qrule p3 addbE) (, (mkq (add $a $b)) (isexpr $a) (isexpr $b))
+                  (, (mkd (add $a $b) (add $a $b))))
+((qrule p3 adduL) (, (mkq (add UNDEFINED $b)) (val $b))
+                  (, (mkd (add UNDEFINED $b) UNDEFINED)))
+((qrule p3 adduR) (, (mkq (add $a UNDEFINED)) (val $a))
+                  (, (mkd (add $a UNDEFINED) UNDEFINED)))
+
+((qrule p3 subf)  (, (mkq (sub (num $a) (num $b))))
+                  (O (pure (mkd (sub (num $a) (num $b)) (num $r)) $r
+                           (i64_to_string (sub_i64 (i64_from_string $a) (i64_from_string $b))))))
+((qrule p3 subzR) (, (mkq (sub $a (num 0))) (isexpr $a))
+                  (, (mkd (sub $a (num 0)) $a)))
+((qrule p3 subxx) (, (mkq (sub $x $x)) (isexpr $x))
+                  (, (mkd (sub $x $x) (num 0))))
+((qrule p3 subbL) (, (mkq (sub $a $b)) (ctor $a num) (isexpr $b))
+                  (, (mkd (sub $a $b) (sub $a $b))))
+((qrule p3 subbR) (, (mkq (sub $a $b)) (isexpr $a) (zn $b NZ))
+                  (, (mkd (sub $a $b) (sub $a $b))))
+((qrule p3 subbE) (, (mkq (sub $a $b)) (isexpr $a) (isexpr $b) (vne $a $b))
+                  (, (mkd (sub $a $b) (sub $a $b))))
+((qrule p3 subuL) (, (mkq (sub UNDEFINED $b)) (val $b))
+                  (, (mkd (sub UNDEFINED $b) UNDEFINED)))
+((qrule p3 subuR) (, (mkq (sub $a UNDEFINED)) (val $a))
+                  (, (mkd (sub $a UNDEFINED) UNDEFINED)))
+
+((qrule p3 mulf)  (, (mkq (mul (num $a) (num $b))))
+                  (O (pure (mkd (mul (num $a) (num $b)) (num $r)) $r
+                           (i64_to_string (product_i64 (i64_from_string $a) (i64_from_string $b))))))
+((qrule p3 mulzL) (, (mkq (mul (num 0) $b)) (isexpr $b))
+                  (, (mkd (mul (num 0) $b) (num 0))))
+((qrule p3 mulzR) (, (mkq (mul $a (num 0))) (isexpr $a))
+                  (, (mkd (mul $a (num 0)) (num 0))))
+((qrule p3 mul1L) (, (mkq (mul (num 1) $b)) (isexpr $b))
+                  (, (mkd (mul (num 1) $b) $b)))
+((qrule p3 mul1R) (, (mkq (mul $a (num 1))) (isexpr $a))
+                  (, (mkd (mul $a (num 1)) $a)))
+((qrule p3 mulmL) (, (mkq (mul (num -1) $b)) (isexpr $b))
+                  (, (mkd (mul (num -1) $b) (neg $b))))
+((qrule p3 mulmR) (, (mkq (mul $a (num -1))) (isexpr $a))
+                  (, (mkd (mul $a (num -1)) (neg $a))))
+((qrule p3 mulbL) (, (mkq (mul $a $b)) (zn $a NZ) (on $a NO) (mn $a NM) (isexpr $b))
+                  (, (mkd (mul $a $b) (mul $a $b))))
+((qrule p3 mulbR) (, (mkq (mul $a $b)) (isexpr $a) (zn $b NZ) (on $b NO) (mn $b NM))
+                  (, (mkd (mul $a $b) (mul $a $b))))
+((qrule p3 mulbE) (, (mkq (mul $a $b)) (isexpr $a) (isexpr $b))
+                  (, (mkd (mul $a $b) (mul $a $b))))
+((qrule p3 muluL) (, (mkq (mul UNDEFINED $b)) (val $b))
+                  (, (mkd (mul UNDEFINED $b) UNDEFINED)))
+((qrule p3 muluR) (, (mkq (mul $a UNDEFINED)) (val $a))
+                  (, (mkd (mul $a UNDEFINED) UNDEFINED)))
+
+((qrule p3 divz)  (, (mkq (div $a (num 0))) (val $a))
+                  (, (mkd (div $a (num 0)) UNDEFINED)))
+((qrule p3 div0a) (, (mkq (div (num 0) $b)) (isexpr $b))
+                  (, (mkd (div (num 0) $b) (num 0))))
+((qrule p3 div0b) (, (mkq (div (num 0) $b)) (zn $b NZ))
+                  (, (mkd (div (num 0) $b) (num 0))))
+((qrule p3 div1)  (, (mkq (div $a (num 1))) (def $a))
+                  (, (mkd (div $a (num 1)) $a)))
+((qrule p3 divxE) (, (mkq (div $x $x)) (isexpr $x))
+                  (, (mkd (div $x $x) (num 1))))
+((qrule p3 divxN) (, (mkq (div $x $x)) (zn $x NZ))
+                  (, (mkd (div $x $x) (num 1))))
+((qrule p3 divbNN) (, (mkq (div $a $b)) (zn $a NZ) (zn $b NZ) (on $b NO) (vne $a $b))
+                   (, (mkd (div $a $b) (div $a $b))))
+((qrule p3 divbNE) (, (mkq (div $a $b)) (zn $a NZ) (isexpr $b))
+                   (, (mkd (div $a $b) (div $a $b))))
+((qrule p3 divbEN) (, (mkq (div $a $b)) (isexpr $a) (zn $b NZ) (on $b NO))
+                   (, (mkd (div $a $b) (div $a $b))))
+((qrule p3 divbEE) (, (mkq (div $a $b)) (isexpr $a) (isexpr $b) (vne $a $b))
+                   (, (mkd (div $a $b) (div $a $b))))
+((qrule p3 divuL) (, (mkq (div UNDEFINED $b)) (val $b))
+                  (, (mkd (div UNDEFINED $b) UNDEFINED)))
+((qrule p3 divuR) (, (mkq (div $a UNDEFINED)) (val $a))
+                  (, (mkd (div $a UNDEFINED) UNDEFINED)))
+
+((qrule p3 pow1) (, (mkq (pow $a (num 1))) (def $a))
+                 (, (mkd (pow $a (num 1)) $a)))
+((qrule p3 pow0) (, (mkq (pow $a (num 0))) (def $a))
+                 (, (mkd (pow $a (num 0)) (num 1))))
+((qrule p3 powb) (, (mkq (pow $a (num $n))) (def $a) (zn (num $n) NZ) (on (num $n) NO))
+                 (, (mkd (pow $a (num $n)) (pow $a (num $n)))))
+((qrule p3 powu) (, (mkq (pow UNDEFINED (num $n))) (val (num $n)))
+                 (, (mkd (pow UNDEFINED (num $n)) UNDEFINED)))
+
+((qrule p3 negf) (, (mkq (neg (num $a))))
+                 (O (pure (mkd (neg (num $a)) (num $r)) $r
+                          (i64_to_string (sub_i64 (i64_from_string 0) (i64_from_string $a))))))
+((qrule p3 negn) (, (mkq (neg (neg $x))))
+                 (, (mkd (neg (neg $x)) $x)))
+((qrule p3 negb) (, (mkq (neg $a)) (ctor $a $c) (negtag $c))
+                 (, (mkd (neg $a) (neg $a))))
+((qrule p3 negu) (, (mkq (neg UNDEFINED)))
+                 (, (mkd (neg UNDEFINED) UNDEFINED)))
+
+((qrule p3 sinb) (, (mkq (sin $a)) (def $a)) (, (mkd (sin $a) (sin $a))))
+((qrule p3 sinu) (, (mkq (sin UNDEFINED))) (, (mkd (sin UNDEFINED) UNDEFINED)))
+((qrule p3 cosb) (, (mkq (cos $a)) (def $a)) (, (mkd (cos $a) (cos $a))))
+((qrule p3 cosu) (, (mkq (cos UNDEFINED))) (, (mkd (cos UNDEFINED) UNDEFINED)))
+((qrule p3 expb) (, (mkq (exp $a)) (def $a)) (, (mkd (exp $a) (exp $a))))
+((qrule p3 expu) (, (mkq (exp UNDEFINED))) (, (mkd (exp UNDEFINED) UNDEFINED)))
+((qrule p3 lnb)  (, (mkq (ln $a)) (def $a)) (, (mkd (ln $a) (ln $a))))
+((qrule p3 lnu)  (, (mkq (ln UNDEFINED))) (, (mkd (ln UNDEFINED) UNDEFINED)))
+
+; ---------------------------------------------------------------------
+; Combination driver: four p1/p2/p3 rounds per depth level
+; ---------------------------------------------------------------------
 (round r1)
 (round r2)
 (round r3)
 (round r4)
 
-; Driver: per (level l), instantiate every qrule once per round; the
-; instance tag ((l r ph) k) orders execution round-major, phase-major.
 (exec (cz Z)
   (, (exec (cz $l) $p $t)
      (level $l)

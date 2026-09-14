@@ -1,8 +1,6 @@
 ; Tests for SIMPLIFIED differentiation results. Two ways to run:
-;   post-process:  cat test_simplify.mm2 diff_engine.mm2 simplify.mm2
-;   fused engine:  cat test_simplify.mm2 diff_engine_fused.mm2
-; (or ./run.sh test_simplify.mm2 simplify.mm2, or
-;  ENGINE=diff_engine_fused.mm2 ./run.sh test_simplify.mm2)
+;   post-process:  ./run.sh test_simplify.mm2 simplify.mm2
+;   fused engine:  ENGINE=diff_engine_fused.mm2 ./run.sh test_simplify.mm2
 ;
 ; Both implementations must produce identical results on these cases:
 ; the inputs contain no redundancy of their own, so the one semantic
@@ -13,64 +11,64 @@
 ; Expected output: one (CORRECT EXPR) per case and no MISTAKE facts.
 
 ; ---------------- test inputs ----------------
-(dvar x)
-(const a)
+(diff (var x))
+(solution (var x) (num 1))
 
-(diff x)
-(solution x 1)
+(diff (num 7))
+(solution (num 7) (num 0))
 
-(diff 7)
-(solution 7 0)
+(diff (add (mul (var x) (var x)) (mul (num 2) (var x))))
+(solution (add (mul (var x) (var x)) (mul (num 2) (var x)))
+          (add (add (var x) (var x)) (num 2)))
 
-(diff (+ (* x x) (* 2 x)))
-(solution (+ (* x x) (* 2 x)) (+ (+ x x) 2))
+(diff (sin (mul (var x) (var x))))
+(solution (sin (mul (var x) (var x)))
+          (mul (cos (mul (var x) (var x))) (add (var x) (var x))))
 
-(diff (sin (* x x)))
-(solution (sin (* x x)) (* (cos (* x x)) (+ x x)))
+(diff (div (var x) (add (var x) (cst a))))
+(solution (div (var x) (add (var x) (cst a)))
+          (div (sub (add (var x) (cst a)) (var x))
+               (mul (add (var x) (cst a)) (add (var x) (cst a)))))
 
-(diff (/ x (+ x a)))
-(solution (/ x (+ x a)) (/ (- (+ x a) x) (* (+ x a) (+ x a))))
+(diff (mul (exp (neg (var x))) (ln (var x))))
+(solution (mul (exp (neg (var x))) (ln (var x)))
+          (add (mul (neg (exp (neg (var x)))) (ln (var x)))
+               (mul (exp (neg (var x))) (div (num 1) (var x)))))
 
-; cascades: numerator (- x x) -> 0 via difxx, then (/ 0 (* x x)) -> 0
-; via div0L; d(x/x) = d(1) = 0
-(diff (/ x x))
-(solution (/ x x) 0)
+(diff (cos (sub (var x) (num 2))))
+(solution (cos (sub (var x) (num 2)))
+          (neg (sin (sub (var x) (num 2)))))
 
-; cascades: (* (exp x) 1) -> (exp x) via mul1R, then the ln rule's
-; (/ (exp x) (exp x)) -> 1 via divxx; ln(exp x) = x, so d = 1
-(diff (ln (exp x)))
-(solution (ln (exp x)) 1)
+; chains the minus-one collapse (mul e (num -1)) -> (neg e) — the neg
+; fold turns (neg (num 1)) into (num -1) first — then double negation
+(diff (cos (neg (var x))))
+(solution (cos (neg (var x))) (sin (neg (var x))))
 
-; division by zero: the quotient rule's denominator (* 0 0) -> 0 makes
-; the derivative (/ 0 0), which divZ turns into UNDEFINED
-(diff (/ x 0))
-(solution (/ x 0) UNDEFINED)
+(diff (pow (var x) (num 3)))
+(solution (pow (var x) (num 3)) (mul (num 3) (pow (var x) (num 2))))
 
-; UNDEFINED is contagious: (+ 1 UNDEFINED) -> UNDEFINED via undR
-(diff (+ x (/ x 0)))
-(solution (+ x (/ x 0)) UNDEFINED)
+(diff (pow (add (var x) (cst a)) (num -2)))
+(solution (pow (add (var x) (cst a)) (num -2))
+          (mul (num -2) (pow (add (var x) (cst a)) (num -3))))
 
-(diff (* (exp (neg x)) (ln x)))
-(solution (* (exp (neg x)) (ln x))
-          (+ (* (neg (exp (neg x))) (ln x)) (* (exp (neg x)) (/ 1 x))))
+; numerator (sub e e) -> (num 0), then zero numerator; d(x/x) = 0
+(diff (div (var x) (var x)))
+(solution (div (var x) (var x)) (num 0))
 
-(diff (cos (- x 2)))
-(solution (cos (- x 2)) (neg (sin (- x 2))))
+; (div e e) -> (num 1) on the ln rule's quotient; ln(exp x) = x, d = 1
+(diff (ln (exp (var x))))
+(solution (ln (exp (var x))) (num 1))
 
-; chains two collapses: (* (sin (neg x)) (neg 1)) -> (neg (sin (neg x)))
-; via muln, then the cos rule's outer neg cancels via negn
-(diff (cos (neg x)))
-(solution (cos (neg x)) (sin (neg x)))
+; the quotient rule's denominator folds to (num 0): division by zero is
+; UNDEFINED
+(diff (div (var x) (num 0)))
+(solution (div (var x) (num 0)) UNDEFINED)
 
-(diff (pow x 3))
-(solution (pow x 3) (* 3 (pow x 2)))
-
-(diff (pow (+ x a) -2))
-(solution (pow (+ x a) -2) (* -2 (pow (+ x a) -3)))
+; UNDEFINED is contagious through the enclosing sum
+(diff (add (var x) (div (var x) (num 0))))
+(solution (add (var x) (div (var x) (num 0))) UNDEFINED)
 
 ; ---------------- test code ----------------
-; Same symmetric-difference harness as test.mm2; the (zzt _) tags sort
-; after both the engine and either simplifier layer.
 (exec (zzt 0) (, (diff $e) (result $e $de)) (O (+ (MISTAKE $e $de))))
 (exec (zzt 0) (, (diff $e) (solution $e $de)) (O (+ (MISTAKE $e $de))))
 (exec (zzt 1) (, (result $e $de) (solution $e $de)) (O (- (MISTAKE $e $de))))
