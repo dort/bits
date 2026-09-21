@@ -19,11 +19,16 @@
 
 (diff (add (mul (var x) (var x)) (mul (num 2) (var x))))
 (solution (add (mul (var x) (var x)) (mul (num 2) (var x)))
-          (add (add (var x) (var x)) (num 2)))
+          (add (num 2) (add (var x) (var x))))
 
 (diff (sin (mul (var x) (var x))))
 (solution (sin (mul (var x) (var x)))
           (mul (cos (mul (var x) (var x))) (add (var x) (var x))))
+
+; a non-identity numeric factor produced on the right is canonicalized left
+(diff (sin (mul (num 3) (var x))))
+(solution (sin (mul (num 3) (var x)))
+          (mul (num 3) (cos (mul (num 3) (var x)))))
 
 (diff (div (var x) (add (var x) (cst a))))
 (solution (div (var x) (add (var x) (cst a)))
@@ -67,6 +72,31 @@
 ; UNDEFINED is contagious through the enclosing sum
 (diff (add (var x) (div (var x) (num 0))))
 (solution (add (var x) (div (var x) (num 0))) UNDEFINED)
+
+; ---------------- floating-point cases ----------------
+(diff (flt 2.5))
+(solution (flt 2.5) (num 0))
+
+; mixed add promotes the integer derivative contribution to f64
+(diff (add (mul (flt 2.5) (var x)) (mul (num 2) (var x))))
+(solution (add (mul (flt 2.5) (var x)) (mul (num 2) (var x))) (flt 4.5))
+
+; mixed multiplication promotes and folds to f64
+(diff (mul (mul (flt 2.5) (var x)) (num 2)))
+(solution (mul (mul (flt 2.5) (var x)) (num 2)) (flt 5.0))
+
+; floating constant exponent uses the grounded f64 decrement
+(diff (pow (var x) (flt 2.5)))
+(solution (pow (var x) (flt 2.5))
+          (mul (flt 2.5) (pow (var x) (flt 1.5))))
+
+; floating zero participates in division-by-zero semantics
+(diff (div (var x) (flt 0.0)))
+(solution (div (var x) (flt 0.0)) UNDEFINED)
+
+; floating zero annihilation preserves promoted floating type
+(diff (mul (flt 0.0) (var x)))
+(solution (mul (flt 0.0) (var x)) (flt 0.0))
 
 ; ---------------- test code ----------------
 (exec (zzt 0) (, (diff $e) (result $e $de)) (O (+ (MISTAKE $e $de))))

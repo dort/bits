@@ -5,8 +5,8 @@
 ; A standalone alternative to diff_engine.mm2 + simplify.mm2 that never
 ; writes an unsimplified derivative. Same typed AST, same inputs, same
 ; outputs on redundancy-free inputs:
-;   leaves (num N) (var x) (cst c); compounds (add/sub/mul/div u v),
-;   (pow u (num N)), (neg/sin/cos/exp/ln u); input (diff EXPR);
+;   leaves (num N) (flt F) (var x) (cst c); compounds (add/sub/mul/div u v),
+;   (pow u (num N)|(flt F)), (neg/sin/cos/exp/ln u); input (diff EXPR);
 ;   output (result EXPR D) with D simplified.
 ;
 ; One semantic difference from the post-process pair: input subterms
@@ -22,6 +22,9 @@
 ; deletions — a total case analysis over reified dispatch facts, with
 ; overlapping rules always agreeing. Requests persist; answers are
 ; monotonic.
+; Canonical form for the commutative constructors puts a lone numeric
+; operand on the left: (add/mul E NUMBER) answers as
+; (add/mul NUMBER E), after identity reduction.
 ;
 ; Dispatch facts (phase p2 below): (val V), (ctor V c), (isexpr V),
 ; (def V), (zn/on/mn V ...) via the pure sink's ifnz, and (vne A B) via
@@ -62,6 +65,8 @@
                 (, (todo (S $l) $u) (todo (S $l) $v) (sub (div $u $v))))
 ((arule pow $l) (, (todo $l (pow $u (num $n))))
                 (, (todo (S $l) $u) (sub (pow $u (num $n)))))
+((arule pow $l) (, (todo $l (pow $u (flt $n))))
+                (, (todo (S $l) $u) (sub (pow $u (flt $n)))))
 ((arule neg $l) (, (todo $l (neg $u)))
                 (, (todo (S $l) $u) (sub (neg $u))))
 ((arule sin $l) (, (todo $l (sin $u)))
@@ -85,6 +90,7 @@
 ; Base derivatives (identical to diff_engine.mm2)
 ; ---------------------------------------------------------------------
 (exec (b0 cst) (, (todo $l (cst $c))) (, (d (cst $c) (num 0))))
+(exec (b0 flt) (, (todo $l (flt $f))) (, (d (flt $f) (num 0))))
 (exec (b0 num) (, (todo $l (num $n))) (, (d (num $n) (num 0))))
 (exec (b0 var) (, (todo $l (var $x))) (, (d (var $x) (num 1))))
 
@@ -94,6 +100,11 @@
            (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
 
 ; ---------------------------------------------------------------------
+(exec (b0 powf)
+  (, (sub (pow $u (flt $n))))
+  (O (pure (expm1 (flt $n) (flt $m)) $m
+           (f64_to_string (sub_f64 (f64_from_string $n) (f64_from_string 1.0))))))
+
 ; p1: derivative logic — request chains and completions
 ; ---------------------------------------------------------------------
 ((qrule p1 addq) (, (sub (add $u $v)) (d $u $du) (d $v $dv))
@@ -146,6 +157,19 @@
                      (mkd (mul $r2 $du) $r))
                   (, (d (pow $u (num $n)) $r)))
 
+((qrule p1 powq1) (, (sub (pow $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du))
+                  (, (mkq (pow $u (flt $m)))))
+((qrule p1 powq2) (, (sub (pow $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du)
+                     (mkd (pow $u (flt $m)) $r1))
+                  (, (mkq (mul (flt $n) $r1))))
+((qrule p1 powq3) (, (sub (pow $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du)
+                     (mkd (pow $u (flt $m)) $r1) (mkd (mul (flt $n) $r1) $r2))
+                  (, (mkq (mul $r2 $du))))
+((qrule p1 powd)  (, (sub (pow $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du)
+                     (mkd (pow $u (flt $m)) $r1) (mkd (mul (flt $n) $r1) $r2)
+                     (mkd (mul $r2 $du) $r))
+                  (, (d (pow $u (flt $n)) $r)))
+
 ((qrule p1 negq) (, (sub (neg $u)) (d $u $du))
                  (, (mkq (neg $du))))
 ((qrule p1 negd) (, (sub (neg $u)) (d $u $du) (mkd (neg $du) $r))
@@ -186,6 +210,7 @@
 ((qrule p2 cexp) (, (val (exp $u))) (, (ctor (exp $u) exp)))
 ((qrule p2 clnn) (, (val (ln $u)))  (, (ctor (ln $u) ln)))
 ((qrule p2 cneg) (, (val (neg $u))) (, (ctor (neg $u) neg)))
+((qrule p2 cflt) (, (val (flt $f))) (, (ctor (flt $f) flt)))
 ((qrule p2 cnum) (, (val (num $n))) (, (ctor (num $n) num)))
 ((qrule p2 csin) (, (val (sin $u))) (, (ctor (sin $u) sin)))
 ((qrule p2 cvar) (, (val (var $x))) (, (ctor (var $x) var)))
@@ -193,6 +218,7 @@
 ((qrule p2 iexp) (, (ctor $v $c) (exprtag $c)) (, (isexpr $v)))
 ((qrule p2 jdfe) (, (isexpr $v)) (, (def $v)))
 ((qrule p2 jdfn) (, (ctor $v num)) (, (def $v)))
+((qrule p2 jdff) (, (ctor $v flt)) (, (def $v)))
 
 ((qrule p2 nzmm) (, (val (num $n)))
                  (O (pure (mn (num $n) $r) $r
@@ -203,6 +229,16 @@
 ((qrule p2 nzzz) (, (val (num $n)))
                  (O (pure (zn (num $n) $r) $r
                           (ifnz (i64_from_string $n) then NZ else Z))))
+
+((qrule p2 nfmm) (, (val (flt $n)))
+                 (O (pure (mn (flt $n) $r) $r
+                          (ifnz (sum_f64 (f64_from_string $n) (f64_from_string 1.0)) then NM else M))))
+((qrule p2 nfoo) (, (val (flt $n)))
+                 (O (pure (on (flt $n) $r) $r
+                          (ifnz (sub_f64 (f64_from_string $n) (f64_from_string 1.0)) then NO else O))))
+((qrule p2 nfzz) (, (val (flt $n)))
+                 (O (pure (zn (flt $n) $r) $r
+                          (ifnz (sum_f64 (f64_from_string $n) (f64_from_string 0.0)) then NZ else Z))))
 
 ((qrule p2 znee) (I (!= (val $x) (val $y))) (, (vne $x $y)))
 
@@ -217,6 +253,16 @@
 ; p3: resolve requests — total case analysis per constructor (the same
 ; rule set as simplify.mm2's zzf phase, on requests instead of subterms)
 ; ---------------------------------------------------------------------
+((qrule p3 addFF) (, (mkq (add (flt $a) (flt $b))))
+                   (O (pure (mkd (add (flt $a) (flt $b)) (flt $r)) $r
+                            (f64_to_string (sum_f64 (f64_from_string $a) (f64_from_string $b))))))
+((qrule p3 addIF) (, (mkq (add (num $a) (flt $b))))
+                   (O (pure (mkd (add (num $a) (flt $b)) (flt $r)) $r
+                            (f64_to_string (sum_f64 (i64_as_f64 (i64_from_string $a)) (f64_from_string $b))))))
+((qrule p3 addFI) (, (mkq (add (flt $a) (num $b))))
+                   (O (pure (mkd (add (flt $a) (num $b)) (flt $r)) $r
+                            (f64_to_string (sum_f64 (f64_from_string $a) (i64_as_f64 (i64_from_string $b)))))))
+
 ((qrule p3 addf)  (, (mkq (add (num $a) (num $b))))
                   (O (pure (mkd (add (num $a) (num $b)) (num $r)) $r
                            (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
@@ -224,16 +270,30 @@
                   (, (mkd (add (num 0) $b) $b)))
 ((qrule p3 addzR) (, (mkq (add $a (num 0))) (isexpr $a))
                   (, (mkd (add $a (num 0)) $a)))
+((qrule p3 addzFL) (, (mkq (add $a $b)) (ctor $a flt) (zn $a Z) (isexpr $b))
+                   (, (mkd (add $a $b) $b)))
+((qrule p3 addzFR) (, (mkq (add $a $b)) (isexpr $a) (ctor $b flt) (zn $b Z))
+                   (, (mkd (add $a $b) $a)))
 ((qrule p3 addbL) (, (mkq (add $a $b)) (zn $a NZ) (isexpr $b))
                   (, (mkd (add $a $b) (add $a $b))))
 ((qrule p3 addbR) (, (mkq (add $a $b)) (isexpr $a) (zn $b NZ))
-                  (, (mkd (add $a $b) (add $a $b))))
+                  (, (mkd (add $a $b) (add $b $a))))
 ((qrule p3 addbE) (, (mkq (add $a $b)) (isexpr $a) (isexpr $b))
                   (, (mkd (add $a $b) (add $a $b))))
 ((qrule p3 adduL) (, (mkq (add UNDEFINED $b)) (val $b))
                   (, (mkd (add UNDEFINED $b) UNDEFINED)))
 ((qrule p3 adduR) (, (mkq (add $a UNDEFINED)) (val $a))
                   (, (mkd (add $a UNDEFINED) UNDEFINED)))
+
+((qrule p3 subFF) (, (mkq (sub (flt $a) (flt $b))))
+                   (O (pure (mkd (sub (flt $a) (flt $b)) (flt $r)) $r
+                            (f64_to_string (sub_f64 (f64_from_string $a) (f64_from_string $b))))))
+((qrule p3 subIF) (, (mkq (sub (num $a) (flt $b))))
+                   (O (pure (mkd (sub (num $a) (flt $b)) (flt $r)) $r
+                            (f64_to_string (sub_f64 (i64_as_f64 (i64_from_string $a)) (f64_from_string $b))))))
+((qrule p3 subFI) (, (mkq (sub (flt $a) (num $b))))
+                   (O (pure (mkd (sub (flt $a) (num $b)) (flt $r)) $r
+                            (f64_to_string (sub_f64 (f64_from_string $a) (i64_as_f64 (i64_from_string $b)))))))
 
 ((qrule p3 subf)  (, (mkq (sub (num $a) (num $b))))
                   (O (pure (mkd (sub (num $a) (num $b)) (num $r)) $r
@@ -242,6 +302,10 @@
                   (, (mkd (sub $a (num 0)) $a)))
 ((qrule p3 subxx) (, (mkq (sub $x $x)) (isexpr $x))
                   (, (mkd (sub $x $x) (num 0))))
+((qrule p3 subzF) (, (mkq (sub $a $b)) (isexpr $a) (ctor $b flt) (zn $b Z))
+                  (, (mkd (sub $a $b) $a)))
+((qrule p3 subbF) (, (mkq (sub $a $b)) (ctor $a flt) (isexpr $b))
+                  (, (mkd (sub $a $b) (sub $a $b))))
 ((qrule p3 subbL) (, (mkq (sub $a $b)) (ctor $a num) (isexpr $b))
                   (, (mkd (sub $a $b) (sub $a $b))))
 ((qrule p3 subbR) (, (mkq (sub $a $b)) (isexpr $a) (zn $b NZ))
@@ -252,6 +316,16 @@
                   (, (mkd (sub UNDEFINED $b) UNDEFINED)))
 ((qrule p3 subuR) (, (mkq (sub $a UNDEFINED)) (val $a))
                   (, (mkd (sub $a UNDEFINED) UNDEFINED)))
+
+((qrule p3 mulFF) (, (mkq (mul (flt $a) (flt $b))))
+                   (O (pure (mkd (mul (flt $a) (flt $b)) (flt $r)) $r
+                            (f64_to_string (product_f64 (f64_from_string $a) (f64_from_string $b))))))
+((qrule p3 mulIF) (, (mkq (mul (num $a) (flt $b))))
+                   (O (pure (mkd (mul (num $a) (flt $b)) (flt $r)) $r
+                            (f64_to_string (product_f64 (i64_as_f64 (i64_from_string $a)) (f64_from_string $b))))))
+((qrule p3 mulFI) (, (mkq (mul (flt $a) (num $b))))
+                   (O (pure (mkd (mul (flt $a) (num $b)) (flt $r)) $r
+                            (f64_to_string (product_f64 (f64_from_string $a) (i64_as_f64 (i64_from_string $b)))))))
 
 ((qrule p3 mulf)  (, (mkq (mul (num $a) (num $b))))
                   (O (pure (mkd (mul (num $a) (num $b)) (num $r)) $r
@@ -268,10 +342,22 @@
                   (, (mkd (mul (num -1) $b) (neg $b))))
 ((qrule p3 mulmR) (, (mkq (mul $a (num -1))) (isexpr $a))
                   (, (mkd (mul $a (num -1)) (neg $a))))
+((qrule p3 mulzFL) (, (mkq (mul $a $b)) (ctor $a flt) (zn $a Z) (isexpr $b))
+                   (, (mkd (mul $a $b) (flt 0.0))))
+((qrule p3 mulzFR) (, (mkq (mul $a $b)) (isexpr $a) (ctor $b flt) (zn $b Z))
+                   (, (mkd (mul $a $b) (flt 0.0))))
+((qrule p3 mul1FL) (, (mkq (mul $a $b)) (ctor $a flt) (on $a O) (isexpr $b))
+                   (, (mkd (mul $a $b) $b)))
+((qrule p3 mul1FR) (, (mkq (mul $a $b)) (isexpr $a) (ctor $b flt) (on $b O))
+                   (, (mkd (mul $a $b) $a)))
+((qrule p3 mulmFL) (, (mkq (mul $a $b)) (ctor $a flt) (mn $a M) (isexpr $b))
+                   (, (mkd (mul $a $b) (neg $b))))
+((qrule p3 mulmFR) (, (mkq (mul $a $b)) (isexpr $a) (ctor $b flt) (mn $b M))
+                   (, (mkd (mul $a $b) (neg $a))))
 ((qrule p3 mulbL) (, (mkq (mul $a $b)) (zn $a NZ) (on $a NO) (mn $a NM) (isexpr $b))
                   (, (mkd (mul $a $b) (mul $a $b))))
 ((qrule p3 mulbR) (, (mkq (mul $a $b)) (isexpr $a) (zn $b NZ) (on $b NO) (mn $b NM))
-                  (, (mkd (mul $a $b) (mul $a $b))))
+                  (, (mkd (mul $a $b) (mul $b $a))))
 ((qrule p3 mulbE) (, (mkq (mul $a $b)) (isexpr $a) (isexpr $b))
                   (, (mkd (mul $a $b) (mul $a $b))))
 ((qrule p3 muluL) (, (mkq (mul UNDEFINED $b)) (val $b))
@@ -281,6 +367,14 @@
 
 ((qrule p3 divz)  (, (mkq (div $a (num 0))) (val $a))
                   (, (mkd (div $a (num 0)) UNDEFINED)))
+((qrule p3 divzF) (, (mkq (div $a $b)) (ctor $b flt) (zn $b Z) (val $a))
+                   (, (mkd (div $a $b) UNDEFINED)))
+((qrule p3 div0Fa) (, (mkq (div $a $b)) (ctor $a flt) (zn $a Z) (isexpr $b))
+                    (, (mkd (div $a $b) (flt 0.0))))
+((qrule p3 div0Fb) (, (mkq (div $a $b)) (ctor $a flt) (zn $a Z) (zn $b NZ))
+                    (, (mkd (div $a $b) (flt 0.0))))
+((qrule p3 div1F) (, (mkq (div $a $b)) (ctor $b flt) (on $b O) (def $a))
+                   (, (mkd (div $a $b) $a)))
 ((qrule p3 div0a) (, (mkq (div (num 0) $b)) (isexpr $b))
                   (, (mkd (div (num 0) $b) (num 0))))
 ((qrule p3 div0b) (, (mkq (div (num 0) $b)) (zn $b NZ))
@@ -304,6 +398,14 @@
 ((qrule p3 divuR) (, (mkq (div $a UNDEFINED)) (val $a))
                   (, (mkd (div $a UNDEFINED) UNDEFINED)))
 
+((qrule p3 pow1F) (, (mkq (pow $a (flt $n))) (on (flt $n) O) (def $a))
+                  (, (mkd (pow $a (flt $n)) $a)))
+((qrule p3 pow0F) (, (mkq (pow $a (flt $n))) (zn (flt $n) Z) (def $a))
+                  (, (mkd (pow $a (flt $n)) (num 1))))
+((qrule p3 powbF) (, (mkq (pow $a (flt $n))) (def $a) (zn (flt $n) NZ) (on (flt $n) NO))
+                  (, (mkd (pow $a (flt $n)) (pow $a (flt $n)))))
+((qrule p3 powuF) (, (mkq (pow UNDEFINED (flt $n))) (val (flt $n)))
+                  (, (mkd (pow UNDEFINED (flt $n)) UNDEFINED)))
 ((qrule p3 pow1) (, (mkq (pow $a (num 1))) (def $a))
                  (, (mkd (pow $a (num 1)) $a)))
 ((qrule p3 pow0) (, (mkq (pow $a (num 0))) (def $a))
@@ -313,6 +415,9 @@
 ((qrule p3 powu) (, (mkq (pow UNDEFINED (num $n))) (val (num $n)))
                  (, (mkd (pow UNDEFINED (num $n)) UNDEFINED)))
 
+((qrule p3 negF) (, (mkq (neg (flt $a))))
+                  (O (pure (mkd (neg (flt $a)) (flt $r)) $r
+                           (f64_to_string (sub_f64 (f64_from_string 0.0) (f64_from_string $a))))))
 ((qrule p3 negf) (, (mkq (neg (num $a))))
                  (O (pure (mkd (neg (num $a)) (num $r)) $r
                           (i64_to_string (sub_i64 (i64_from_string 0) (i64_from_string $a))))))

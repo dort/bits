@@ -1,0 +1,13 @@
+7:42am
+
+
+ni@singbuntu24:~/repos/m/bits/mm2/symbolic_differentiation$ ls
+augmented_README.md  claud-logs  diff_engine_fused.mm2  diff_engine.mm2  example.mm2  fable-log.txt  README.md  run.sh  simplify.mm2  test.mm2  test_simplify.mm2
+
+
+The goal here is to first work on canonicalization. We'll be simultaneously improving diff_engine.mm2 and diff_engine_fused.mm2 as they are alternate implementations attempting to accomplish the same thing (and return identical results).
+
+What we need to do is to make things more efficient, using the architecture and design of MORK by moving all numbers to the left-hand side of our expressions as we process through the computations and pattern matches.
+
+Currently there is wasted effort by not doing that. Please rewrite both mm2 files (or only 1 if appropriate?) to complete the refactor I'm asking for.
+

@@ -78,7 +78,7 @@ constructor syntax Part 3 introduces.
 | `(sub u v)` | `(sub du dv)` |
 | `(mul u v)` | `(add (mul du v) (mul u dv))` |
 | `(div u v)` | `(div (sub (mul du v) (mul u dv)) (mul v v))` |
-| `(pow u (num n))` — uⁿ | `(mul (mul (num n) (pow u (num n-1))) du)` |
+| `(pow u (num n)|(flt f))` — uⁿ | `(mul (mul (num n) (pow u (num n-1))) du)` |
 | `(neg u)` — negation | `(neg du)` |
 | `(sin u)` | `(mul (cos u) du)` |
 | `(cos u)` | `(neg (mul (sin u) du))` |
@@ -460,8 +460,11 @@ mirrors), `(div (num 0) e) -> (num 0)`, `(div e (num 1)) -> e`,
 `(div e e) -> (num 1)`, `(pow e (num 1)) -> e`, `(pow e (num 0)) ->
 (num 1)`, `(neg (num n)) -> (num -n)`, `(neg (neg e)) -> e`, and integer
 `add`/`sub`/`mul` folded by Rust. Division by zero is not an identity
-but an error value: `(div e (num 0)) -> UNDEFINED` — `(div (num 0)
-(num 0))` included — and UNDEFINED is *contagious*: every constructor
+but an error value. Remaining numeric operands of commutative `add` and
+`mul` are canonicalized to the left, so `(add e (num n))` becomes
+`(add (num n) e)` and likewise for `mul`. Division by zero is represented
+as `(div e (num 0)) -> UNDEFINED` — `(div (num 0) (num 0))` included —
+and UNDEFINED is *contagious*: every constructor
 has a rule collapsing a node with an UNDEFINED child to UNDEFINED, and
 every other rule requires its operands `def` or `isexpr`, so the error
 can never be swallowed by, say, the zero rule.
@@ -470,7 +473,7 @@ On the Part 5 example the simplified result is:
 
 ```
 (result (add (mul (var x) (var x)) (mul (num 2) (var x)))
-        (add (add (var x) (var x)) (num 2)))
+        (add (num 2) (add (var x) (var x))))
 ```
 
 (that is the `example.mm2` case; d(x² + 2x) = 2x + 2, kept as

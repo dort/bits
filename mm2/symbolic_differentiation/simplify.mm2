@@ -12,6 +12,12 @@
 ;   (pow e (num 1)) -> e            (pow e (num 0)) -> (num 1)
 ;   (neg (num n)) -> (num -n)       (neg (neg e)) -> e
 ;   integer add/sub/mul folded by Rust; UNDEFINED is contagious.
+;   float add/sub/mul and mixed int/float arithmetic are grounded in
+;   Rust; mixed operations promote to (flt F).
+;   add/mul canonicalize a lone numeric operand to the left:
+;     (add e NUMBER) -> (add NUMBER e)
+;     (mul e NUMBER) -> (mul NUMBER e)
+;   after the identity cases above have been applied.
 ;
 ; This is a CLEAN rule set in the Prolog sense: no default rule, no
 ; deletion-ordered else-branches, no classify-by-parse-failure. Every
@@ -61,6 +67,8 @@
                 (, (stodo (S $l) $u) (stodo (S $l) $v) (ssub (div $u $v))))
 ((drule pow $l) (, (stodo $l (pow $u (num $n))))
                 (, (stodo (S $l) $u) (stodo (S $l) (num $n)) (ssub (pow $u (num $n)))))
+((drule pow $l) (, (stodo $l (pow $u (flt $n))))
+                (, (stodo (S $l) $u) (stodo (S $l) (flt $n)) (ssub (pow $u (flt $n)))))
 ((drule neg $l) (, (stodo $l (neg $u)))
                 (, (stodo (S $l) $u) (ssub (neg $u))))
 ((drule sin $l) (, (stodo $l (sin $u)))
@@ -84,6 +92,7 @@
 ; Leaf base cases: dispatch by constructor, one-shot each
 ; ---------------------------------------------------------------------
 (exec (zzd cst) (, (stodo $l (cst $c))) (, (s (cst $c) (cst $c))))
+(exec (zzd flt) (, (stodo $l (flt $f))) (, (s (flt $f) (flt $f))))
 (exec (zzd num) (, (stodo $l (num $n))) (, (s (num $n) (num $n))))
 (exec (zzd var) (, (stodo $l (var $x))) (, (s (var $x) (var $x))))
 
@@ -100,6 +109,7 @@
 ((rrule zze cexp) (, (val (exp $u))) (, (ctor (exp $u) exp)))
 ((rrule zze clnn)  (, (val (ln $u)))  (, (ctor (ln $u) ln)))
 ((rrule zze cneg) (, (val (neg $u))) (, (ctor (neg $u) neg)))
+((rrule zze cflt) (, (val (flt $f))) (, (ctor (flt $f) flt)))
 ((rrule zze cnum) (, (val (num $n))) (, (ctor (num $n) num)))
 ((rrule zze csin) (, (val (sin $u))) (, (ctor (sin $u) sin)))
 ((rrule zze cvar) (, (val (var $x))) (, (ctor (var $x) var)))
@@ -107,6 +117,7 @@
 ((rrule zze iexp)  (, (ctor $v $c) (exprtag $c)) (, (isexpr $v)))
 ((rrule zze jdfe) (, (isexpr $v)) (, (def $v)))
 ((rrule zze jdfn) (, (ctor $v num)) (, (def $v)))
+((rrule zze jdff) (, (ctor $v flt)) (, (def $v)))
 
 ((rrule zze nzmm) (, (val (num $n)))
                  (O (pure (mn (num $n) $r) $r
@@ -117,6 +128,16 @@
 ((rrule zze nzzz) (, (val (num $n)))
                  (O (pure (zn (num $n) $r) $r
                           (ifnz (i64_from_string $n) then NZ else Z))))
+
+((rrule zze nfmm) (, (val (flt $n)))
+                 (O (pure (mn (flt $n) $r) $r
+                          (ifnz (sum_f64 (f64_from_string $n) (f64_from_string 1.0)) then NM else M))))
+((rrule zze nfoo) (, (val (flt $n)))
+                 (O (pure (on (flt $n) $r) $r
+                          (ifnz (sub_f64 (f64_from_string $n) (f64_from_string 1.0)) then NO else O))))
+((rrule zze nfzz) (, (val (flt $n)))
+                 (O (pure (zn (flt $n) $r) $r
+                          (ifnz (sum_f64 (f64_from_string $n) (f64_from_string 0.0)) then NZ else Z))))
 
 ((rrule zze znee) (I (!= (val $x) (val $y))) (, (vne $x $y)))
 
@@ -133,8 +154,19 @@
 ; ---------------------------------------------------------------------
 ; Constructor rule store (phase zzf): total case analysis per operator
 ; ---------------------------------------------------------------------
-; add: (num,num) fold | zero drops | (num!=0,expr) (expr,num!=0)
-;      (expr,expr) build | UNDEFINED contagion
+; add: (num,num) fold | zero drops | (num!=0,expr) build |
+;      (expr,num!=0) canonicalize to (num,expr) | (expr,expr) build |
+;      UNDEFINED contagion
+((rrule zzf addFF) (, (ssub (add $u $v)) (s $u (flt $a)) (s $v (flt $b)))
+                    (O (pure (s (add $u $v) (flt $r)) $r
+                             (f64_to_string (sum_f64 (f64_from_string $a) (f64_from_string $b))))))
+((rrule zzf addIF) (, (ssub (add $u $v)) (s $u (num $a)) (s $v (flt $b)))
+                    (O (pure (s (add $u $v) (flt $r)) $r
+                             (f64_to_string (sum_f64 (i64_as_f64 (i64_from_string $a)) (f64_from_string $b))))))
+((rrule zzf addFI) (, (ssub (add $u $v)) (s $u (flt $a)) (s $v (num $b)))
+                    (O (pure (s (add $u $v) (flt $r)) $r
+                             (f64_to_string (sum_f64 (f64_from_string $a) (i64_as_f64 (i64_from_string $b)))))))
+
 ((rrule zzf addf)  (, (ssub (add $u $v)) (s $u (num $a)) (s $v (num $b)))
                    (O (pure (s (add $u $v) (num $r)) $r
                             (i64_to_string (sum_i64 (i64_from_string $a) (i64_from_string $b))))))
@@ -142,10 +174,14 @@
                    (, (s (add $u $v) $b)))
 ((rrule zzf addzR) (, (ssub (add $u $v)) (s $v (num 0)) (s $u $a) (isexpr $a))
                    (, (s (add $u $v) $a)))
+((rrule zzf addzFL) (, (ssub (add $u $v)) (s $u $a) (ctor $a flt) (zn $a Z) (s $v $b) (isexpr $b))
+                    (, (s (add $u $v) $b)))
+((rrule zzf addzFR) (, (ssub (add $u $v)) (s $u $a) (isexpr $a) (s $v $b) (ctor $b flt) (zn $b Z))
+                    (, (s (add $u $v) $a)))
 ((rrule zzf addbL) (, (ssub (add $u $v)) (s $u $a) (zn $a NZ) (s $v $b) (isexpr $b))
                    (, (s (add $u $v) (add $a $b))))
 ((rrule zzf addbR) (, (ssub (add $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ))
-                   (, (s (add $u $v) (add $a $b))))
+                   (, (s (add $u $v) (add $b $a))))
 ((rrule zzf addbE) (, (ssub (add $u $v)) (s $u $a) (isexpr $a) (s $v $b) (isexpr $b))
                    (, (s (add $u $v) (add $a $b))))
 ((rrule zzf adduL) (, (ssub (add $u $v)) (s $u UNDEFINED) (s $v $b) (val $b))
@@ -156,6 +192,16 @@
 ; sub: fold | minus-zero | same-operand (equality by unification) |
 ;      builds (the (expr,expr) build requires vne: the complement of
 ;      the same-operand rule) | contagion
+((rrule zzf subFF) (, (ssub (sub $u $v)) (s $u (flt $a)) (s $v (flt $b)))
+                    (O (pure (s (sub $u $v) (flt $r)) $r
+                             (f64_to_string (sub_f64 (f64_from_string $a) (f64_from_string $b))))))
+((rrule zzf subIF) (, (ssub (sub $u $v)) (s $u (num $a)) (s $v (flt $b)))
+                    (O (pure (s (sub $u $v) (flt $r)) $r
+                             (f64_to_string (sub_f64 (i64_as_f64 (i64_from_string $a)) (f64_from_string $b))))))
+((rrule zzf subFI) (, (ssub (sub $u $v)) (s $u (flt $a)) (s $v (num $b)))
+                    (O (pure (s (sub $u $v) (flt $r)) $r
+                             (f64_to_string (sub_f64 (f64_from_string $a) (i64_as_f64 (i64_from_string $b)))))))
+
 ((rrule zzf subf)  (, (ssub (sub $u $v)) (s $u (num $a)) (s $v (num $b)))
                    (O (pure (s (sub $u $v) (num $r)) $r
                             (i64_to_string (sub_i64 (i64_from_string $a) (i64_from_string $b))))))
@@ -163,6 +209,10 @@
                    (, (s (sub $u $v) $a)))
 ((rrule zzf subxx) (, (ssub (sub $u $v)) (s $u $x) (s $v $x) (isexpr $x))
                    (, (s (sub $u $v) (num 0))))
+((rrule zzf subzF) (, (ssub (sub $u $v)) (s $u $a) (isexpr $a) (s $v $b) (ctor $b flt) (zn $b Z))
+                   (, (s (sub $u $v) $a)))
+((rrule zzf subbF) (, (ssub (sub $u $v)) (s $u $a) (ctor $a flt) (s $v $b) (isexpr $b))
+                   (, (s (sub $u $v) (sub $a $b))))
 ((rrule zzf subbL) (, (ssub (sub $u $v)) (s $u $a) (ctor $a num) (s $v $b) (isexpr $b))
                    (, (s (sub $u $v) (sub $a $b))))
 ((rrule zzf subbR) (, (ssub (sub $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ))
@@ -175,8 +225,18 @@
                    (, (s (sub $u $v) UNDEFINED)))
 
 ; mul: fold | zero | one | minus-one collapses to neg | builds
-;      ((num,expr) builds need the num outside {0,1,-1}: zn/on/mn) |
-;      contagion
+;      ((num,expr) builds need the num outside {0,1,-1}: zn/on/mn;
+;      (expr,num) canonicalizes to (num,expr)) | contagion
+((rrule zzf mulFF) (, (ssub (mul $u $v)) (s $u (flt $a)) (s $v (flt $b)))
+                    (O (pure (s (mul $u $v) (flt $r)) $r
+                             (f64_to_string (product_f64 (f64_from_string $a) (f64_from_string $b))))))
+((rrule zzf mulIF) (, (ssub (mul $u $v)) (s $u (num $a)) (s $v (flt $b)))
+                    (O (pure (s (mul $u $v) (flt $r)) $r
+                             (f64_to_string (product_f64 (i64_as_f64 (i64_from_string $a)) (f64_from_string $b))))))
+((rrule zzf mulFI) (, (ssub (mul $u $v)) (s $u (flt $a)) (s $v (num $b)))
+                    (O (pure (s (mul $u $v) (flt $r)) $r
+                             (f64_to_string (product_f64 (f64_from_string $a) (i64_as_f64 (i64_from_string $b)))))))
+
 ((rrule zzf mulf)  (, (ssub (mul $u $v)) (s $u (num $a)) (s $v (num $b)))
                    (O (pure (s (mul $u $v) (num $r)) $r
                             (i64_to_string (product_i64 (i64_from_string $a) (i64_from_string $b))))))
@@ -192,10 +252,22 @@
                    (, (s (mul $u $v) (neg $b))))
 ((rrule zzf mulmR) (, (ssub (mul $u $v)) (s $v (num -1)) (s $u $a) (isexpr $a))
                    (, (s (mul $u $v) (neg $a))))
+((rrule zzf mulzFL) (, (ssub (mul $u $v)) (s $u $a) (ctor $a flt) (zn $a Z) (s $v $b) (isexpr $b))
+                    (, (s (mul $u $v) (flt 0.0))))
+((rrule zzf mulzFR) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (ctor $b flt) (zn $b Z))
+                    (, (s (mul $u $v) (flt 0.0))))
+((rrule zzf mul1FL) (, (ssub (mul $u $v)) (s $u $a) (ctor $a flt) (on $a O) (s $v $b) (isexpr $b))
+                    (, (s (mul $u $v) $b)))
+((rrule zzf mul1FR) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (ctor $b flt) (on $b O))
+                    (, (s (mul $u $v) $a)))
+((rrule zzf mulmFL) (, (ssub (mul $u $v)) (s $u $a) (ctor $a flt) (mn $a M) (s $v $b) (isexpr $b))
+                    (, (s (mul $u $v) (neg $b))))
+((rrule zzf mulmFR) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (ctor $b flt) (mn $b M))
+                    (, (s (mul $u $v) (neg $a))))
 ((rrule zzf mulbL) (, (ssub (mul $u $v)) (s $u $a) (zn $a NZ) (on $a NO) (mn $a NM) (s $v $b) (isexpr $b))
                    (, (s (mul $u $v) (mul $a $b))))
 ((rrule zzf mulbR) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (zn $b NZ) (on $b NO) (mn $b NM))
-                   (, (s (mul $u $v) (mul $a $b))))
+                   (, (s (mul $u $v) (mul $b $a))))
 ((rrule zzf mulbE) (, (ssub (mul $u $v)) (s $u $a) (isexpr $a) (s $v $b) (isexpr $b))
                    (, (s (mul $u $v) (mul $a $b))))
 ((rrule zzf muluL) (, (ssub (mul $u $v)) (s $u UNDEFINED) (s $v $b) (val $b))
@@ -209,6 +281,14 @@
 ;      closed over the integers.
 ((rrule zzf divz)  (, (ssub (div $u $v)) (s $v (num 0)) (s $u $a) (val $a))
                    (, (s (div $u $v) UNDEFINED)))
+((rrule zzf divzF) (, (ssub (div $u $v)) (s $v $b) (ctor $b flt) (zn $b Z) (s $u $a) (val $a))
+                    (, (s (div $u $v) UNDEFINED)))
+((rrule zzf div0Fa) (, (ssub (div $u $v)) (s $u $a) (ctor $a flt) (zn $a Z) (s $v $b) (isexpr $b))
+                     (, (s (div $u $v) (flt 0.0))))
+((rrule zzf div0Fb) (, (ssub (div $u $v)) (s $u $a) (ctor $a flt) (zn $a Z) (s $v $b) (zn $b NZ))
+                     (, (s (div $u $v) (flt 0.0))))
+((rrule zzf div1F) (, (ssub (div $u $v)) (s $v $b) (ctor $b flt) (on $b O) (s $u $a) (def $a))
+                    (, (s (div $u $v) $a)))
 ((rrule zzf div0a) (, (ssub (div $u $v)) (s $u (num 0)) (s $v $b) (isexpr $b))
                    (, (s (div $u $v) (num 0))))
 ((rrule zzf div0b) (, (ssub (div $u $v)) (s $u (num 0)) (s $v $b) (zn $b NZ))
@@ -235,6 +315,14 @@
 ; pow: exponent 1 | exponent 0 | build (exponent outside {0,1}) |
 ;      contagion. The exponent was decomposed, so its (num n) carries
 ;      zn/on facts.
+((rrule zzf pow1F) (, (ssub (pow $u (flt $n))) (on (flt $n) O) (s $u $a) (def $a))
+                   (, (s (pow $u (flt $n)) $a)))
+((rrule zzf pow0F) (, (ssub (pow $u (flt $n))) (zn (flt $n) Z) (s $u $a) (def $a))
+                   (, (s (pow $u (flt $n)) (num 1))))
+((rrule zzf powbF) (, (ssub (pow $u (flt $n))) (s $u $a) (def $a) (zn (flt $n) NZ) (on (flt $n) NO))
+                   (, (s (pow $u (flt $n)) (pow $a (flt $n)))))
+((rrule zzf powuF) (, (ssub (pow $u (flt $n))) (s $u UNDEFINED))
+                   (, (s (pow $u (flt $n)) UNDEFINED)))
 ((rrule zzf pow1) (, (ssub (pow $u (num 1))) (s $u $a) (def $a))
                   (, (s (pow $u (num 1)) $a)))
 ((rrule zzf pow0) (, (ssub (pow $u (num 0))) (s $u $a) (def $a))
@@ -247,6 +335,9 @@
 ; neg: (num n) folds to (num -n) | double negation cancels | any other
 ;      constructor builds (negtag = every tag but num and neg) |
 ;      contagion
+((rrule zzf negF) (, (ssub (neg $u)) (s $u (flt $a)))
+                  (O (pure (s (neg $u) (flt $r)) $r
+                           (f64_to_string (sub_f64 (f64_from_string 0.0) (f64_from_string $a))))))
 ((rrule zzf negf) (, (ssub (neg $u)) (s $u (num $a)))
                   (O (pure (s (neg $u) (num $r)) $r
                            (i64_to_string (sub_i64 (i64_from_string 0) (i64_from_string $a))))))

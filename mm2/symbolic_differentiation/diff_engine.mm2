@@ -8,12 +8,13 @@
 ; than "defaulty" representation, in the Prolog sense).
 ;
 ;   leaves:     (num N)   integer literal, N an i64 symbol
+;               (flt F)   floating literal, F an f64 symbol
 ;               (var x)   THE variable of differentiation (one per
 ;                         program; its name is documentation)
 ;               (cst c)   any other symbolic leaf (parameters, other
 ;                         variables): derivative 0
 ;   compounds:  (add u v) (sub u v) (mul u v) (div u v)
-;               (pow u (num N))         [exponent embedded, an i64]
+;               (pow u (num N)|(flt F)) [constant numeric exponent]
 ;               (neg u) (sin u) (cos u) (exp u) (ln u)
 ;
 ; Input facts:  (diff EXPR)      any number of them; nothing else — the
@@ -22,6 +23,10 @@
 ;                                the parse-every-todo integer detector
 ;                                are gone.
 ; Output facts: (result EXPR D)  where D = dEXPR/dx, unsimplified
+;                                (including operand order). The optional
+;                                simplify.mm2 layer owns canonical form,
+;                                including numbers-left add/mul; doing it
+;                                here would duplicate value classification.
 ;
 ; Architecture (priorities order the phases by shortlex on the exec tag:
 ; (0 _) < (a0 _) < (az _) < (b0 _) < (c0 _) < (cz _) < (zz _)):
@@ -59,6 +64,8 @@
 ; pow decomposes only its base; the exponent is part of the constructor
 ((arule pow $l) (, (todo $l (pow $u (num $n))))
                 (, (todo (S $l) $u) (sub (pow $u (num $n)))))
+((arule pow $l) (, (todo $l (pow $u (flt $n))))
+                (, (todo (S $l) $u) (sub (pow $u (flt $n)))))
 ((arule neg $l) (, (todo $l (neg $u)))
                 (, (todo (S $l) $u) (sub (neg $u))))
 ((arule sin $l) (, (todo $l (sin $u)))
@@ -82,6 +89,7 @@
 ; Base derivatives: dispatch on leaf constructors, one-shot each
 ; ---------------------------------------------------------------------
 (exec (b0 cst) (, (todo $l (cst $c))) (, (d (cst $c) (num 0))))
+(exec (b0 flt) (, (todo $l (flt $f))) (, (d (flt $f) (num 0))))
 (exec (b0 num) (, (todo $l (num $n))) (, (d (num $n) (num 0))))
 (exec (b0 var) (, (todo $l (var $x))) (, (d (var $x) (num 1))))
 
@@ -91,6 +99,11 @@
   (, (sub (pow $u (num $n))))
   (O (pure (expm1 (num $n) (num $m)) $m
            (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
+
+(exec (b0 powf)
+  (, (sub (pow $u (flt $n))))
+  (O (pure (expm1 (flt $n) (flt $m)) $m
+           (f64_to_string (sub_f64 (f64_from_string $n) (f64_from_string 1.0))))))
 
 ; ---------------------------------------------------------------------
 ; Phase B: combination rules, stored as data (level-free)
@@ -105,6 +118,8 @@
              (, (d (div $u $v) (div (sub (mul $du $v) (mul $u $dv)) (mul $v $v)))))
 ((brule pow) (, (sub (pow $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du))
              (, (d (pow $u (num $n)) (mul (mul (num $n) (pow $u (num $m))) $du))))
+((brule pow) (, (sub (pow $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du))
+             (, (d (pow $u (flt $n)) (mul (mul (flt $n) (pow $u (flt $m))) $du))))
 ((brule neg) (, (sub (neg $u)) (d $u $du))
              (, (d (neg $u) (neg $du))))
 ((brule sin) (, (sub (sin $u)) (d $u $du))

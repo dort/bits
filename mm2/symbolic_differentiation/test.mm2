@@ -46,6 +46,14 @@
           (mul (mul (num -2) (pow (add (var x) (cst a)) (num -3)))
                (add (num 1) (num 0))))
 
+; floating leaf and constant floating exponent
+(diff (flt 2.5))
+(solution (flt 2.5) (num 0))
+
+(diff (pow (var x) (flt 2.5)))
+(solution (pow (var x) (flt 2.5))
+          (mul (mul (flt 2.5) (pow (var x) (flt 1.5))) (num 1)))
+
 ; ---------------- test code ----------------
 ; MISTAKE = (result U solution) \ (result /\ solution), per diff root.
 (exec (zzt 0) (, (diff $e) (result $e $de)) (O (+ (MISTAKE $e $de))))

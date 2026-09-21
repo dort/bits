@@ -6,21 +6,27 @@ expression grammar has its own constructor, so every rule dispatches by
 pattern (unification) alone. There are no catch-all default rules, no
 deletion-ordered else-branches, and no classify-by-parse-failure — the
 "clean rather than defaulty representation" discipline from Prolog
-practice. Integer arithmetic (constant folding, the power rule's exponent
-decrement, zero/one tests) is grounded in Rust via the `pure` sink.
+practice. Integer and floating-point arithmetic (constant folding,
+mixed-type promotion, the power rule's exponent decrement, zero/one tests)
+is grounded in Rust via the `pure` sink.
 
 ## The AST
 
 ```
 leaves:     (num N)    integer literal, N an i64 symbol
+            (flt F)    floating literal, F an f64 symbol
             (var x)    THE variable of differentiation (one per program;
                        the name is documentation)
             (cst c)    any other symbolic leaf (parameters, other
                        variables): derivative 0
 compounds:  (add u v) (sub u v) (mul u v) (div u v)
-            (pow u (num N))     exponent embedded, an i64 literal
+            (pow u (num N)|(flt F))   constant numeric exponent
             (neg u) (sin u) (cos u) (exp u) (ln u)
 ```
+
+Integer-only operations retain `num`; any mixed `num`/`flt` operation
+promotes to `flt`. Both are canonicalized to the left of commutative
+`add` and `mul` nodes.
 
 The AST is self-describing, so the input is just `(diff EXPR)` facts —
 the old `(dvar _)` / `(const _)` declarations are gone, and so is the
@@ -106,7 +112,9 @@ Both eliminate the redundancy the derivative rules generate:
 `add`/`sub`/`mul` folded by Rust. Division by zero is an error value:
 `(div e (num 0)) -> UNDEFINED`, `(div (num 0) (num 0))` included, and
 `UNDEFINED` is contagious — any node over it collapses to it. Both pass
-`test_simplify.mm2` and produce byte-identical result sets.
+`test_simplify.mm2` and produce byte-identical result sets. As a
+canonical-form invariant, a remaining numeric operand of commutative
+`add` or `mul` is always placed on the left.
 
 ### Clean dispatch instead of an else-branch
 
@@ -136,12 +144,16 @@ over reified classification facts, computed for every simplified value:
 With these, every constructor's rule set is a **total case analysis**:
 e.g. `mul`'s left operand is either `(num 0)`, `(num 1)`, `(num -1)`
 (literal patterns), a number outside those (`zn`/`on`/`mn` all negative),
-an `isexpr`, or `UNDEFINED` — six disjoint cases, each with its own
+an `isexpr`, or `UNDEFINED` — six cases, each with its own
 rule, and the few overlapping pairs (a fold and a zero rule both
 matching `(mul (num 0) (num 5))`) always **agree**, so duplicates
 collapse in the set-based space. Nothing is ever deleted; the whole
 simplifier is monotonic saturation. Set membership is data
 (`(exprtag c)`, `(negtag c)` facts), not code.
+
+The right-number build cases canonicalize instead of preserving order:
+`(add e (num n)) -> (add (num n) e)` and
+`(mul e (num n)) -> (mul (num n) e)`.
 
 ### `simplify.mm2` (post-process)
 
