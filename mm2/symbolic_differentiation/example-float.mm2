@@ -1,0 +1,36 @@
+; Example inputs for the symbolic differentiation engine.
+; Expressions are the typed AST: (num N) integer literals, (var x) the
+; variable of differentiation, (cst c) other symbolic leaves, and
+; (add/sub/mul/div/pow/neg/sin/cos/exp/ln ...) compounds. The AST is
+; self-describing: no (dvar _) or (const _) declarations exist.
+;
+; Run:  ./run.sh                              (unsimplified results)
+;       ./run.sh example.mm2 simplify.mm2     (simplified results)
+;       ENGINE=diff_engine_fused.mm2 ./run.sh (simplified, fused engine)
+
+; d/dx (x*x + 2*x)
+;(diff (add (mul (var x) (var x)) (mul (num 2) (var x))))
+
+; d/dx sin(x*x)                    [chain rule]
+;(diff (sin (mul (var x) (var x))))
+
+; d/dx (x / (x + a))               [quotient rule, symbolic parameter a]
+;(diff (div (var x) (add (var x) (cst a))))
+
+; d/dx exp(-x) * ln(x)
+;(diff (mul (exp (neg (var x))) (ln (var x))))
+
+; d/dx x^3                         [power rule, 3-1 via Rust]
+;(diff (pow (var x) (num 3)))
+
+; d/dx (x+a)^2                     [power + chain]
+;(diff (pow (add (var x) (cst a)) (num 2)))
+
+; d/dx (x^2.3 + 0.31*x)
+;(diff (add (pow (var x) (flt 2.3)) (mul (flt 0.31) (var x))))
+
+; d/dx (x^2.3 + 0.31*x^0.99)
+(diff (add (pow (var x) (flt 2.3)) (mul (flt 0.31) (exp (var x) (flt 0.99)))))
+
+
+;(stodo Z (add (mul (mul (flt 2.3) (pow (var x) (flt 1.2999999999999998))) (num 1)) (add (mul (num 0) (exp (var x) (flt 0.99))) (mul (flt 0.31) (mul (mul (flt 0.99) (exp (var x) (flt -0.010000000000000009))) (num 1))))))

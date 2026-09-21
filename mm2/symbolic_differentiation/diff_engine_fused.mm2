@@ -75,6 +75,10 @@
                 (, (todo (S $l) $u) (sub (cos $u))))
 ((arule exp $l) (, (todo $l (exp $u)))
                 (, (todo (S $l) $u) (sub (exp $u))))
+((arule expf $l) (, (todo $l (exp $u (flt $n))))
+                 (, (todo (S $l) $u) (sub (exp $u (flt $n)))))
+((arule expn $l) (, (todo $l (exp $u (num $n))))
+                 (, (todo (S $l) $u) (sub (exp $u (num $n)))))
 ((arule ln $l)  (, (todo $l (ln $u)))
                 (, (todo (S $l) $u) (sub (ln $u))))
 
@@ -104,6 +108,15 @@
   (, (sub (pow $u (flt $n))))
   (O (pure (expm1 (flt $n) (flt $m)) $m
            (f64_to_string (sub_f64 (f64_from_string $n) (f64_from_string 1.0))))))
+
+(exec (b0 expf)
+  (, (sub (exp $u (flt $n))))
+  (O (pure (expm1 (flt $n) (flt $m)) $m
+           (f64_to_string (sub_f64 (f64_from_string $n) (f64_from_string 1.0))))))
+(exec (b0 expn)
+  (, (sub (exp $u (num $n))))
+  (O (pure (expm1 (num $n) (num $m)) $m
+           (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
 
 ; p1: derivative logic — request chains and completions
 ; ---------------------------------------------------------------------
@@ -192,6 +205,32 @@
                  (, (mkq (mul (exp $u) $du))))
 ((qrule p1 expd) (, (sub (exp $u)) (d $u $du) (mkd (mul (exp $u) $du) $r))
                  (, (d (exp $u) $r)))
+
+((qrule p1 expfq1) (, (sub (exp $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du))
+                   (, (mkq (exp $u (flt $m)))))
+((qrule p1 expfq2) (, (sub (exp $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du)
+                      (mkd (exp $u (flt $m)) $r1))
+                   (, (mkq (mul (flt $n) $r1))))
+((qrule p1 expfq3) (, (sub (exp $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du)
+                      (mkd (exp $u (flt $m)) $r1) (mkd (mul (flt $n) $r1) $r2))
+                   (, (mkq (mul $du $r2))))
+((qrule p1 expfd)  (, (sub (exp $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du)
+                      (mkd (exp $u (flt $m)) $r1) (mkd (mul (flt $n) $r1) $r2)
+                      (mkd (mul $du $r2) $r))
+                   (, (d (exp $u (flt $n)) $r)))
+
+((qrule p1 expnq1) (, (sub (exp $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du))
+                   (, (mkq (exp $u (num $m)))))
+((qrule p1 expnq2) (, (sub (exp $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du)
+                      (mkd (exp $u (num $m)) $r1))
+                   (, (mkq (mul (num $n) $r1))))
+((qrule p1 expnq3) (, (sub (exp $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du)
+                      (mkd (exp $u (num $m)) $r1) (mkd (mul (num $n) $r1) $r2))
+                   (, (mkq (mul $du $r2))))
+((qrule p1 expnd)  (, (sub (exp $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du)
+                      (mkd (exp $u (num $m)) $r1) (mkd (mul (num $n) $r1) $r2)
+                      (mkd (mul $du $r2) $r))
+                   (, (d (exp $u (num $n)) $r)))
 
 ((qrule p1 lnq) (, (sub (ln $u)) (d $u $du))
                 (, (mkq (div $du $u))))
@@ -434,6 +473,14 @@
 ((qrule p3 cosu) (, (mkq (cos UNDEFINED))) (, (mkd (cos UNDEFINED) UNDEFINED)))
 ((qrule p3 expb) (, (mkq (exp $a)) (def $a)) (, (mkd (exp $a) (exp $a))))
 ((qrule p3 expu) (, (mkq (exp UNDEFINED))) (, (mkd (exp UNDEFINED) UNDEFINED)))
+((qrule p3 expfb) (, (mkq (exp $a (flt $n))) (def $a))
+                  (, (mkd (exp $a (flt $n)) (exp $a (flt $n)))))
+((qrule p3 expfu) (, (mkq (exp UNDEFINED (flt $n))))
+                  (, (mkd (exp UNDEFINED (flt $n)) UNDEFINED)))
+((qrule p3 expnb) (, (mkq (exp $a (num $n))) (def $a))
+                  (, (mkd (exp $a (num $n)) (exp $a (num $n)))))
+((qrule p3 expnu) (, (mkq (exp UNDEFINED (num $n))))
+                  (, (mkd (exp UNDEFINED (num $n)) UNDEFINED)))
 ((qrule p3 lnb)  (, (mkq (ln $a)) (def $a)) (, (mkd (ln $a) (ln $a))))
 ((qrule p3 lnu)  (, (mkq (ln UNDEFINED))) (, (mkd (ln UNDEFINED) UNDEFINED)))
 

@@ -74,6 +74,11 @@
                 (, (todo (S $l) $u) (sub (cos $u))))
 ((arule exp $l) (, (todo $l (exp $u)))
                 (, (todo (S $l) $u) (sub (exp $u))))
+; binary exp is constant-exponent power; unary exp remains e^u
+((arule expf $l) (, (todo $l (exp $u (flt $n))))
+                 (, (todo (S $l) $u) (sub (exp $u (flt $n)))))
+((arule expn $l) (, (todo $l (exp $u (num $n))))
+                 (, (todo (S $l) $u) (sub (exp $u (num $n)))))
 ((arule ln $l)  (, (todo $l (ln $u)))
                 (, (todo (S $l) $u) (sub (ln $u))))
 
@@ -106,6 +111,15 @@
            (f64_to_string (sub_f64 (f64_from_string $n) (f64_from_string 1.0))))))
 
 ; ---------------------------------------------------------------------
+(exec (b0 expf)
+  (, (sub (exp $u (flt $n))))
+  (O (pure (expm1 (flt $n) (flt $m)) $m
+           (f64_to_string (sub_f64 (f64_from_string $n) (f64_from_string 1.0))))))
+(exec (b0 expn)
+  (, (sub (exp $u (num $n))))
+  (O (pure (expm1 (num $n) (num $m)) $m
+           (i64_to_string (sub_i64 (i64_from_string $n) (i64_one))))))
+
 ; Phase B: combination rules, stored as data (level-free)
 ; ---------------------------------------------------------------------
 ((brule add) (, (sub (add $u $v)) (d $u $du) (d $v $dv))
@@ -126,6 +140,10 @@
              (, (d (sin $u) (mul (cos $u) $du))))
 ((brule cos) (, (sub (cos $u)) (d $u $du))
              (, (d (cos $u) (neg (mul (sin $u) $du)))))
+((brule expf) (, (sub (exp $u (flt $n))) (expm1 (flt $n) (flt $m)) (d $u $du))
+              (, (d (exp $u (flt $n)) (mul $du (mul (flt $n) (exp $u (flt $m)))))))
+((brule expn) (, (sub (exp $u (num $n))) (expm1 (num $n) (num $m)) (d $u $du))
+              (, (d (exp $u (num $n)) (mul $du (mul (num $n) (exp $u (num $m)))))))
 ((brule exp) (, (sub (exp $u)) (d $u $du))
              (, (d (exp $u) (mul (exp $u) $du))))
 ((brule ln)  (, (sub (ln $u)) (d $u $du))

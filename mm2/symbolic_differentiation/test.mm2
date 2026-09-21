@@ -54,6 +54,11 @@
 (solution (pow (var x) (flt 2.5))
           (mul (mul (flt 2.5) (pow (var x) (flt 1.5))) (num 1)))
 
+; binary exp is the alternate constant-exponent spelling
+(diff (exp (var x) (flt 2.5)))
+(solution (exp (var x) (flt 2.5))
+          (mul (num 1) (mul (flt 2.5) (exp (var x) (flt 1.5)))))
+
 ; ---------------- test code ----------------
 ; MISTAKE = (result U solution) \ (result /\ solution), per diff root.
 (exec (zzt 0) (, (diff $e) (result $e $de)) (O (+ (MISTAKE $e $de))))
