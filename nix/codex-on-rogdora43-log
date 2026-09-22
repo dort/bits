@@ -1,0 +1,1426 @@
+ng/2026/being$ ssh -p 1022 202.181.158.137
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-191-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Sep 16 15:44:39 UTC 2026
+
+  System load:  0.07               Processes:             138
+  Usage of /:   1.4% of 158.76GB   Users logged in:       3
+  Memory usage: 1%                 IPv4 address for eth0: 202.181.158.137
+  Swap usage:   0%
+
+ * Canonical Workshop gives developers fast, composable, reproducible, and
+   secure developer environments that are perfect for agentic workflows.
+
+   https://ubuntu.com/workshop
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+6 additional security updates can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+New release '24.04.5 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+
+Last login: Wed Sep 16 15:35:34 2026 from 73.238.49.12
+ni@rnd-auto-hive-v2-1-01fbeaf4c8:~$ exit
+logout
+Connection to 202.181.158.137 closed.
+ni@singbuntu24:~/repos/pp/writing/journaling/2026/being$ ssh 10.0.0.168
+The authenticity of host '10.0.0.168 (10.0.0.168)' can't be established.
+ED25519 key fingerprint is SHA256:aR/9Tchp/IJFotJOFk16vTSqiQMi2EPbLhf7Ab5OjeY.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:112: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '10.0.0.168' (ED25519) to the list of known hosts.
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Last login: Thu Sep  3 09:10:58 2026 from 10.0.0.199
+ni@rogdora43:~$ echo "Hello Nix" | nix run "https://flakehub.com/f/NixOS/nixpkgs/*#ponysay"
+ _______________ 
+< Hello Nix     >
+ --------------- 
+              \                         
+               \                        
+                \                       
+                 \     ▄▄▄▄▄▄▄▄▄        
+                  \   ███▄▄▄███▄▄       
+                 ▄▄▄▄▄▄▄▄████████       
+               ▄▄████████▄▄▄▄▄▄▄▄█▄▄    
+              ▄▄█████████████▄▄██▄▄█▄▄▄ 
+              █▄▄▄▄▄▄▄█████████▄▄▄█▄████
+                ▄▄██▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄██▄▀
+                ██▄██▄█▄▄▄▄▄▄▄███▄▄     
+                █▀█████████▄▄█▄█▄█▄▄    
+   ▄▄▄▄▄▄▄        ▀▄█▄▄████▄▄▄▄███▄▄▄   
+   ▄█▄████▄▄▄     ▄▀▄██▄████████▄████▄█ 
+  ████████████   ▀▄▄▄▄▄▄██▄▄▄▄▄▄██▄▀▀█▀ 
+ ████████▄▄▄▄▄▄▄▄▄████▄▄▄▄▄▄▄█          
+███████▄▀ ▄▄██▄███▄▄██▄▄▄▄▄███          
+██▄██▄██  ██▄███▄███████▄▄███           
+█▀████▀█  ▀▄█▄█▄█████▄▄▄▄██▀            
+   ███    ▄████▄█▄▄███████              
+    ▀█   ██████▄▄▀  ██████              
+        ▄▄███████   ████▄█▄             
+        █████████   ███████             
+       ██████████   █████▄▄█▄           
+       ███████▄▄▄█  ███████▄█           
+       ▀▄▄▄▄▄▄█      █▄▄▄▄▄█            
+                                        
+ni@rogdora43:~$ nix develop "https://flakehub.com/f/DeterminateSystems/zero-to-nix/*#example"
+(nix:zero-to-nix-env) ni@rogdora43:~$ emacs
+(nix:zero-to-nix-env) ni@rogdora43:~$ type emacs
+emacs is hashed (/usr/bin/emacs)
+(nix:zero-to-nix-env) ni@rogdora43:~$ type curl
+curl is /nix/store/wyhhly9yani8vcjx2qvmflbn96s1568m-curl-8.21.0-bin/bin/curl
+(nix:zero-to-nix-env) ni@rogdora43:~$ type git
+git is /nix/store/8wxs6573l730vxkqd6wp58kvxa19csll-git-2.55.0/bin/git
+(nix:zero-to-nix-env) ni@rogdora43:~$ cd nix
+bash: cd: nix: No such file or directory
+(nix:zero-to-nix-env) ni@rogdora43:~$ ls
+ 2026.05.05-codex-notes.txt   bin   clanky      client-setup-mesto.md   Documents   eaprecoro.png       ' mn'    nal_melody_gen.py   Public   snap        song.txt              '#start-clanky.sh#'   Templates             Videos
+ AGENTS.md                    c     CLAUDE.md   Desktop                 Downloads   hiltoncc-phone-num   Music   Pictures            repos    song2.txt   start-clanky-orig.sh   start-clanky.sh      tensorflow_datasets
+(nix:zero-to-nix-env) ni@rogdora43:~$ mkdir nix-codexy
+(nix:zero-to-nix-env) ni@rogdora43:~$ cd nix-codexy/
+(nix:zero-to-nix-env) ni@rogdora43:~/nix-codexy$ codex
+
+╭────────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.155.1)                     │
+│                                                │
+│ model:     gpt-5.6-sol high   /model to change │
+│ directory: ~/nix-codexy                        │
+╰────────────────────────────────────────────────╯
+
+  Tip: New Use /fast to enable our fastest inference with increased plan usage.
+
+• You have 2 usage limit resets available. Run /usage to use one.
+
+
+› I'm exploring nix -- it's not a full nixOS environment (because this machine is still running fedora43, since I haven't installed nixOS at the bare metal level). Rather, it's just a nix install here. I want to be able to deploy podman quadlets, as
+  the nix ecosystem seems to offer more container options that way vs. more traditional docker instances. Can you let me know how I might go about this and if you have some confidence in how to proceed, to lay out a plan in a markdown file here.
+  Whether or not it makes sense to jump right into https://wiki.nixos.org/wiki/Home_Manager for this sort of setup or whether i should try to proceed more slowly using something else (the warning linked on that Home Manager page scares me a bit) is
+  unknown to me so I'd like some guidance in terms of what seems more easily doable without hiccups, roadblocks and/or delays trying to get broken stuff that happened because I went too fast fixed. The ultimate goal is to be able to create a hive of
+  agents inside a nix container that can administer (whether collectively or as a team) administer their own "OS").
+
+
+• I’ll assess the existing Nix setup, verify current Home Manager/Podman Quadlet guidance from primary sources, and then write a cautious, staged plan into this workspace. I’ll optimize for Fedora coexistence and easy rollback, with the agent “hive” as
+  the destination rather than the first experiment.
+
+• Ran pwd && rg --files -g 'AGENTS.md' -g '!result' -g '!result-*' | sed -n '1,80p' && find . -maxdepth 2 -type f -not -path './.git/*' -print | sort | sed -n '1,160p'
+  └ /home/ni/nix-codexy
+
+• Ran ls -la && command -v nix || true && nix --version 2>/dev/null || true && command -v podman || true && podman --version 2>/dev/null || true && systemctl --user --version 2>/dev/null | head -n 1 || true && loginctl show-user "$USER" -p Linger 2>/
+  │ dev/null || true
+  └ total 0
+    drwxr-xr-x 1 ni ni   34 Sep 22 14:05 .
+    … +6 lines (ctrl + t to view transcript)
+    /usr/bin/podman
+    systemd 258 (258.10-1.fc43)
+
+◦ Searching the web
+
+• Searched the web for https://wiki.nixos.org/wiki/Home_Manager
+
+• Searching the web
+
+• Searched the web for site:wiki.nixos.org/wiki/Home_Manager warning standalone Home Manager ...
+
+• Searching the web
+
+• Searched the web for site:wiki.nixos.org/wiki/Home_Manager Home Manager warning ...
+
+◦ Searching the web
+
+• Searched the web
+
+◦ Searching the web
+
+• Searched the web
+
+• The key architectural point is already clear: on Fedora, NixOS container modules are not available just because Nix is installed. Quadlet execution should remain a Fedora Podman + user-systemd responsibility; Nix can reproducibly build images, tools,
+  and configuration around it. I’m checking the exact host prerequisites and the safest point at which Home Manager adds value.
+
+• Ran type -a podman; podman version; podman info --format 'rootless={{.Host.Security.Rootless}} cgroups={{.Host.CgroupsVersion}} manager={{.Host.CgroupManager}} distro={{.Host.Distribution.Distribution}} version={{.Version.Version}}'; systemctl --user
+  │ is-system-running; systemctl --user show-environment | rg '^(HOME|PATH|XDG_CONFIG_HOME|XDG_RUNTIME_DIR)=' || true; loginctl show-user "$(id -un)" -p Linger; nix config show | rg '^(experimental-features|flake-registry|warn-dirty|trusted-users|
+  │ allowed-users)' || true; nix profile list 2>/dev/null || true
+  └ podman is /usr/bin/podman
+    Failed to obtain podman configuration: set sticky bit on: chmod /run/user/1000/libpod: read-only file system
+    … +7 lines (ctrl + t to view transcript)
+    trusted-users = root
+    warn-dirty = true
+
+✔ You approved codex to run podman version; podman info --format 'rootless={{.Host.Security.Rootless}} cg... this time
+
+• Ran podman version; podman info --format 'rootless={{.Host.Security.Rootless}} cgroups={{.Host.CgroupsVersion}} manager={{.Host.CgroupManager}} distro={{.Host.Distribution.Distribution}} version={{.Version.Version}}'; systemctl --user
+  │ is-system-running; loginctl show-user "$(id -un)" -p Linger
+  └ rootless=true cgroups=v2 manager=systemd distro=fedora version=5.8.4
+    degraded
+    Linger=yes
+
+✔ You approved codex to run systemctl --user --failed --no-pager; systemctl --user status podman-user-wai... this time
+
+• Ran systemctl --user --failed --no-pager; systemctl --user status podman-user-wait-network-online.service --no-pager 2>/dev/null || true; systemd-analyze --user unit-paths | sed -n '1,80p'; rpm -q podman systemd shadow-utils; getsubids "$(id -un)" 2>/
+  │ dev/null || true
+  └   UNIT                                             LOAD   ACTIVE SUB    DESCRIPTION
+    ● app-nvidia\x2dsettings\x2dload@autostart.service loaded failed failed NVIDIA X Server Settings
+    … +51 lines (ctrl + t to view transcript)
+    shadow-utils-4.18.0-3.fc43.x86_64
+    0: ni 524288 65536
+
+• Searching the web
+
+• Searched the web for site:nixos.org/manual/nixpkgs/stable dockerTools buildLayeredImage ...
+
+• Searching the web
+
+• Searched the web for site:nixos.org/manual/nixpkgs/unstable "buildLayeredImage" ...
+
+• Searching the web
+
+• Searched the web for site:search.nixos.org/options virtualisation.quadlet ...
+
+• Searching the web
+
+• Searched the web for site:github.com/nix-community/home-manager "services.podman.containers" "autoStart" ...
+
+• Searching the web
+
+• Searched the web for https://raw.githubusercontent.com/nix-community/home-manager/release-26.05/modules/services/podman/linux/default.nix
+
+◦ Searching the web
+
+• Searched the web for https://raw.githubusercontent.com/nix-community/home-manager/release-26.05/modules/services/podman/linux/install-quadlet.nix
+
+✔ You approved codex to run getenforce; podman info --format 'graphDriver={{.Store.GraphDriverName}} grap... this time
+
+• Ran getenforce; podman info --format 'graphDriver={{.Store.GraphDriverName}} graphRoot={{.Store.GraphRoot}} networkBackend={{.Host.NetworkBackend}}'; command -v podman-user-generator; rpm -ql podman | rg 'user-generators/.+podman|
+  │ podman-user-generator|quadlet' | sed -n '1,80p'; systemctl --user list-unit-files --no-pager | rg 'podman-auto-update|default.target|multi-user.target' || true
+  └ podman-auto-update.service                                                       disabled  disabled
+    default.target                                                                   static    -
+    podman-auto-update.timer                                                         disabled  disabled
+
+• Searching the web
+
+• Searched the web for site:docs.podman.io/en/latest/markdown podman-image.unit docker-archive Image= ...
+
+• Searching the web
+
+• Searched the web for site:nix-community.github.io/home-manager "home-manager generations" rollback ...
+
+• The host is ready for a low-risk rootless trial: Podman 5.8.4, cgroup v2, systemd cgroup management, subordinate UID/GID ranges, SELinux enforcing, and user lingering are all present. The user systemd manager is “degraded,” but only because of three
+  unrelated desktop services (NVIDIA settings, Snap user autostart, and DrKonqi), so that is not a Quadlet blocker.
+
+• Added FEDORA_NIX_QUADLET_PLAN.md (+318 -0)
+      1 +# Fedora + Nix + rootless Podman Quadlet plan
+      2 +
+      3 +Status: proposed plan, based on this host as inspected on 2026-09-22.
+      4 +
+      5 +## Recommendation in one paragraph
+      6 +
+      7 +Do **not** try to turn this Fedora installation into a partial NixOS, and do not begin by giving Home Manager control of the whole home directory. Keep Fedora responsible for the kernel, systemd, SELinux, and Podman. Use rootless Quadlets manag
+         ed by the Fedora user systemd instance. Add Nix first as a reproducible builder for the agent software and OCI image. After one hand-written Quadlet has survived a reboot and an update, add standalone, flake-pinned Home Manager only to deploy t
+         he already-understood Quadlet files. Treat a container as an immutable workload, not as a small mutable NixOS. If the agents truly need to run `nixos-rebuild`, control their own init system, or change their whole OS, graduate that workload to a
+          dedicated NixOS VM instead of making a privileged Podman container.
+      8 +
+      9 +This is a deliberately staged path. Each phase is useful by itself and has an obvious rollback.
+     10 +
+     11 +## What is already true on this machine
+     12 +
+     13 +The read-only inspection found:
+     14 +
+     15 +- Host OS: Fedora 43.
+     16 +- Nix: Determinate Nix 3.22.5, reporting upstream Nix 2.35.2.
+     17 +- Podman: Fedora's `/usr/bin/podman`, version 5.8.4.
+     18 +- Podman is running rootless, with cgroup v2 and the systemd cgroup manager.
+     19 +- Storage is rootless overlay at `~/.local/share/containers/storage`; networking uses Netavark.
+     20 +- The Podman user generator is installed at `/usr/lib/systemd/user-generators/podman-user-generator`.
+     21 +- The account has a subordinate ID range of 65,536 UIDs/GIDs.
+     22 +- SELinux is enforcing.
+     23 +- User lingering is already enabled, so user units can start at boot without an interactive login.
+     24 +- The user systemd manager currently reports `degraded`, but its three failed units are unrelated desktop helpers: NVIDIA settings, Snap user autostart, and DrKonqi. This is not a Podman/Quadlet failure.
+     25 +- This repository currently has no project files, so there is no existing deployment layout to preserve.
+     26 +
+     27 +These are the important prerequisites for rootless Quadlets. No bare-metal NixOS installation is required.
+     28 +
+     29 +## Keep the layers distinct
+     30 +
+     31 +The intended stack should be:
+     32 +
+     33 +```text
+     34 +Fedora host
+     35 +  -> user systemd + Fedora's Quadlet generator
+     36 +    -> rootless Fedora Podman
+     37 +      -> OCI image built reproducibly with Nix
+     38 +        -> agent processes and their deliberately mounted state
+     39 +```
+     40 +
+     41 +Nix being installed on Fedora does not make NixOS modules such as `containers.*` or arbitrary `services.*` applicable to the Fedora host. Those modules describe a NixOS system activation. Nixpkgs packages and build functions, however, work perf
+         ectly well on non-NixOS Linux.
+     42 +
+     43 +Likewise, an OCI image assembled with Nix is not automatically NixOS. A normal OCI container shares the Fedora kernel and ordinarily runs one workload rather than its own full systemd instance. That distinction is useful: it keeps the initial d
+         esign small and debuggable.
+     44 +
+     45 +## Why not start with Home Manager?
+     46 +
+     47 +Home Manager is viable here, but it should be the third step rather than the first.
+     48 +
+     49 +The warning on the Home Manager project is not saying that it routinely destroys a home directory. It says that errors can be difficult for Nix newcomers, some modules can overwrite state they cannot fully identify, and users should begin with
+         a small configuration. Home Manager normally detects a colliding file and aborts activation before replacing it. It also supports building without activating, backup extensions, generations, and rollback.
+     50 +
+     51 +There are two distinct ways Home Manager could participate:
+     52 +
+     53 +1. **Recommended at first:** use `xdg.configFile` to link reviewed raw `.container`, `.network`, `.volume`, and `.pod` files into `~/.config/containers/systemd/`. Fedora's installed Quadlet generator remains responsible for translating them.
+     54 +2. **Evaluate later:** use Home Manager's `services.podman` module and its typed Quadlet options.
+     55 +
+     56 +The second option is attractive, but the current `release-26.05` implementation also installs the Nixpkgs Podman package, writes several `containers/*.conf` files, runs the Nix-provided Podman generator during the Nix build, and links generated
+          systemd units into the user configuration. That replaces more of the Fedora-native path and introduces a second Podman packaging/version boundary. It is not the best first diagnostic surface.
+     57 +
+     58 +Do not initially enable Home Manager modules for the shell, desktop, Git, or unrelated dotfiles. Do not use `force = true`, automatic upgrades, automatic garbage collection, or automatic container image updates during the proving stages.
+     59 +
+     60 +## Phase 1: prove Fedora-native Quadlet end to end
+     61 +
+     62 +Goal: prove that a harmless rootless service can be generated, started, logged, stopped, and started after reboot before Nix or Home Manager is involved.
+     63 +
+     64 +Suggested repository layout:
+     65 +
+     66 +```text
+     67 +quadlets/
+     68 +  smoke.container
+     69 +scripts/
+     70 +  deploy-quadlets
+     71 +  undeploy-quadlets
+     72 +```
+     73 +
+     74 +Start with one disposable container. Use a fully qualified image name. A tag is acceptable for the first five-minute smoke test, but record and use a digest before calling the deployment reproducible.
+     75 +
+     76 +Example shape (the exact image digest should be filled in when this phase is implemented):
+     77 +
+     78 +```ini
+     79 +[Unit]
+     80 +Description=Disposable Quadlet smoke test
+     81 +
+     82 +[Container]
+     83 +Image=docker.io/library/alpine@sha256:REPLACE_WITH_VERIFIED_DIGEST
+     84 +Exec=/bin/sh -c "while true; do date -Iseconds; sleep 60; done"
+     85 +
+     86 +[Service]
+     87 +Restart=on-failure
+     88 +TimeoutStartSec=300
+     89 +
+     90 +[Install]
+     91 +WantedBy=default.target
+     92 +```
+     93 +
+     94 +Deployment should link each reviewed file individually into the rootless search directory. Podman explicitly supports symlinks there.
+     95 +
+     96 +```bash
+     97 +mkdir -p "$HOME/.config/containers/systemd"
+     98 +ln -sfn "$PWD/quadlets/smoke.container" \
+     99 +  "$HOME/.config/containers/systemd/smoke.container"
+    100 +systemctl --user daemon-reload
+    101 +systemd-analyze --user --generators=true verify smoke.service
+    102 +systemctl --user start smoke.service
+    103 +systemctl --user status smoke.service
+    104 +journalctl --user -u smoke.service --no-pager -n 100
+    105 +```
+    106 +
+    107 +Important details:
+    108 +
+    109 +- A generated Quadlet service should not be enabled with `systemctl enable`. The Quadlet's `[Install]` section tells the generator how to attach it to `default.target`.
+    110 +- Keep `TimeoutStartSec` generous while an image might be pulled.
+    111 +- Test a reboot only after manual start/stop and log inspection work.
+    112 +- Bind host ports to `127.0.0.1` until external access is intentional and the Fedora firewall policy has been decided.
+    113 +- With SELinux enforcing, label writable bind mounts intentionally: normally `:Z` for a mount private to one container and `:z` only when multiple containers really share it.
+    114 +
+    115 +Rollback is small and explicit:
+    116 +
+    117 +```bash
+    118 +systemctl --user stop smoke.service
+    119 +unlink "$HOME/.config/containers/systemd/smoke.container"
+    120 +systemctl --user daemon-reload
+    121 +```
+    122 +
+    123 +Exit gate:
+    124 +
+    125 +- The service starts, stops, and logs correctly.
+    126 +- It starts after a reboot without a login.
+    127 +- Removing the link and reloading removes the generated unit.
+    128 +- No `sudo`, privileged container, host Podman socket, or broad home-directory mount was needed.
+    129 +
+    130 +## Phase 2: let Nix build the workload, not operate the host
+    131 +
+    132 +Goal: add a pinned flake that builds an OCI archive and development/test tools while Fedora Podman still owns runtime operation.
+    133 +
+    134 +Suggested additions:
+    135 +
+    136 +```text
+    137 +flake.nix
+    138 +flake.lock
+    139 +nix/
+    140 +  agent-image.nix
+    141 +quadlets/
+    142 +  agent.image
+    143 +  agent.container
+    144 +scripts/
+    145 +  build-and-load-image
+    146 +  deploy-quadlets
+    147 +```
+    148 +
+    149 +The flake should pin Nixpkgs and expose at least:
+    150 +
+    151 +- `packages.x86_64-linux.agent-image`, initially built with `pkgs.dockerTools.buildLayeredImage`;
+    152 +- `checks.x86_64-linux.*` for configuration and application tests;
+    153 +- optionally a small `devShell`, but no global profile mutation.
+    154 +
+    155 +Nixpkgs' `dockerTools` name is historical: its archive is usable by Podman. A simple deployment flow is:
+    156 +
+    157 +1. `nix build .#agent-image`;
+    158 +2. load the resulting Docker-compatible archive into rootless Podman;
+    159 +3. confirm the expected image ID/tag;
+    160 +4. reload/restart the associated Quadlet;
+    161 +5. run a health or behavior check;
+    162 +6. on failure, retag/reload the last known-good archive and restart.
+    163 +
+    164 +Podman 5.8 can also represent a local Docker archive with a `.image` Quadlet using `Image=docker-archive:/path/to/archive` plus `ImageTag=...`. This can remove an imperative `podman load` step, but there is a subtle Nix concern: a bare `/nix/st
+         ore/...` path written into a text file is not necessarily a garbage-collection root. Prefer the explicit load step first, or maintain a deliberate GC-root symlink and test garbage collection before relying on the `.image` approach.
+    165 +
+    166 +Use immutable image identity in deployments. Avoid making `latest` the only record of what is running. The Git revision, flake lock revision, Nix output path, and Podman image digest should be inspectable together.
+    167 +
+    168 +Exit gate:
+    169 +
+    170 +- Two consecutive builds from the same lock file produce the expected image identity/content.
+    171 +- Updating one application dependency creates a reviewable lock/config change.
+    172 +- The new image can be deployed and rolled back without changing the host Podman package.
+    173 +- Persistent data survives image replacement because it is in a deliberate named volume or bind mount, not in the container writable layer.
+    174 +
+    175 +## Phase 3: introduce standalone Home Manager narrowly
+    176 +
+    177 +Goal: use Home Manager as a reversible file deployment mechanism after raw Quadlet behavior is familiar.
+    178 +
+    179 +Use a flake, not mutable channels. As of this plan, the matching stable pair is Nixpkgs `nixos-26.05` (or `nixpkgs-26.05`) and Home Manager `release-26.05`; set `home-manager.inputs.nixpkgs.follows = "nixpkgs"`. Pin both in `flake.lock`. If thi
+         s phase is implemented after a new release, choose the then-current matching pair rather than copying these branch names blindly.
+    180 +
+    181 +The first Home Manager configuration should contain only:
+    182 +
+    183 +- the correct `home.username` and `home.homeDirectory`;
+    184 +- `home.stateVersion = "26.05"` for a configuration first created on 26.05 (do not routinely bump this later);
+    185 +- `targets.genericLinux.enable = true`;
+    186 +- one `xdg.configFile."containers/systemd/agent.container".source = ./quadlets/agent.container` entry;
+    187 +- optionally `programs.home-manager.enable = true` after the initial test, solely to retain the command.
+    188 +
+    189 +It should initially **not** contain `services.podman.enable = true`. That module can be tested in a separate branch once the Fedora-native deployment is known-good.
+    190 +
+    191 +Safe adoption sequence:
+    192 +
+    193 +1. Ensure the raw Phase 1 symlink is either the exact target Home Manager will adopt or has been moved aside deliberately.
+    194 +2. Run `home-manager build --flake .#USER@HOST` (or invoke the pinned Home Manager app with `nix run`) and inspect `result/home-files` before activation.
+    195 +3. Review every collision. Do not solve unexpected collisions with `force = true`.
+    196 +4. Activate with a unique backup extension if an expected unmanaged file must be moved: `home-manager switch -b pre-hm-YYYYMMDD --flake .#USER@HOST`.
+    197 +5. Explicitly run `systemctl --user daemon-reload`, inspect the generated unit, and start/restart it. Keep service lifecycle outside Home Manager activation for the first iteration.
+    198 +6. Record `home-manager generations`. Home Manager 25.11 and newer supports `home-manager switch --rollback`.
+    199 +
+    200 +Once this is stable, an idempotent `onChange` hook or a separate deploy command can perform reload and `try-restart`. Keeping build, activation, and service restart as three observable steps is preferable while learning.
+    201 +
+    202 +Exit gate:
+    203 +
+    204 +- `home-manager build` has no side effects.
+    205 +- The activation changes only the intended Quadlet path and Home Manager's own generation/profile state.
+    206 +- Rollback restores the prior file generation.
+    207 +- Fedora's `/usr/bin/podman` and Fedora Quadlet generator still execute the service.
+    208 +
+    209 +## Phase 4: build the smallest useful agent hive
+    210 +
+    211 +Goal: demonstrate multiple agents with bounded authority, observable coordination, and reproducible replacement.
+    212 +
+    213 +Begin with three roles, each in a separate container rather than several agents sharing one mutable container:
+    214 +
+    215 +- a coordinator that accepts work and records desired state;
+    216 +- one or two workers with separate writable workspaces;
+    217 +- an optional narrow deployer that can build/check a proposed revision and request activation.
+    218 +
+    219 +Use a dedicated `.network` Quadlet and, only where useful, named `.volume` Quadlets. A `.pod` can be added when shared network namespace/lifecycle is genuinely helpful; it is not required merely because the services form a team.
+    220 +
+    221 +Default security boundary:
+    222 +
+    223 +- rootless Podman only;
+    224 +- run as a non-root UID inside the image where practical;
+    225 +- read-only root filesystem where practical;
+    226 +- drop capabilities and use `no-new-privileges`;
+    227 +- memory, CPU, PID, and restart limits;
+    228 +- no host Podman socket;
+    229 +- no host Docker socket;
+    230 +- no writable host `/nix` and no access to the host Nix daemon socket;
+    231 +- no broad `$HOME` mount;
+    232 +- only explicit work, state, and secret paths;
+    233 +- bind ports to loopback unless there is a reviewed need for LAN access.
+    234 +
+    235 +Do not put API keys, registry credentials, SSH keys, or tokens into Nix expressions, Home Manager `text` values, flake inputs, image layers, or Quadlet `Environment=` entries. Those are liable to become world-readable in the Nix store, image me
+         tadata, generated unit, or process inspection. Inject secrets at runtime with permissions and lifecycle appropriate to the secret (for example Podman secrets or a host file mounted read-only), and keep their paths/content out of Git.
+    236 +
+    237 +The agents should administer **desired state**, not mutate their base image in place:
+    238 +
+    239 +```text
+    240 +agent proposes change to the flake/config repository
+    241 +  -> checks build in an unprivileged context
+    242 +    -> policy/review gate accepts a known Git revision
+    243 +      -> trusted deployer builds and activates that revision
+    244 +        -> health check passes or deployment rolls back
+    245 +```
+    246 +
+    247 +This gives agents a meaningful way to “administer their OS” while retaining history, reproducibility, and recovery. An agent running `nix profile install` or editing `/etc` inside an ephemeral container produces state that is hard to review and
+          disappears on replacement.
+    248 +
+    249 +Exit gate:
+    250 +
+    251 +- Compromising one worker does not provide control of the host or other workers' private state.
+    252 +- Every running image maps to a Git revision and locked Nix inputs.
+    253 +- Agent-produced configuration must pass builds/checks before activation.
+    254 +- A bad deployment automatically or manually rolls back to a known-good image/config.
+    255 +- Logs, health checks, state backup, and secret rotation have all been exercised once.
+    256 +
+    257 +## Phase 5 decision: OCI workload or real self-administered NixOS?
+    258 +
+    259 +Make this decision only after the hive proof of concept.
+    260 +
+    261 +| Need | Best fit |
+    262 +| --- | --- |
+    263 +| Reproducible agent binaries and filesystem; one main process per unit | Nix-built OCI images under rootless Quadlet |
+    264 +| Several cooperating services with isolated writable state | Several Quadlets plus a private Podman network/volumes |
+    265 +| Agents propose changes and a controller rebuilds/redeploys | OCI + Git/flake control plane (recommended) |
+    266 +| Agents need a package manager interactively for experiments | Disposable dev container or `nix develop`; do not confuse it with production state |
+    267 +| Agents need their own systemd, users, NixOS modules, and `nixos-rebuild` | Dedicated NixOS VM, preferably with snapshots and resource limits |
+    268 +| Untrusted agents require a strong isolation boundary | VM; a container shares the Fedora kernel |
+    269 +
+    270 +Running a full systemd-based NixOS userspace inside privileged Podman is technically possible in assorted forms, but it adds nested cgroups, privilege, mount, SELinux, and shutdown semantics precisely where a first deployment should stay simple
+         . Native NixOS containers are also documented as NixOS-host functionality and are not perfectly isolated from their host. Neither is the preferred target for untrusted autonomous agents on Fedora.
+    271 +
+    272 +## Operational rules to adopt from day one
+    273 +
+    274 +1. Pin flake inputs and image digests; update them deliberately.
+    275 +2. Build before activation, and inspect what will be linked/generated.
+    276 +3. Separate immutable image content from writable state.
+    277 +4. Back up named volumes/bind-mounted state; a Nix rebuild does not back up data.
+    278 +5. Use health checks and bounded restart policies. Avoid infinite crash loops hidden by `Restart=always`.
+    279 +6. Keep automatic image updates off until rollback is proven. A reproducible deployment should update by reviewed revision, not surprise timer.
+    280 +7. Run syntax/unit verification and a smoke test in CI before deployment.
+    281 +8. Never grant the hive a host container-engine socket as a shortcut to self-administration.
+    282 +9. Keep the host runtime Fedora-native until there is a measured reason to replace it with Nixpkgs Podman.
+    283 +10. Preserve at least one known-good Home Manager generation and image revision before garbage collection.
+    284 +
+    285 +## Proposed implementation order
+    286 +
+    287 +The next work should be split into small, independently reviewable changes:
+    288 +
+    289 +1. Add a smoke Quadlet and non-destructive deploy/undeploy scripts.
+    290 +2. Run it manually, verify logs, then verify one reboot.
+    291 +3. Add the pinned flake and a minimal Nix-built image.
+    292 +4. Add image-load/deploy and rollback scripts with checks.
+    293 +5. Add a minimal standalone Home Manager output that manages only the Quadlet files.
+    294 +6. Add one coordinator and one worker with no sensitive privileges.
+    295 +7. Add secrets, persistence, health checks, backup, and resource limits one at a time.
+    296 +8. Decide whether the long-term agent “OS” remains immutable OCI desired state or moves into a NixOS VM.
+    297 +
+    298 +## Confidence and known unknowns
+    299 +
+    300 +- **High confidence:** Fedora-native rootless Quadlet is supported by the installed host and is the shortest path to a working service.
+    301 +- **High confidence:** Nix can reproducibly build OCI archives that Fedora Podman consumes without making the host NixOS.
+    302 +- **High confidence:** a minimal, standalone, flake-pinned Home Manager configuration can safely manage only selected files if collision checks and build-before-switch are respected.
+    303 +- **Moderate confidence until tested:** the exact agent application image, writable paths, SELinux labeling, health check, and UID mapping; these depend on the actual agent runtime.
+    304 +- **Low confidence / not recommended:** treating a privileged Podman container as a fully autonomous NixOS machine. Use a VM if those semantics are truly required.
+    305 +
+    306 +## Primary references
+    307 +
+    308 +- [Podman Quadlet systemd unit documentation](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html) — unit types, rootless search paths, supported symlinks, cgroup v2, dependencies, and timeouts.
+    309 +- [Podman Quadlet basic usage](https://docs.podman.io/en/latest/markdown/podman-quadlet-basic-usage.7.html) — placement, reload/start, logs, and generated-unit behavior.
+    310 +- [Podman image Quadlet documentation](https://docs.podman.io/en/stable/markdown/podman-image.unit.5.html) — registry images and local Docker archives.
+    311 +- [Home Manager project warning and installation choices](https://github.com/nix-community/home-manager#words-of-warning) — small configurations, non-NixOS support caveat, and standalone mode.
+    312 +- [Home Manager flake standalone setup](https://nix-community.github.io/home-manager/nix-flakes/standalone.html) — pinned standalone structure.
+    313 +- [Home Manager file collision and backup behavior](https://nix-community.github.io/home-manager/usage/dotfiles.html) — collision aborts, backup extensions, `force`, and symlink behavior.
+    314 +- [Home Manager Podman options](https://nix-community.github.io/home-manager/options/home-manager/services/podman.html) — the available typed Podman/Quadlet module.
+    315 +- [Home Manager 26.05 Podman implementation](https://github.com/nix-community/home-manager/tree/release-26.05/modules/services/podman) — important for understanding what that module generates and installs.
+    316 +- [Nixpkgs `dockerTools` documentation](https://github.com/NixOS/nixpkgs/blob/master/doc/build-helpers/images/dockertools.section.md) — reproducible layered OCI/Docker-compatible archives.
+    317 +- [NixOS manual: container management](https://nixos.org/manual/nixos/stable/#ch-containers) — why native NixOS containers are a NixOS-host feature and why container root is not a strong isolation boundary.
+    318 +
+
+• Ran wc -l FEDORA_NIX_QUADLET_PLAN.md && sed -n '1,80p' FEDORA_NIX_QUADLET_PLAN.md && git status --short && git diff --check
+  └ 318 FEDORA_NIX_QUADLET_PLAN.md
+    # Fedora + Nix + rootless Podman Quadlet plan
+    … +79 lines (ctrl + t to view transcript)
+    fatal: not a git repository (or any parent up to mount point /)
+    Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+• Ran getsubids "$(id -un)"; getsubids -g "$(id -un)"
+  └ 0: ni 524288 65536
+    0: ni 524288 65536
+
+• I created the plan at FEDORA_NIX_QUADLET_PLAN.md.
+
+  My recommendation is:
+
+  - Keep Fedora responsible for Podman, systemd, SELinux, and the host OS.
+  - Begin with a hand-written rootless Quadlet.
+  - Then use Nix to build reproducible OCI images.
+  - Introduce standalone, flake-pinned Home Manager later, initially managing only the Quadlet files.
+  - Avoid Home Manager’s services.podman module at first because it also introduces Nixpkgs’ Podman and pre-generates systemd units, expanding the troubleshooting surface.
+  - If agents genuinely need their own systemd, users, NixOS modules, and nixos-rebuild, use a NixOS VM rather than a privileged “NixOS-like” Podman container.
+
+  The machine is already well prepared: rootless Podman 5.8.4, cgroup v2, user lingering, subordinate UID/GID ranges, overlay storage, the Quadlet generator, and enforcing SELinux are present. The degraded user-systemd status comes from three unrelated
+  desktop helpers and is not a Quadlet blocker.
+
+  One important conceptual distinction: Quadlet is a Podman/systemd facility (https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html), not a Nix feature. Nix’s role here is reproducible image and configuration construction. Likewise,
+  installing Nix on Fedora does not make NixOS host modules available. The cautious Home Manager approach follows the project’s own recommendation to start with a small configuration (https://github.com/nix-community/home-manager#words-of-warning).
+
+  Worked for 8m 21s · done 2:13 PM
+
+
+› Please create another document laying out how I go about setting up a VM using virt-manager or just KVM command-line functionality without the GUI options virt-manager provides -- either is OK. If there's more funcationality I'll get operating from a
+  nixOS VM then I want to have that available. Write this document with instructions for both fedora and ubuntu host OSes.
+
+
+• I’ll write this as a practical companion to the Quadlet plan: one NixOS guest design, with both virt-manager and reproducible virt-install paths, and separate Fedora/Ubuntu host preparation. I’ll also distinguish a persistent libvirt VM from Nix’s
+  convenient but more disposable build-vm workflow, since they serve different purposes.
+
+• Searching the web
+
+• Searched the web for site:docs.fedoraproject.org virtualization getting started libvirt virt-install Fedora 43 ...
+
+• Searching the web
+
+• Searched the web for site:docs.fedoraproject.org/en-US/quick-docs virtualization getting started Fedora libvirt virt-manager ...
+
+• Ran dnf -q group info virtualization 2>/dev/null | sed -n '1,100p'; rpm -q qemu-kvm libvirt-daemon-kvm libvirt-client virt-install virt-manager edk2-ovmf swtpm swtpm-tools 2>/dev/null || true; systemctl list-unit-files 'virt*qemud*.socket'
+  │ 'libvirtd*.socket' --no-pager 2>/dev/null | sed -n '1,80p'
+  └ package qemu-kvm is not installed
+    package libvirt-daemon-kvm is not installed
+    … +4 lines (ctrl + t to view transcript)
+    package swtpm is not installed
+    package swtpm-tools is not installed
+
+• Searching the web
+
+• Searched the web for site:nixos.org/download NixOS 26.05 minimal ISO x86_64 checksum ...
+
+◦ Searching the web
+
+• Searched the web for site:gitlab.com/libosinfo/osinfo-db nixos short-id ...
+
+• Searching the web
+
+• Searched the web for site:libvirt.org daemons modular virtqemud socket virtnetworkd systemd ...
+
+• Searching the web
+
+• Searched the web for site:nixos.org/manual/nixos/stable "system.build.vm" "run-"-vm ...
+
+• Searching the web
+
+• Searched the web for site:nixos.org/manual/nixos/stable nixos-enter --root passwd user ...
+
+• The main recommendation for this guide will be a persistent libvirt-managed NixOS VM using qemu:///system. That gives the same VM to both virsh/virt-install and virt-manager, so choosing the GUI does not lock you into a different architecture. The GUI
+  is just a frontend over the same libvirt definition.
+
+• Added NIXOS_KVM_VM_GUIDE.md (+721 -0)
+      1 +# NixOS VM on Fedora or Ubuntu with KVM/libvirt
+      2 +
+      3 +Status: installation and operating guide, written 2026-09-22.
+      4 +
+      5 +This is a companion to `FEDORA_NIX_QUADLET_PLAN.md`. Its recommended outcome is a persistent NixOS virtual machine managed by libvirt. The same VM can be created and operated either with virt-manager or entirely from the command line with `virt
+         -install` and `virsh`.
+      6 +
+      7 +## Recommendation
+      8 +
+      9 +Use the host's native KVM, QEMU, and libvirt packages. Create the VM on the system libvirt connection (`qemu:///system`), install NixOS 26.05 from its minimal ISO, and put the guest's complete configuration in a pinned flake. Begin with 4 virtu
+         al CPUs, 8 GiB RAM, and a 120 GiB thin-provisioned qcow2 disk; increase that to roughly 8 CPUs, 16 GiB RAM, and 200 GiB disk if several agents will build large Nix closures concurrently.
+     10 +
+     11 +The VM is the right boundary when the agents need any of the following:
+     12 +
+     13 +- a real NixOS system with its own systemd and boot generations;
+     14 +- NixOS service, user, networking, firewall, and container modules;
+     15 +- permission to run `nixos-rebuild` without administering the Fedora or Ubuntu host;
+     16 +- a persistent `/nix/store` and machine state;
+     17 +- stronger isolation than a container sharing the host kernel;
+     18 +- a checkpoint/clone boundary around experiments.
+     19 +
+     20 +The VM does consume more RAM, disk, and startup time than a rootless container. A guest administrator is still not a host administrator unless the host exposes devices, host directories, or the libvirt/Podman socket to it. Do not expose those m
+         erely for convenience.
+     21 +
+     22 +## Tooling model
+     23 +
+     24 +The layers are:
+     25 +
+     26 +```text
+     27 +Fedora or Ubuntu host
+     28 +  -> KVM kernel acceleration
+     29 +    -> QEMU virtual machine process
+     30 +      -> libvirt lifecycle, storage, and networking
+     31 +        -> NixOS guest
+     32 +          -> systemd services and/or Podman agent containers
+     33 +```
+     34 +
+     35 +virt-manager, `virt-install`, and `virsh` all operate through libvirt. It is therefore safe to create a VM with the CLI and later inspect or edit it in virt-manager, or vice versa.
+     36 +
+     37 +Prefer libvirt to a raw `qemu-system-x86_64` command for a long-lived VM. Libvirt retains the machine definition, supplies NAT/DHCP, manages UEFI variable storage, applies SELinux/AppArmor isolation, handles autostart, and provides stable lifec
+         ycle commands. Raw QEMU is excellent for short tests but makes those responsibilities manual.
+     38 +
+     39 +This guide uses `qemu:///system`, which supplies libvirt's default NAT network and supports host-boot autostart. The alternative `qemu:///session` runs QEMU under the invoking user and avoids some file-permission issues, but it normally falls b
+         ack to slower user networking and is awkward to reach from elsewhere. It is less appropriate for an always-on agent VM.
+     40 +
+     41 +> Membership in the host `libvirt` group is highly privileged. The system libvirt socket can often be used to obtain host-equivalent access by defining a VM with sensitive host mounts or devices. Never add an agent account to the host's `libvir
+         t` group and never pass that socket into the guest.
+     42 +
+     43 +## 1. Check hardware and firmware support
+     44 +
+     45 +On either host OS:
+     46 +
+     47 +```bash
+     48 +grep -E -m1 '(vmx|svm)' /proc/cpuinfo
+     49 +lsmod | grep '^kvm'
+     50 +ls -l /dev/kvm
+     51 +```
+     52 +
+     53 +Expected results are a CPU flag (`vmx` for Intel or `svm` for AMD), a `kvm_intel` or `kvm_amd` module, and `/dev/kvm`. If the CPU supports virtualization but `/dev/kvm` is absent, enable Intel VT-x or AMD-V/SVM in the machine firmware and reboo
+         t. If the Fedora or Ubuntu host is itself a VM, the outer hypervisor must expose nested virtualization.
+     54 +
+     55 +Podman inside the NixOS guest does **not** require nested virtualization. Nested virtualization is needed only if the NixOS guest will itself run KVM virtual machines.
+     56 +
+     57 +## 2A. Prepare a Fedora host
+     58 +
+     59 +### Full workstation installation
+     60 +
+     61 +This includes virt-manager and the graphical viewer:
+     62 +
+     63 +```bash
+     64 +sudo dnf install @virtualization edk2-ovmf swtpm swtpm-tools
+     65 +```
+     66 +
+     67 +If the group shorthand is not accepted by the installed DNF version, use:
+     68 +
+     69 +```bash
+     70 +sudo dnf group install virtualization
+     71 +sudo dnf install edk2-ovmf swtpm swtpm-tools
+     72 +```
+     73 +
+     74 +### CLI-only installation
+     75 +
+     76 +```bash
+     77 +sudo dnf install \
+     78 +  qemu-kvm \
+     79 +  libvirt-daemon-kvm \
+     80 +  libvirt-daemon-config-network \
+     81 +  libvirt-client \
+     82 +  virt-install \
+     83 +  edk2-ovmf \
+     84 +  swtpm \
+     85 +  swtpm-tools
+     86 +```
+     87 +
+     88 +Fedora has used libvirt's modular daemons by default since Fedora 35. Package installation normally applies the correct systemd presets. Ensure the QEMU manager and supporting sockets are available:
+     89 +
+     90 +```bash
+     91 +sudo systemctl enable --now virtqemud.socket
+     92 +sudo systemctl enable --now virtnetworkd.socket
+     93 +sudo systemctl enable --now virtstoraged.socket
+     94 +```
+     95 +
+     96 +If VMs configured for autostart do not start after a host reboot, also enable the service:
+     97 +
+     98 +```bash
+     99 +sudo systemctl enable --now virtqemud.service
+    100 +```
+    101 +
+    102 +Do not simultaneously switch back and forth between `libvirtd` and the modular daemons. Fedora's new installations are intended to use `virtqemud`, `virtnetworkd`, and the other modular services.
+    103 +
+    104 +### Host access
+    105 +
+    106 +On a single-user workstation, add your human account—not an agent—to the management groups:
+    107 +
+    108 +```bash
+    109 +sudo usermod -aG libvirt,kvm "$(id -un)"
+    110 +```
+    111 +
+    112 +Log out of the desktop session completely and log back in. On a shared host, prefer a deliberate polkit/sudo policy over broad group membership.
+    113 +
+    114 +## 2B. Prepare an Ubuntu host
+    115 +
+    116 +The base system/CLI packages are:
+    117 +
+    118 +```bash
+    119 +sudo apt update
+    120 +sudo apt install \
+    121 +  qemu-kvm \
+    122 +  libvirt-daemon-system \
+    123 +  libvirt-clients \
+    124 +  virtinst \
+    125 +  ovmf \
+    126 +  swtpm \
+    127 +  swtpm-tools
+    128 +```
+    129 +
+    130 +For the GUI, also install:
+    131 +
+    132 +```bash
+    133 +sudo apt install virt-manager virt-viewer
+    134 +```
+    135 +
+    136 +Enable the distro-provided libvirt service:
+    137 +
+    138 +```bash
+    139 +sudo systemctl enable --now libvirtd
+    140 +```
+    141 +
+    142 +Add your human account to the management groups, then log out and back in:
+    143 +
+    144 +```bash
+    145 +sudo usermod -aG libvirt,kvm "$(id -un)"
+    146 +```
+    147 +
+    148 +Ubuntu's libvirt packages apply AppArmor profiles to guests. Keep VM disks and installer media in libvirt's normal storage locations unless there is a specific reason to extend those policies.
+    149 +
+    150 +## 3. Validate libvirt and its default network
+    151 +
+    152 +After installing the packages and refreshing group membership:
+    153 +
+    154 +```bash
+    155 +sudo virt-host-validate qemu
+    156 +virsh --connect qemu:///system list --all
+    157 +virsh --connect qemu:///system net-list --all
+    158 +```
+    159 +
+    160 +Warnings about optional features are not necessarily blockers, but failures for `/dev/kvm`, QEMU, or cgroups should be resolved before continuing.
+    161 +
+    162 +The expected network is named `default`. Start it and make it persistent if it is inactive:
+    163 +
+    164 +```bash
+    165 +sudo virsh --connect qemu:///system net-start default
+    166 +sudo virsh --connect qemu:///system net-autostart default
+    167 +```
+    168 +
+    169 +`net-start` will report that the network is already active when no action is required. If `default` does not exist, first look for the distribution-provided definition:
+    170 +
+    171 +```bash
+    172 +ls -l /usr/share/libvirt/networks/default.xml
+    173 +```
+    174 +
+    175 +If present, define it and then start it:
+    176 +
+    177 +```bash
+    178 +sudo virsh --connect qemu:///system net-define \
+    179 +  /usr/share/libvirt/networks/default.xml
+    180 +sudo virsh --connect qemu:///system net-autostart default
+    181 +sudo virsh --connect qemu:///system net-start default
+    182 +```
+    183 +
+    184 +If that XML file is absent, install Fedora's `libvirt-daemon-config-network` package or verify Ubuntu's `libvirt-daemon-system` installation rather than downloading an arbitrary network definition.
+    185 +
+    186 +The default network gives the guest outbound connectivity and an address on a private host bridge, usually `virbr0`. The host can SSH directly to that private address. Machines elsewhere on the LAN cannot initiate connections to it without a br
+         idge, port forwarding, or a host reverse proxy. Start with NAT; changing the host's physical interface into a bridge can interrupt the host's network and should be a separate, carefully planned change.
+    187 +
+    188 +## 4. Download and verify the NixOS installer
+    189 +
+    190 +The following uses the stable NixOS 26.05 minimal x86-64 image. Check the [NixOS download page](https://nixos.org/download/) and release notes before copying this later; use a matching newer stable release when appropriate.
+    191 +
+    192 +```bash
+    193 +mkdir -p "$HOME/Downloads/nixos-vm"
+    194 +cd "$HOME/Downloads/nixos-vm"
+    195 +
+    196 +NIXOS_VM_ISO_URL="https://channels.nixos.org/nixos-26.05/latest-nixos-minimal-x86_64-linux.iso"
+    197 +NIXOS_VM_ISO_FILE="nixos-minimal-26.05-x86_64-linux.iso"
+    198 +
+    199 +curl --fail --location "$NIXOS_VM_ISO_URL" --output "$NIXOS_VM_ISO_FILE"
+    200 +curl --fail --location "${NIXOS_VM_ISO_URL}.sha256" --output nixos-minimal.sha256
+    201 +
+    202 +NIXOS_VM_EXPECTED_HASH="$(awk 'NR == 1 { print $1 }' nixos-minimal.sha256)"
+    203 +printf '%s  %s\n' "$NIXOS_VM_EXPECTED_HASH" "$NIXOS_VM_ISO_FILE" | sha256sum --check -
+    204 +```
+    205 +
+    206 +Place the verified ISO in a standard system-libvirt location. This avoids home-directory traversal, SELinux, and AppArmor surprises:
+    207 +
+    208 +```bash
+    209 +sudo install -d -m 0755 /var/lib/libvirt/images/iso
+    210 +sudo install -m 0644 \
+    211 +  "$HOME/Downloads/nixos-vm/nixos-minimal-26.05-x86_64-linux.iso" \
+    212 +  /var/lib/libvirt/images/iso/nixos-minimal-26.05-x86_64-linux.iso
+    213 +```
+    214 +
+    215 +On Fedora, restore the distribution's SELinux labels:
+    216 +
+    217 +```bash
+    218 +sudo restorecon -RFv /var/lib/libvirt/images
+    219 +```
+    220 +
+    221 +For an ARM64 host, use the NixOS AArch64 ISO and the host's AArch64 QEMU/UEFI packages. Do not use an AArch64 image for an ordinary x86-64 KVM VM; cross-architecture emulation is much slower and is a different setup.
+    222 +
+    223 +## 5A. Create the VM with virt-manager
+    224 +
+    225 +Start virt-manager on the system connection:
+    226 +
+    227 +```bash
+    228 +virt-manager --connect qemu:///system
+    229 +```
+    230 +
+    231 +Then:
+    232 +
+    233 +1. Select **Create a new virtual machine**.
+    234 +2. Choose **Local install media (ISO image or CDROM)**.
+    235 +3. Select `/var/lib/libvirt/images/iso/nixos-minimal-26.05-x86_64-linux.iso`.
+    236 +4. If NixOS is in the OS list, select the newest NixOS entry. Otherwise choose a recent generic Linux entry. The selection influences virtual-hardware defaults; it does not change the installed software.
+    237 +5. Allocate 8192 MiB RAM and 4 vCPUs for the initial VM.
+    238 +6. Create a 120 GiB qcow2 disk. qcow2 is thin-provisioned, but the host must still be monitored so it never runs out of real space.
+    239 +7. Name the VM `nixos-hive` and select **Customize configuration before install**.
+    240 +8. In Overview, select Q35 chipset and UEFI firmware. Leave Secure Boot disabled for the initial installation.
+    241 +9. Set the CPU model to **host-passthrough** or **Copy host CPU configuration** when the VM will remain on this host. Use a more portable CPU model if live migration to different hardware matters.
+    242 +10. Confirm that the disk and NIC use VirtIO and the NIC is attached to the `default` virtual network.
+    243 +11. Add a QEMU guest-agent channel if virt-manager did not add one automatically.
+    244 +12. Add a serial PTY device. It is useful for recovery even when the graphical console works.
+    245 +13. SPICE graphics and a VirtIO video device are reasonable GUI defaults. 3D acceleration is unnecessary for a server/agent VM.
+    246 +14. Begin installation and follow the guest installation section below.
+    247 +
+    248 +A virtual TPM is optional. Add TPM 2.0 only when the guest will actively use it. It creates another piece of per-VM state that must be included in backups and migrations.
+    249 +
+    250 +## 5B. Create the same VM entirely from the CLI
+    251 +
+    252 +Check whether the installed libosinfo database knows NixOS:
+    253 +
+    254 +```bash
+    255 +virt-install --osinfo list | grep -Ei 'nixos|linux20'
+    256 +```
+    257 +
+    258 +The command below permits ISO detection to fail because NixOS is not present in every distro's libosinfo database. It explicitly selects the important modern hardware choices itself.
+    259 +
+    260 +```bash
+    261 +sudo virt-install \
+    262 +  --connect qemu:///system \
+    263 +  --name nixos-hive \
+    264 +  --memory 8192 \
+    265 +  --vcpus 4 \
+    266 +  --cpu host-passthrough \
+    267 +  --machine q35 \
+    268 +  --boot uefi \
+    269 +  --disk path=/var/lib/libvirt/images/nixos-hive.qcow2,size=120,format=qcow2,bus=virtio,discard=unmap \
+    270 +  --network network=default,model=virtio \
+    271 +  --controller usb,model=qemu-xhci \
+    272 +  --rng /dev/urandom \
+    273 +  --channel unix,target_type=virtio,name=org.qemu.guest_agent.0 \
+    274 +  --cdrom /var/lib/libvirt/images/iso/nixos-minimal-26.05-x86_64-linux.iso \
+    275 +  --osinfo detect=on,require=off \
+    276 +  --graphics none \
+    277 +  --console pty,target_type=serial
+    278 +```
+    279 +
+    280 +The NixOS ISO boot menu has a serial-console entry. Select it when installing through `virsh console`. If the current ISO/firmware combination gives a blank serial screen, do not weaken the VM or expose VNC publicly. Stop the VM, add local SPIC
+         E graphics with virt-manager or `virsh edit`, complete installation through `virt-viewer`, and retain the serial device for the installed system.
+    281 +
+    282 +Detach from a `virsh console` session with **Ctrl+]**. This does not stop the VM.
+    283 +
+    284 +The VM created by this command will immediately appear in virt-manager because both use `qemu:///system`.
+    285 +
+    286 +## 6. Install NixOS inside the guest
+    287 +
+    288 +The commands in this section run **inside the NixOS installer VM**, not on the Fedora or Ubuntu host.
+    289 +
+    290 +### Confirm the target disk
+    291 +
+    292 +```bash
+    293 +lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
+    294 +```
+    295 +
+    296 +With the settings above, the empty 120 GiB virtual disk should be `/dev/vda` and the ISO should be a separate read-only device. Confirm this carefully. The following partition commands erase their target, although in this design that target is
+         only the new virtual disk.
+    297 +
+    298 +### Partition and mount for UEFI
+    299 +
+    300 +This simple layout has a 512 MiB EFI System Partition and one root filesystem. Add a separate data disk or swap later if measurements justify it.
+    301 +
+    302 +```bash
+    303 +sudo parted /dev/vda -- mklabel gpt
+    304 +sudo parted /dev/vda -- mkpart ESP fat32 1MiB 513MiB
+    305 +sudo parted /dev/vda -- set 1 esp on
+    306 +sudo parted /dev/vda -- mkpart root ext4 513MiB 100%
+    307 +
+    308 +sudo mkfs.fat -F 32 -n boot /dev/vda1
+    309 +sudo mkfs.ext4 -L nixos /dev/vda2
+    310 +
+    311 +sudo mount /dev/disk/by-label/nixos /mnt
+    312 +sudo mkdir -p /mnt/boot
+    313 +sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
+    314 +```
+    315 +
+    316 +### Generate the hardware configuration
+    317 +
+    318 +```bash
+    319 +sudo nixos-generate-config --root /mnt
+    320 +```
+    321 +
+    322 +Do not hand-copy `hardware-configuration.nix` from another system. It records the filesystems and detected virtual hardware for this VM.
+    323 +
+    324 +### Create the initial NixOS configuration
+    325 +
+    326 +Edit `/mnt/etc/nixos/configuration.nix` so it contains the following shape. Replace the example SSH key with the complete public key from the human administrator's host. Never put a private key or plaintext secret in this file.
+    327 +
+    328 +```nix
+    329 +{ config, lib, pkgs, ... }:
+    330 +
+    331 +{
+    332 +  imports = [ ./hardware-configuration.nix ];
+    333 +
+    334 +  boot.loader.systemd-boot.enable = true;
+    335 +  boot.loader.efi.canTouchEfiVariables = true;
+    336 +
+    337 +  # Keep the VM manageable through `virsh console` as well as a graphical console.
+    338 +  boot.kernelParams = [
+    339 +    "console=tty0"
+    340 +    "console=ttyS0,115200n8"
+    341 +  ];
+    342 +
+    343 +  networking.hostName = "nixos-hive";
+    344 +  networking.useDHCP = lib.mkDefault true;
+    345 +  time.timeZone = "America/New_York";
+    346 +
+    347 +  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+    348 +
+    349 +  users.users.hiveadmin = {
+    350 +    isNormalUser = true;
+    351 +    description = "NixOS hive administrator";
+    352 +    extraGroups = [ "wheel" ];
+    353 +    openssh.authorizedKeys.keys = [
+    354 +      "ssh-ed25519 REPLACE_WITH_THE_REAL_PUBLIC_KEY human-admin"
+    355 +    ];
+    356 +  };
+    357 +
+    358 +  services.openssh = {
+    359 +    enable = true;
+    360 +    settings = {
+    361 +      PermitRootLogin = "no";
+    362 +      PasswordAuthentication = false;
+    363 +      KbdInteractiveAuthentication = false;
+    364 +    };
+    365 +  };
+    366 +
+    367 +  services.qemuGuest.enable = true;
+    368 +  services.spice-vdagentd.enable = true;
+    369 +
+    370 +  virtualisation.podman.enable = true;
+    371 +
+    372 +  environment.systemPackages = with pkgs; [
+    373 +    curl
+    374 +    git
+    375 +    jq
+    376 +    tmux
+    377 +    vim
+    378 +  ];
+    379 +
+    380 +  # Set this to the release used for the first installation and do not
+    381 +  # routinely change it during upgrades.
+    382 +  system.stateVersion = "26.05";
+    383 +}
+    384 +```
+    385 +
+    386 +If this is intentionally a serial-only VM, `services.spice-vdagentd.enable` can be omitted. The QEMU guest agent remains useful because it lets libvirt query guest state and request clean shutdowns.
+    387 +
+    388 +### Make the configuration a pinned flake
+    389 +
+    390 +Create `/mnt/etc/nixos/flake.nix`:
+    391 +
+    392 +```nix
+    393 +{
+    394 +  description = "NixOS agent hive VM";
+    395 +
+    396 +  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    397 +
+    398 +  outputs = { self, nixpkgs }:
+    399 +    {
+    400 +      nixosConfigurations.nixos-hive = nixpkgs.lib.nixosSystem {
+    401 +        system = "x86_64-linux";
+    402 +        modules = [ ./configuration.nix ];
+    403 +      };
+    404 +    };
+    405 +}
+    406 +```
+    407 +
+    408 +When installing a later stable release, update the input and initial `system.stateVersion` together for the **first installation**. On subsequent upgrades, update the input deliberately but normally leave `system.stateVersion` at its original v
+         alue.
+    409 +
+    410 +### Install and set a console password
+    411 +
+    412 +```bash
+    413 +sudo nixos-install --flake /mnt/etc/nixos#nixos-hive
+    414 +sudo nixos-enter --root /mnt -c 'passwd hiveadmin'
+    415 +```
+    416 +
+    417 +The password is written interactively to the guest's password database; it is not exposed in the Nix store. `nixos-install` will also offer to set a root password. Once key-based access and sudo work, consider locking direct root password acces
+         s inside the installed system with `sudo passwd -l root`.
+    418 +
+    419 +The installer should create `/mnt/etc/nixos/flake.lock`. Preserve and commit the lock file with the configuration after the first boot.
+    420 +
+    421 +### Reboot and remove the installer media
+    422 +
+    423 +Shut down from the installer rather than repeatedly booting the ISO:
+    424 +
+    425 +```bash
+    426 +sudo poweroff
+    427 +```
+    428 +
+    429 +Back on the host, find the CD-ROM target:
+    430 +
+    431 +```bash
+    432 +virsh --connect qemu:///system domblklist nixos-hive --details
+    433 +```
+    434 +
+    435 +Use the target name shown for the CD-ROM in place of `sda` if it differs:
+    436 +
+    437 +```bash
+    438 +sudo virsh --connect qemu:///system change-media \
+    439 +  nixos-hive sda --eject --config
+    440 +sudo virsh --connect qemu:///system start nixos-hive
+    441 +virsh --connect qemu:///system console nixos-hive
+    442 +```
+    443 +
+    444 +In virt-manager, the equivalent action is **Remove Hardware** or **Disconnect** on the CD-ROM before starting the VM.
+    445 +
+    446 +## 7. Find the guest and connect over SSH
+    447 +
+    448 +Ask libvirt's DHCP lease table for the address:
+    449 +
+    450 +```bash
+    451 +virsh --connect qemu:///system domifaddr nixos-hive --source lease
+    452 +```
+    453 +
+    454 +If no address appears immediately, wait for DHCP and try again. Once the guest agent is running, this can also help:
+    455 +
+    456 +```bash
+    457 +virsh --connect qemu:///system domifaddr nixos-hive --source agent
+    458 +```
+    459 +
+    460 +Then connect from the host:
+    461 +
+    462 +```bash
+    463 +ssh hiveadmin@GUEST_IP_ADDRESS
+    464 +```
+    465 +
+    466 +Do not disable the NixOS firewall indiscriminately. The OpenSSH NixOS module opens its port when configured to do so by the current module defaults/options; verify inside the guest with `systemctl status sshd` and `ss -lntp` if connection fails
+         .
+    467 +
+    468 +## 8. Day-to-day libvirt commands
+    469 +
+    470 +These commands run on the Fedora or Ubuntu host:
+    471 +
+    472 +```bash
+    473 +# List VMs.
+    474 +virsh --connect qemu:///system list --all
+    475 +
+    476 +# Start and connect to the serial console.
+    477 +virsh --connect qemu:///system start nixos-hive
+    478 +virsh --connect qemu:///system console nixos-hive
+    479 +
+    480 +# Ask the guest to shut down cleanly.
+    481 +virsh --connect qemu:///system shutdown nixos-hive
+    482 +
+    483 +# Request a clean reboot.
+    484 +virsh --connect qemu:///system reboot nixos-hive
+    485 +
+    486 +# Inspect virtual disks and NICs.
+    487 +virsh --connect qemu:///system domblklist nixos-hive --details
+    488 +virsh --connect qemu:///system domiflist nixos-hive
+    489 +
+    490 +# Start the VM when the host boots (optional).
+    491 +sudo virsh --connect qemu:///system autostart nixos-hive
+    492 +```
+    493 +
+    494 +Use `virsh destroy nixos-hive` only as the virtual equivalent of pulling a power cable. It is not a graceful shutdown and can damage guest filesystems or state.
+    495 +
+    496 +To resize CPU/RAM or edit devices, shut down the guest and use virt-manager or:
+    497 +
+    498 +```bash
+    499 +sudo virsh --connect qemu:///system edit nixos-hive
+    500 +```
+    501 +
+    502 +`virsh edit` validates the XML before saving, but malformed or incompatible device changes can still prevent boot. Save a copy first:
+    503 +
+    504 +```bash
+    505 +virsh --connect qemu:///system dumpxml nixos-hive > nixos-hive.xml
+    506 +```
+    507 +
+    508 +## 9. NixOS change, test, and rollback workflow
+    509 +
+    510 +Inside the guest, keep `/etc/nixos` in Git and commit `flake.lock`. A cautious change cycle is:
+    511 +
+    512 +```bash
+    513 +cd /etc/nixos
+    514 +
+    515 +# Evaluate and build without activation.
+    516 +sudo nixos-rebuild build --flake .#nixos-hive
+    517 +
+    518 +# Show the activation effects where supported.
+    519 +sudo nixos-rebuild dry-activate --flake .#nixos-hive
+    520 +
+    521 +# Activate until reboot, but do not make it the default boot generation.
+    522 +sudo nixos-rebuild test --flake .#nixos-hive
+    523 +
+    524 +# After validation, make it the active/default generation.
+    525 +sudo nixos-rebuild switch --flake .#nixos-hive
+    526 +```
+    527 +
+    528 +If `test` breaks networking or services, rebooting returns to the previous boot generation. If a switched generation is bad, select an older generation in the boot menu or use the rollback support of `nixos-rebuild` after regaining access.
+    529 +
+    530 +Do not give an agent passwordless permission to invoke unrestricted `nixos-rebuild` while pretending that the agent is unprivileged. An agent that controls the evaluated NixOS module and can activate it effectively has root in the guest: it can
+          create users, replace services, read secrets available to root, or install arbitrary activation scripts. That may be the desired meaning of “administer its own OS,” but it should be an explicit trust decision.
+    531 +
+    532 +A safer team workflow is:
+    533 +
+    534 +```text
+    535 +agents edit a Git worktree as ordinary guest users
+    536 +  -> Nix evaluation/build/checks run without activation
+    537 +    -> a policy or human review approves a commit
+    538 +      -> a narrow controller activates that exact commit
+    539 +        -> health checks pass, or the VM/generation rolls back
+    540 +```
+    541 +
+    542 +## 10. VM checkpoints, clones, and backups
+    543 +
+    544 +NixOS generations and VM backups solve different problems:
+    545 +
+    546 +- A NixOS generation rolls back declarative system software/configuration.
+    547 +- A qcow2 snapshot/clone rolls back mutable data too.
+    548 +- Neither is a substitute for an independent backup stored away from the host disk.
+    549 +
+    550 +Before a high-risk experiment, cleanly shut down the VM:
+    551 +
+    552 +```bash
+    553 +virsh --connect qemu:///system shutdown nixos-hive
+    554 +virsh --connect qemu:///system domstate nixos-hive
+    555 +```
+    556 +
+    557 +A simple full clone can serve as a local known-good checkpoint:
+    558 +
+    559 +```bash
+    560 +sudo virt-clone \
+    561 +  --connect qemu:///system \
+    562 +  --original nixos-hive \
+    563 +  --name nixos-hive-known-good \
+    564 +  --auto-clone
+    565 +```
+    566 +
+    567 +Do not run the original and full clone on the same network without changing the clone's hostname, machine ID, and SSH host keys. A full clone copies those identities and any secrets on disk.
+    568 +
+    569 +Libvirt internal/external snapshots have storage-format, UEFI NVRAM, TPM-state, and guest-quiescing details that vary with the VM definition. Use them only after testing restoration. For a durable cold backup, shut the guest down and preserve:
+    570 +
+    571 +- `virsh dumpxml` output;
+    572 +- every disk shown by `virsh domblklist`;
+    573 +- UEFI NVRAM shown in the domain XML;
+    574 +- virtual TPM state if a TPM was added;
+    575 +- any external persistent volumes or network definitions.
+    576 +
+    577 +Keep backups outside `/var/lib/libvirt/images` and, ideally, off the host.
+    578 +
+    579 +## 11. Running the agent hive in NixOS
+    580 +
+    581 +Once the base VM and rollback path are proven, choose one of two guest layouts.
+    582 +
+    583 +### Agents as native NixOS services
+    584 +
+    585 +Use NixOS modules/systemd services when each agent is already a Nix package and does not need its own container boundary. This is the simplest way to let one NixOS configuration describe users, services, resource controls, directories, and netw
+         orking.
+    586 +
+    587 +### Agents as Podman containers inside NixOS
+    588 +
+    589 +Keep `virtualisation.podman.enable = true` and choose one declarative interface:
+    590 +
+    591 +- NixOS `virtualisation.oci-containers` with `backend = "podman"` for system-level containers;
+    592 +- raw Podman Quadlets under the appropriate rootful or rootless Quadlet path;
+    593 +- later, a reviewed third-party Quadlet Nix module if its behavior is preferable.
+    594 +
+    595 +Start with the built-in NixOS `virtualisation.oci-containers` module or raw Quadlets rather than combining several container abstractions at once. Rootful system containers and per-agent rootless containers have different security and lifecycle
+          tradeoffs; do not migrate between them accidentally.
+    596 +
+    597 +Even inside the VM:
+    598 +
+    599 +- keep agent data in explicit guest volumes/directories;
+    600 +- keep secrets out of the Nix store and image layers;
+    601 +- avoid mounting the host filesystem into the guest;
+    602 +- do not pass the host Podman or libvirt socket through;
+    603 +- use private virtual networks and loopback bindings until exposure is intentional;
+    604 +- set CPU, memory, PID, and restart limits;
+    605 +- back up mutable hive state independently of `/nix/store`.
+    606 +
+    607 +## 12. Optional: Nix's fast `build-vm` test loop
+    608 +
+    609 +The persistent libvirt VM should be the operational machine. Separately, Nix can build an ephemeral QEMU VM directly from a NixOS configuration. This is useful on either Fedora or Ubuntu for testing the configuration before applying it to the p
+         ersistent guest.
+    610 +
+    611 +From a flake containing `nixosConfigurations.nixos-hive`:
+    612 +
+    613 +```bash
+    614 +nix build \
+    615 +  .#nixosConfigurations.nixos-hive.config.system.build.vm
+    616 +./result/bin/run-nixos-hive-vm
+    617 +```
+    618 +
+    619 +For a headless run with host port 2222 forwarded to guest SSH:
+    620 +
+    621 +```bash
+    622 +QEMU_NET_OPTS="hostfwd=tcp:127.0.0.1:2222-:22" \
+    623 +QEMU_KERNEL_PARAMS="console=ttyS0" \
+    624 +  ./result/bin/run-nixos-hive-vm -nographic
+    625 +```
+    626 +
+    627 +The NixOS module can give the test VM more resources without changing the real-machine configuration:
+    628 +
+    629 +```nix
+    630 +virtualisation.vmVariant = {
+    631 +  virtualisation = {
+    632 +    memorySize = 8192;
+    633 +    cores = 4;
+    634 +  };
+    635 +};
+    636 +```
+    637 +
+    638 +This `build-vm` runner is not managed by libvirt, and its local qcow2 state can retain old users/data between runs. It is a test harness, not a replacement for the persistent VM, lifecycle management, backups, or the libvirt network.
+    639 +
+    640 +## 13. Troubleshooting checklist
+    641 +
+    642 +### `virt-host-validate` says KVM is unavailable
+    643 +
+    644 +- Check BIOS/UEFI VT-x or AMD-V/SVM.
+    645 +- Check `/dev/kvm` and `kvm_intel`/`kvm_amd`.
+    646 +- If the host is a VM, enable nested virtualization in the outer hypervisor.
+    647 +- Verify the account's `kvm` group membership after a full logout/login.
+    648 +
+    649 +### `virsh` cannot connect
+    650 +
+    651 +- Always specify `--connect qemu:///system` while diagnosing; desktop tools may otherwise choose a session connection.
+    652 +- On Fedora inspect `virtqemud.socket` and `journalctl -u virtqemud`.
+    653 +- On Ubuntu inspect `libvirtd` and `journalctl -u libvirtd`.
+    654 +- Do not solve socket errors by making libvirt sockets world-writable.
+    655 +
+    656 +### The default network is missing or inactive
+    657 +
+    658 +- Check `virsh --connect qemu:///system net-list --all`.
+    659 +- Install/repair the distro's libvirt network configuration package.
+    660 +- Check `virtnetworkd` on Fedora or `libvirtd` on Ubuntu.
+    661 +- Check host firewall logs rather than disabling the firewall.
+    662 +
+    663 +### QEMU cannot read the ISO or disk
+    664 +
+    665 +- Use `/var/lib/libvirt/images` for system-libvirt media.
+    666 +- On Fedora run `restorecon` instead of disabling SELinux.
+    667 +- On Ubuntu keep AppArmor enabled and use its libvirt-supported paths.
+    668 +- Confirm file and directory traversal permissions.
+    669 +
+    670 +### The serial console is blank
+    671 +
+    672 +- Use the ISO's serial-console boot entry.
+    673 +- Confirm the VM has a serial PTY.
+    674 +- Retain the `console=ttyS0,115200n8` guest kernel parameter.
+    675 +- Use local SPICE/virt-viewer for installation if the ISO/UEFI menu is not visible on serial; do not expose unauthenticated VNC on `0.0.0.0`.
+    676 +
+    677 +### The VM boots the installer again
+    678 +
+    679 +- Power it off and eject/remove the virtual CD-ROM.
+    680 +- Confirm the qcow2 disk is first in the persistent boot order.
+    681 +
+    682 +### The guest has no network
+    683 +
+    684 +- Confirm its NIC is attached to libvirt network `default` with model VirtIO.
+    685 +- Confirm the network is active and DHCP has leases.
+    686 +- Inspect `ip address`, `ip route`, and `systemctl status dhcpcd` inside NixOS.
+    687 +- Do not immediately replace NAT with a host bridge; isolate the simpler failure first.
+    688 +
+    689 +### Builds consume too much disk
+    690 +
+    691 +- Inspect `df -h / /nix` and `nix path-info -Sh /run/current-system`.
+    692 +- Preserve working generations before collecting garbage.
+    693 +- Increase the qcow2 virtual size and then grow the guest partition/filesystem in a planned maintenance step.
+    694 +- For a serious hive, consider a separate virtual disk for agent data so OS rollback and data backup have clearer boundaries.
+    695 +
+    696 +## 14. Proposed adoption sequence
+    697 +
+    698 +1. Install KVM/libvirt tools on the host and validate `/dev/kvm`.
+    699 +2. Start the default NAT network.
+    700 +3. Download and verify the NixOS ISO.
+    701 +4. Create the VM with either virt-manager or `virt-install`.
+    702 +5. Install the minimal flake-pinned NixOS configuration.
+    703 +6. Verify serial console, SSH, clean shutdown, and guest-agent reporting.
+    704 +7. Commit the guest's `/etc/nixos` configuration and lock file to a private/reviewed repository.
+    705 +8. Make a powered-off known-good clone or cold backup.
+    706 +9. Add one native service or one Podman workload—not the entire agent hive.
+    707 +10. Exercise NixOS `build`, `test`, `switch`, boot-generation rollback, and VM restoration.
+    708 +11. Add the coordinator and workers with explicit resource and authority boundaries.
+    709 +12. Enable host autostart only after shutdown and recovery behavior is understood.
+    710 +
+    711 +## Primary references
+    712 +
+    713 +- [NixOS 26.05 manual: installation and administration](https://nixos.org/manual/nixos/stable/) — UEFI partitioning, `nixos-generate-config`, flake installation, user passwords, `nixos-rebuild`, rollback, and `build-vm`.
+    714 +- [NixOS downloads](https://nixos.org/download/) — current stable installer images and checksums.
+    715 +- [Ubuntu libvirt documentation](https://ubuntu.com/server/docs/how-to/virtualisation/libvirt/) — KVM checks, packages, system/session connections, NAT, AppArmor, and `virsh`.
+    716 +- [Ubuntu virt-manager and virt-install documentation](https://ubuntu.com/server/docs/how-to/virtualisation/virtual-machine-manager/) — GUI and CLI lifecycle tooling.
+    717 +- [Fedora virtualization package guidance](https://fedoraproject.org/wiki/Getting_started_with_virtualization) — Fedora virtualization group and KVM/libvirt setup.
+    718 +- [Fedora modular libvirt daemon change](https://fedoraproject.org/wiki/Changes/LibvirtModularDaemons) — why current Fedora uses `virtqemud` and related daemons instead of monolithic `libvirtd`.
+    719 +- [Upstream libvirt daemon documentation](https://libvirt.org/daemons.html) — modular sockets, services, and privilege implications.
+    720 +- [Upstream `virt-install` manual](https://github.com/virt-manager/virt-manager/blob/main/man/virt-install.rst) — current CLI options and libosinfo behavior.
+    721 +
+
+• Explored
+  └ Read NIXOS_KVM_VM_GUIDE.md
+    Search REPLACE|sudo virsh|nixos-install|virt-install|stateVersion|destroy in NIXOS_KVM_VM_GUIDE.md
+
+• Searching the web
+
+• Searched the web for site:search.nixos.org/options?channel=26.05 services.spice-vdagentd.enable ...
+
+◦ Searching the web
+
+• Searched the web for site:github.com/virt-manager/virt-manager virt-install "--channel unix,target_type=virtio,name=org.qemu.guest_agent.0" ...
+
+• Ran grep -E -m1 -o '(vmx|svm)' /proc/cpuinfo || true; lsmod | rg '^kvm' || true; ls -l /dev/kvm 2>/dev/null || true; test -e /dev/kvm; printf 'kvm_device_exit=%s\n' "$?"
+  └ svm
+    svm
+    kvm_amd               274432  0
+    kvm                  1568768  1 kvm_amd
+    kvm_device_exit=1
+
+• I’ve completed the guide and am doing a final accuracy pass on package names, UEFI/serial installation, guest-agent wiring, and rollback. One host-specific note will be included: this Fedora machine advertises AMD virtualization and has kvm_amd
+  loaded, but the libvirt/QEMU packages are not yet installed; /dev/kvm must be verified from a normal terminal because it is not exposed inside this workspace sandbox.
+
+• Edited NIXOS_KVM_VM_GUIDE.md (+4 -1)
+     21
+     22 +### Current Fedora host observation
+     23 +
+     24 +This machine's CPU advertises AMD SVM virtualization and the `kvm_amd` kernel module is loaded. The KVM/QEMU, libvirt, virt-install, virt-manager, OVMF, and software-TPM packages checked during preparation are not currently installed. The manag
+         ed workspace sandbox does not expose `/dev/kvm`, so confirm that device from an ordinary host terminal before installing the VM. No virtualization packages or host services were changed while preparing this guide.
+     25 +
+     26  ## Tooling model
+        ⋮
+    724  - [Upstream `virt-install` manual](https://github.com/virt-manager/virt-manager/blob/main/man/virt-install.rst) — current CLI options and libosinfo behavior.
+    721 -
+
+• Created NIXOS_KVM_VM_GUIDE.md.
+
+  It covers:
+
+  - Fedora and Ubuntu host preparation.
+  - CLI-only and virt-manager package sets.
+  - KVM and libvirt validation.
+  - System-versus-session libvirt connections.
+  - Verified NixOS ISO download.
+  - VM creation through either virt-manager or virt-install.
+  - Serial-console installation without a GUI.
+  - A flake-pinned initial NixOS configuration.
+  - SSH, QEMU guest-agent, Podman, and systemd setup.
+  - NixOS build/test/switch/rollback workflow.
+  - Libvirt operation, cloning, backup, and troubleshooting.
+  - Security boundaries for self-administering agents.
+  - Nix’s lightweight build-vm workflow as a separate testing option.
+
+  The persistent VM uses the same qemu:///system libvirt definition regardless of whether it is created through virt-manager or the CLI. The guidance follows the current NixOS installation manual (https://nixos.org/manual/nixos/stable/), Ubuntu libvirt
+  documentation (https://ubuntu.com/server/docs/how-to/virtualisation/libvirt/), and Fedora’s modular libvirt daemon design (https://fedoraproject.org/wiki/Changes/LibvirtModularDaemons).
+
+  No virtualization packages or host configuration were changed.
+
+  Worked for 12m 10s · done 2:29 PM
+ 
