@@ -1,0 +1,32 @@
+{
+  "slides": 26,
+  "main_slides": 20,
+  "backup_slides": 6,
+  "talk_seconds": 1620,
+  "discussion_seconds": 180,
+  "private_notes_parts": 26,
+  "speaker_guide_pages": 28,
+  "speaker_guide_words": 8370,
+  "fabricpc_commit": "8406e6a838442391fd3089958e1a2c1b44c57eda",
+  "scalar_verification": {
+    "pc_hidden": 0.6,
+    "alm_hidden": 0.19999999999999996,
+    "alm_multiplier": 0.8,
+    "pc_gradient": [
+      -0.39999999999999997,
+      -0.24
+    ],
+    "bp_gradient": [
+      -0.8,
+      -0.16000000000000003
+    ],
+    "alm_gradient": [
+      -0.8,
+      -0.15999999999999998
+    ],
+    "spectral_radius": 0.7745966692414833
+  },
+  "audience_slides_contain_private_note_sections": false,
+  "rendering": "PDF and PowerPoint generated from shared positioned primitives; PDF previews inspected separately.",
+  "limitations": "No native PowerPoint/LibreOffice renderer used. No new FabricPC or paper training benchmark run."
+}
