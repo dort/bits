@@ -1,0 +1,1354 @@
+
+╭───────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.155.1)                    │
+│                                               │
+│ model:     gpt-5.6-sol low   /model to change │
+│ directory: ~/repos/bits/alm                   │
+╰───────────────────────────────────────────────╯
+
+  Tip: This is GPT-6, a new generation of intelligence. Astra is state-of-the-art in coding, computer use, science, and professional work. Give it a hard problem, a half-formed
+  idea, or anything you've been meaning to build. See where it takes you.
+
+⚠ 1 startup issue · ctrl + t for details
+
+• You have 2 usage limit resets available. Run /usage to use one.
+
+• Model changed to gpt-6-astra xhigh
+
+■ Failed to paste image: no image on clipboard: The clipboard contents were not available in the requested format or the clipboard is empty.
+
+
+› I need to do a 1/2 hour presentation on this Augmented Lagrangian Predictive Coding paper and I would like you to create a slidedeck for me with speaker annotations that are not
+  visible on the slides (speaker annotations can be a separate document, as they need to extensively spell out things from first principles) that I can use to present. Please not
+  only build from first principles, but compare this mechanism in the paper to ePC (error predictive coding) and standard predictive coding, highlighting differences, possible
+  advantages and possible disadvantages. You can use https://github.com/trueagi-io/FabricPC for your understanding of ePC and sPC if you want to download the repo into /tmp as a
+  possible goal of our team I'm presenting this to may be to bring augmented lagrangian mechanisms and algorithms into our FabricPC codebase.
+
+
+• I’ll find the paper in this workspace, work through its mechanism alongside FabricPC’s ePC and standard predictive coding, and build a 30-minute slide deck with detailed, separate
+  speaker notes. I’ll also include a practical discussion of what adopting the method in FabricPC would involve.
+
+✔ You approved codex to run pwd && rg --files -g 'AGENTS.md' -g '*.pdf' -g '*.md' -g '*.tex' -g '*.bib' -... this time
+
+• Ran pwd && rg --files -g 'AGENTS.md' -g '*.pdf' -g '*.md' -g '*.tex' -g '*.bib' -g '*.pptx' -g '*.ipynb' -g 'pyproject.toml' -g 'package.json' -g 'requirements*.txt' -g '*.py' -g
+  │ '*.html' && git status --short
+  └ /home/ni/repos/bits/alm
+    2605.31022v1.pdf
+    … +7 lines (ctrl + t to view transcript)
+    ?? ../sam_tutorial/file_access/error_computation.log
+    ?? ../sam_tutorial/file_access/test.txt
+
+• Searching the web
+
+• Searched the web for https://github.com/trueagi-io/FabricPC
+
+✔ You approved codex to run for task_path in /AGENTS.md /home/AGENTS.md /home/ni/AGENTS.md /home/ni/repos... this time
+
+• Ran for task_path in /AGENTS.md /home/AGENTS.md /home/ni/AGENTS.md /home/ni/repos/AGENTS.md /home/ni/repos/bits/AGENTS.md /home/ni/repos/bits/alm/AGENTS.md; do if [ -f
+  │ "$task_path" ]; then printf '\n%s\n' "$task_path"; sed -n '1,240p' "$task_path"; fi; done
+  │ pdftotext -layout 2605.31022v1.pdf /tmp/alm-paper.txt
+  │ … +2 lines
+  └
+    /home/ni/AGENTS.md
+    … +474 lines (ctrl + t to view transcript)
+    /usr/bin/mutool
+    /usr/bin/google-chrome
+
+• Exploring
+  └ Read alm-paper.txt
+
+• Running git clone --depth 1 https://github.com/trueagi-io/FabricPC.git /tmp/alm-FabricPC-20260922
+  │ python3 -c "import importlib.util; print({m:bool(importlib.util.find_spec(m)) for m in ['pptx','reportlab','matplotlib','numpy','PIL','fitz','docx','playwright']})"
+  │ fc-list : family | sort -u
+
+• Searching the web
+
+• Searched the web for https://arxiv.org/abs/2605.31022
+
+✔ You approved codex to run sed -n '230,610p' /tmp/alm-paper.txt this time
+
+✔ You approved codex to run git clone --depth 1 https://github.com/trueagi-io/FabricPC.git /tmp/alm-Fabri... this time
+
+• Explored
+  └ Read alm-paper.txt
+
+• Ran git clone --depth 1 https://github.com/trueagi-io/FabricPC.git /tmp/alm-FabricPC-20260922
+  │ python3 -c "import importlib.util; print({m:bool(importlib.util.find_spec(m)) for m in ['pptx','reportlab','matplotlib','numpy','PIL','fitz','docx','playwright']})"
+  │ fc-list : family | sort -u
+  └ {'pptx': False, 'reportlab': True, 'matplotlib': False, 'numpy': True, 'PIL': True, 'fitz': False, 'docx': False, 'playwright': False}
+    Balker
+    … +356 lines (ctrl + t to view transcript)
+    flatline
+    progenisis
+
+• I found the paper: Seely and Gould’s “Augmented Lagrangian Predictive Coding.” Its central idea is to give each layer a variable that accumulates prediction errors, allowing
+  learning signals to persist as the activations return toward their forward-pass values. I’m checking FabricPC’s actual ePC equations so the comparison reflects your codebase.
+
+• Running python3 -m venv /tmp/alm-slides-venv && /tmp/alm-slides-venv/bin/pip install python-pptx matplotlib pymupdf reportlab python-docx
+
+✔ You approved codex to run python3 -m venv /tmp/alm-slides-venv && /tmp/alm-slides-venv/bin/pip install ... this time
+
+✔ You approved codex to run git -C /tmp/alm-FabricPC-20260922 rev-parse HEAD ... this time
+
+• Ran git -C /tmp/alm-FabricPC-20260922 rev-parse HEAD
+  │ rg -n 'ePC|sPC|error.predictive|standard.predictive|epc|spc' /tmp/alm-FabricPC-20260922/fabricpc /tmp/alm-FabricPC-20260922/docs /tmp/alm-FabricPC-20260922/tests -g '*.py' -g
+  │ '*.md'
+  │ … +3 lines
+  └ 8406e6a838442391fd3089958e1a2c1b44c57eda
+    /tmp/alm-FabricPC-20260922/tests/test_inference_epc.py:4:ePC relaxes the prediction errors ε and derives the latents by a forward
+    … +721 lines (ctrl + t to view transcript)
+    1577:the credit-wave analysis of Appendix D are restricted to networks with identity activations and
+    1592:one epoch of training. Broader evaluation on larger and more diverse datasets, longer training
+
+• Ran python3 -m venv /tmp/alm-slides-venv && /tmp/alm-slides-venv/bin/pip install python-pptx matplotlib pymupdf reportlab python-docx
+  └ Collecting python-pptx
+      Downloading python_pptx-1.0.2-py3-none-any.whl.metadata (2.5 kB)
+    … +73 lines (ctrl + t to view transcript)
+    Successfully installed Pillow-12.3.0 XlsxWriter-3.2.9 charset-normalizer-3.5.1 contourpy-1.4.0 cycler-0.12.1 fonttools-4.65.0 kiwisolver-1.5.1 lxml-6.1.3 matplotlib-3.11.2
+    numpy-2.5.3 packaging-26.3 pymupdf-1.28.2 pyparsing-3.3.3 python-dateutil-2.9.0.post0 python-docx-1.2.0 python-pptx-1.0.2 reportlab-5.0.1 six-1.17.0 typing-extensions-4.16.0
+
+✔ You approved codex to run sed -n '1,255p' /tmp/alm-FabricPC-20260922/fabricpc/core/inference_epc.py ... this time
+
+✔ You approved codex to run sed -n '1,210p' /tmp/alm-FabricPC-20260922/docs/user_guides/17_training_with_... this time
+
+• Exploring
+  └ Read inference_epc.py
+    Read 17_training_with_epc.md
+    Read alm-paper.txt
+    Read alm-paper.txt
+    Read alm-paper.txt
+    List docs
+    Search epc|report|theory
+    Read inference.py
+    Read types.py
+    Search def |stop_gradient|error|energy in learning.py
+    Read epc_regime_and_stability_report.md
+    Read alm-paper.txt
+    Read alm-paper.txt
+
+• Searching the web
+
+• Searched the web for https://arxiv.org/abs/2505.20137
+
+✗ You canceled the request to run sed -n '1,210p' /tmp/alm-FabricPC-20260922/fabricpc/core/inference.py ...
+
+• Explored
+  └ Read inference.py
+    Read types.py
+    Search def |stop_gradient|error|energy in learning.py
+    Read epc_regime_and_stability_report.md
+    Read alm-paper.txt
+    Read alm-paper.txt
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report the issue.
+
+
+› You have my permission regarding:
+    Would you like to run the following command?
+
+    Environment: local
+
+    Reason: May I inspect the integration points and stability proof before drafting the technical comparison?
+
+    $ sed -n '1,210p' /tmp/alm-FabricPC-20260922/fabricpc/core/inference.py
+    sed -n '110,190p' /tmp/alm-FabricPC-20260922/fabricpc/core/types.py
+    rg -n 'def |stop_gradient|error|energy' /tmp/alm-FabricPC-20260922/fabricpc/core/learning.py
+    sed -n '1,145p' /tmp/alm-FabricPC-20260922/docs/reports/epc_regime_and_stability_report.md
+    sed -n '1072,1240p' /tmp/alm-paper.txt
+    sed -n '1442,1468p' /tmp/alm-paper.txt
+
+  Please also shift into an auto mode where you don't have to keep asking me permission. I give you permission to do all you need to.
+
+
+• I’ll proceed with the research, deck creation, and validation under that authorization.
+
+  The key comparison is clear now: FabricPC’s ePC changes the variables used to minimize the PC energy and uses a full-network reverse pass. PC-ALM changes the optimization problem
+  and propagates credit through local updates. I’ll make that distinction central to the presentation.
+
+✗ You canceled the request to run sed -n '1,210p' /tmp/alm-FabricPC-20260922/fabricpc/core/inference.py ...
+
+• Explored
+  └ Read inference.py
+    Read types.py
+    Search def |stop_gradient|error|energy in learning.py
+    Read epc_regime_and_stability_report.md
+    Read alm-paper.txt
+    Read alm-paper.txt
+
+■ Conversation interrupted - tell the model what to do differently. Something went wrong? Hit `/feedback` to report the issue.
+
+
+› The answer is yes to the below command. Can you please proceed without asking me questions like this and just execute whatever commands you need to inside or outside the sandbox
+  as you need in order to continue our work?
+    Would you like to run the following command?
+
+    Environment: local
+
+    Reason: Read the integration points and stability proof under your authorization to complete the presentation.
+
+    $ sed -n '1,210p' /tmp/alm-FabricPC-20260922/fabricpc/core/inference.py
+    sed -n '110,190p' /tmp/alm-FabricPC-20260922/fabricpc/core/types.py
+    rg -n 'def |stop_gradient|error|energy' /tmp/alm-FabricPC-20260922/fabricpc/core/learning.py
+    sed -n '1,145p' /tmp/alm-FabricPC-20260922/docs/reports/epc_regime_and_stability_report.md
+    sed -n '1072,1240p' /tmp/alm-paper.txt
+    sed -n '1442,1468p' /tmp/alm-paper.txt
+
+
+• Your authorization is clear; I won’t ask for further task decisions. The repeated prompts come from the execution environment, whose approval settings I can’t override. I’ll use
+  existing approvals where possible and continue building the presentation.
+
+• Ran sed -n '1,220p;220,520p' /tmp/alm-FabricPC-20260922/fabricpc/core/inference.py /tmp/alm-FabricPC-20260922/fabricpc/core/types.py /tmp/alm-FabricPC-20260922/fabricpc/core/
+  │ learning.py /tmp/alm-FabricPC-20260922/docs/reports/epc_regime_and_stability_report.md
+  └ """
+    Core inference dynamics for JAX predictive coding networks.
+    … +517 lines (ctrl + t to view transcript)
+
+    if TYPE_CHECKING:
+
+• Searching the web
+
+• Searched the web for https://arxiv.org/abs/2505.20137
+
+✔ You approved codex to run sed -n '1088,1120p' /tmp/alm-paper.txt this time
+
+• Ran sed -n '1,220p;220,520p' -s /tmp/alm-FabricPC-20260922/fabricpc/core/types.py /tmp/alm-FabricPC-20260922/fabricpc/core/learning.py
+  └ """
+    Core JAX types for predictive coding networks.
+    … +296 lines (ctrl + t to view transcript)
+
+        return params_gradients
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys, importlib.util; print(sys.version); print({m:bool(importlib.util.find_spec(m)) for m in
+  │ ['pptx','matplotlib','fitz','reportlab','docx']}); print(sys.path)"
+  └ 3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]
+    {'pptx': False, 'matplotlib': True, 'fitz': True, 'reportlab': False, 'docx': False}
+    ['', '/usr/lib/python312.zip', '/usr/lib/python3.12', '/usr/lib/python3.12/lib-dynload', '/home/ni/repos/freeFabricPC/virt-envs/ffpc1/lib/python3.12/site-packages', '/home/ni/
+    repos/freeFabricPC/FabricPC/cl-benchmark/src']
+
+• Explored
+  └ Read alm-paper.txt
+
+• I’m building an editable PowerPoint, a PDF copy, and a detailed speaker guide with derivations and anticipated questions. The talk will distinguish the paper’s linear convergence
+  result from its nonlinear experiments, and include a concrete FabricPC integration proposal. A useful caution for the team: the reported experiments cover one epoch on MNIST and
+  Fashion-MNIST, so longer training and other architectures remain open questions.
+
+• Ran sed -n '558,835p;1116,1215p' /tmp/alm-paper.txt
+  └
+                                                                                                 7
+    … +374 lines (ctrl + t to view transcript)
+    Crucially, det(Mi ) does not depend on α; only the trace does. In the complex-eigenvalue regime
+    ηh σi2 (ρ + α)2 < 4α, the two roots are conjugate with |µ± |2 = det(Mi ), so
+
+• Ran sed -n '1,220p;220,520p' /tmp/alm-FabricPC-20260922/docs/reports/epc_regime_and_stability_report.md
+  └ # ePC in FabricPC: exact oracle, backprop regime, and the stability bound
+
+    … +522 lines (ctrl + t to view transcript)
+
+    ### 6.1 Answers to the reviewer's bullets
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages'); import pptx, fitz, reportlab,
+  │ docx, matplotlib; print('Presentation libraries ready'); d=fitz.open('2605.31022v1.pdf'); print('Paper pages',len(d)); print(d[19].get_text()[:5500]); print(d[5].get_text()
+  │ [:3600])"
+  └ warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+    Presentation libraries ready
+    … +236 lines (ctrl + t to view transcript)
+    6
+
+
+• Added presentation/README.md (+36 -0)
+     1 +# Augmented Lagrangian Predictive Coding — presentation package
+     2 +
+     3 +The presentation is designed for 27 minutes of prepared material and 3 minutes of discussion. Slides 21–26 are optional technical backup.
+     4 +
+     5 +## Files
+     6 +
+     7 +- `ALPC_FabricPC_presentation.pptx`: editable widescreen slides with private PowerPoint speaker notes.
+     8 +- `ALPC_FabricPC_slides.pdf`: audience-facing slides only, including backup slides.
+     9 +- `ALPC_FabricPC_speaker_guide.pdf`: detailed, separate presenter guide.
+    10 +- `ALPC_FabricPC_speaker_guide.docx`: editable presenter guide.
+    11 +- `ALPC_FabricPC_speaker_guide.md`: plain-text source of the presenter guide.
+    12 +- `slide_contact_sheet.png`: overview for checking the deck.
+    13 +- `build_presentation.py` and `content.py`: reproducible presentation sources.
+    14 +- `assets/`: extracted paper figures, equation images, and the independently computed scalar example.
+    15 +
+    16 +Use PowerPoint's Presenter View to display the private notes on your own screen. Present the slide PDF if you want a format that contains no presenter notes. In the guide, “
+        Talk track” is the material to use during the allotted time; “From first principles / preparation” is additional preparation, not extra text to read aloud. Main slide 20 is
+        the discussion stop; advance beyond it only for backup material.
+    17 +
+    18 +## Scope and provenance
+    19 +
+    20 +Primary paper: Jeffrey Seely and Julian Gould, *Augmented Lagrangian Predictive Coding*, arXiv:2605.31022v1, 29 May 2026. The supplied local PDF is the source of the paper a
+        nalysis and reproduced figures.
+    21 +
+    22 +ePC: Cédric Goemaere, Gaspard Oliviers, Rafal Bogacz, and Thomas Demeester, *ePC: Fast and Deep Predictive Coding in Digital Simulation*, arXiv:2505.20137. The comparison is
+         grounded primarily in the FabricPC implementation.
+    23 +
+    24 +FabricPC was inspected at commit `8406e6a838442391fd3089958e1a2c1b44c57eda`, retrieved 22 September 2026 from <https://github.com/trueagi-io/FabricPC>. The clone is in `/tmp
+        /alm-FabricPC-20260922`. No FabricPC source was changed. This package contains an integration proposal, not an implemented solver or a new benchmark of the library.
+    25 +
+    26 +The scalar example is independently derived and numerically checked. Paper results are labeled as reported results. Proposed experiments and engineering judgments are explic
+        itly identified.
+    27 +
+    28 +## Rebuild
+    29 +
+    30 +Requires Python 3.12 with `python-pptx`, `matplotlib`, `numpy`, `pymupdf`, `reportlab`, `python-docx`, and `Pillow`. The temporary build environment is `/tmp/alm-slides-venv
+        `.
+    31 +
+    32 +```bash
+    33 +/tmp/alm-slides-venv/bin/python presentation/build_presentation.py
+    34 +```
+    35 +
+    36 +The PowerPoint uses editable text and shapes, with rasterized mathematical notation and plots. The PDF is generated from the same positioned content. Slide fonts are Lato; e
+        quations use DejaVu Sans math. Installed-font substitution can slightly change PowerPoint rendering on other computers.
+
+
+
+
+
+<i think some stuff got clipped here as the console scrolled too deeply to retain all the history between capturing the above and the below>
+
+
+    211 +At compatible equilibria, sPC and ePC solve the relaxed PC problem. A feasible stationary ALM endpoint yields BP weight gradients. Each has a plausible role: sPC for the so
+         ft-constraint model and local graph dynamics, ePC for fast digital inference, and ALM for testing BP-like learning through local dynamics. The paper does not tell us which
+         is the best overall FabricPC default.""",
+    212 +"""The table is intentionally conditional. The sPC/ePC equilibrium correspondence assumes an acyclic error/state change of coordinates and true descent on the same energy.
+         Their trajectories need not visit the same nonlinear minimum. FabricPC's cyclic unrolling and nonlinear μPC gradient preconditioning are concrete exceptions to unqualified
+         equivalence.
+    213 +
+    214 +For sPC, advantages include a simple scalar energy, adjacent-node derivatives, and a natural interpretation when hidden mismatches are legitimate latent uncertainty or soft
+          constraints. Disadvantages include slow propagation at finite budgets and a finite-penalty objective whose weight derivative generally differs from the feedforward loss gr
+         adient.
+    215 +
+    216 +For ePC, advantages include an existing implementation in FabricPC, a global error gradient that reaches all layers in one pass, and potentially fewer iterations. Disadvant
+         ages include a global reverse-mode computation and memory footprint, curvature-dependent step sizes, and the distinction between small-step BP-like behavior and equilibrium
+          PC behavior. The local final weight rule does not make its error inference local.
+    217 +
+    218 +For PC-ALM, advantages are persistent local credit after residuals shrink, the conditional exact BP endpoint, and the encouraging deep-narrow experiments. Disadvantages are
+          additional dual state and tuning, stability/finite-budget limitations, and untested library integration. A hard-constraint forward endpoint may be inappropriate if the goa
+         l is the original soft latent-variable model. All three use derivatives of local prediction functions. ALM does not remove the need for appropriate transposed Jacobian acti
+         ons.
+    219 +
+    220 +The terms ePC error and ALM multiplier must not be conflated. The first parameterizes a current discrepancy; the second accumulates constraint violations over inference tim
+         e. At the ALM endpoint the discrepancy can vanish while the multiplier remains nonzero.""",
+    221 +"That distinction tells us which shared FabricPC contracts must change."),
+    222 +
+    223 +slide("FabricPC needs a coordinated extension", "Proposed design based on the inspected source; no solver has been implemented here.", 90, "FABRICPC PROPOSAL", ["N", "I", "
+         W", "R"],
+    224 +"""There are four connected changes. First, store a per-example hidden multiplier in the inference state with a clear reset lifecycle. Second, add the augmented local term
+         to the objective so both activity gradients and weight gradients see it. Third, implement the exact primal–residual–dual ordering and final primal-only step. Fourth, add di
+         agnostics that distinguish prediction error, multiplier, composite credit, and stationarity.
+    225 +
+    226 +This is more than overriding a latent-update formula. FabricPC's learning path recomputes local node derivatives, and its error field already has a precise meaning. The sha
+         red state, inference, and learning interfaces need to carry the same mathematical objective. Start with a small acyclic Gaussian network, then extend the common contracts t
+         o richer nodes once the gradients check out.""",
+    227 +"""Repository evidence: NodeState in core/types.py currently has z_latent, z_mu, error, energy, and latent_grad; it has no multiplier field. The state is a JAX pytree. Any
+         chosen dual-state representation must be handled by state initialization, copying/replacement, batching, sharding, and pytree registration. Keep λ separate from error, beca
+         use node pairing defines error=z_latent−z_mu.
+    228 +
+    229 +InferenceBase in core/inference.py exposes inference_step, begin_segment, finalize_state, and run_inference. Its default step forms local activity gradients and then update
+         s states. ALM needs control of the larger phase structure, including updated-state residuals and the final dual omission. An InferenceSchedule can compose solvers, but comp
+         osing an ePC warm start with ALM would be a new algorithm, not a replication of the paper's forward initialization.
+    230 +
+    231 +compute_local_weight_gradients in core/learning.py calls each node's forward_and_weight_grads, so a modified signal stored only in a final error buffer would be recomputed
+         away. The local augmented objective must feed this derivative path as well as inference. Preserve the trainer's established batch normalization: the low-level routine produ
+         ces batch sums and the training wrapper normalizes them. Do not normalize twice.
+    232 +
+    233 +The initial proposed scope is hidden Gaussian consistency constraints plus a separate supervised readout loss, with plain, explicitly matched scaling. Audit μPC forward sca
+         les and gradient preconditioners before adopting paper hyperparameters. Arbitrary node energies, cyclic graphs, extra clamps, and a cross-entropy head require deliberate ob
+         jective semantics. Scope expansion should update shared infrastructure and all affected callers; a special node that bypasses the shared energy contract would hide the inco
+         nsistency. No exact new class/API name is claimed to exist.""",
+    234 +"We can turn the proposal into a sequence of falsifiable tests."),
+    235 +
+    236 +slide("Evaluate correctness before model-scale claims", "A proposed experiment sequence with explicit comparisons and decision criteria.", 90, "FABRICPC PROPOSAL", ["P", "D
+         ", "T"],
+    237 +"""First, reproduce a scalar and a small linear graph, where the exact gradients are available. Verify that zero dual rate recovers the matched sPC trajectory and that a se
+         ttled stable ALM solve matches BP. Test update ordering and per-example dual resets directly.
+    238 +
+    239 +Next, compare BP, sPC, ePC in both of its relevant regimes, and ALM on the same small networks. Record gradient direction and magnitude, constraint and stationarity residua
+         ls, wall time, and memory. Then reproduce the paper's deep-narrow setting and extend to longer training and a CIFAR convolutional model. Promote the method only if it solve
+         s a measured problem our existing baselines do not already solve at comparable cost.""",
+    240 +"""Stage 1 is algebraic correctness, not a training contest. Use a scalar oracle and randomized linear acyclic networks with known BP gradients. Under α=0 and λ initialized
+          to zero, match sPC's objective, activity steps, initialization, precision, and scaling exactly. T=1 must omit the dual update. For stable positive α, convergence should dr
+         ive both constraint residuals and activity stationarity toward zero and make the full weight-gradient relative error vanish. Test an independent hand-derived objective, not
+          just the same helper called through two interfaces. These are proposed FabricPC checks; this package independently verifies only its scalar teaching example.
+    241 +
+    242 +Stage 2 compares algorithms fairly. Report cosine(g_method,g_BP), relative gradient error ‖g_method−g_BP‖/(‖g_BP‖+small numerical guard), per-layer magnitudes, supervised l
+         oss, validation accuracy, time per update, time to target accuracy, and peak accelerator memory. Here g denotes the vector of all parameter gradients. Cosine can be excelle
+         nt while the magnitude is wrong. Both algorithms must use the same weights, sample, and loss when comparing gradients. Use stable rate searches for each algorithm and compa
+         rable tuning effort, rather than sharing a numerical η that acts in different coordinates.
+    243 +
+    244 +Stage 3 reproduces the paper protocol, then changes one axis at a time: more epochs, nonlinearity, width/depth, different initialization/scaling, precision, readout loss, a
+         nd convolutional nodes. Compare both equal activity counts and equal measured compute budgets. Exclude compilation and warmup from steady-state timing; report them separate
+         ly if startup matters. Run multiple seeds and state uncertainty. At L=64, the paper's T=2L condition means 128 activity steps, so practical cost cannot be assumed small.
+    245 +
+    246 +For an ePC/ALM hybrid, explicitly budget the global reverse passes and test the state/dual initialization at the handoff. A hybrid may be a useful later experiment, but it
+         no longer tests wholly local inference. Go/no-go thresholds should reflect the team's objective: local credit fidelity, time-to-accuracy, or memory, rather than a universal
+          percentage invented for this talk.""",
+    247 +"End with a decision the team can discuss."),
+    248 +
+    249 +slide("Recommendation: test PC-ALM as a research method", "The opportunity is local BP-consistent credit; the practical win must be measured.", 60, "TEAM DECISION", ["P", "
+         R"],
+    250 +"""I recommend a bounded research implementation and a controlled comparison, rather than assuming the paper justifies changing our default training method. The mechanism i
+         s attractive because it changes what an equilibrated local network computes: the residual can disappear while the multiplier preserves the BP learning signal.
+    251 +
+    252 +The critical comparison for FabricPC is with the ePC regime we actually use, at measured cost and over meaningful training durations. If our primary aim is studying local c
+         redit assignment, the paper gives a strong reason to proceed. If our primary aim is GPU training speed, we need evidence from the implementation before calling this an impr
+         ovement.""",
+    253 +"""This is a recommendation, not a result from the paper. The requested deliverable is a presentation, so this package does not modify FabricPC, launch a large training cam
+         paign, or assert that a new solver is ready. The integration design is concrete enough to scope the next engineering discussion.
+    254 +
+    255 +A useful first deliverable for an implementation project would be a correct acyclic linear/Gaussian ALM solver in the shared inference/objective framework, with independent
+          gradient checks, explicit state lifecycle, and a comparison harness that already includes BP and ePC. Follow it with the published residual-MLP setting. Extending to the f
+         ull arbitrary-graph/custom-energy surface of FabricPC at once would make it harder to tell whether failures came from the proposed method or altered objective semantics.
+    256 +
+    257 +The three takeaways to emphasize are: sPC and ePC generally optimize the relaxed PC objective using different coordinates; ALM introduces dual accumulation to target the fo
+         rward constraints; and reaching a BP endpoint is conditional on convergence, while practical value requires fair cost and stability measurements. The possible benefit is al
+         gorithmic and architectural. It is not established by the word augmented or by one favorable dataset grid.""",
+    258 +"Invite the team to choose the experiment's success criterion."),
+    259 +
+    260 +slide("Discussion: what should the first experiment prove?", "Choose the primary objective before choosing the benchmark.", 180, "DISCUSSION", [],
+    261 +"""I would like the team to decide which question matters most. Do we want to show that local dynamics can reproduce BP credit? Do we want better deep-network learning than
+          our present PC configuration? Or do we want a practical improvement in training time or memory over ePC? Those lead to different first experiments and different definition
+         s of success.
+    262 +
+    263 +My proposed starting point is a correct linear acyclic implementation, followed by one matched deep-narrow comparison with BP, sPC, and both small-step and near-equilibrium
+          ePC. From there we can decide whether longer training and richer nodes are justified.""",
+    264 +"""Reserve these three minutes for discussion rather than using them to deliver more prepared material. Backup slides follow, so stop here when presenting unless a question
+          calls for one.
+    265 +
+    266 +Likely question: Is this just backpropagation? Answer: the feasible stationary endpoint computes the BP weight gradient, but the procedure for obtaining it is a finite sequ
+         ence of adjacent-layer primal-dual updates. At finite inference it can differ. Ordinary backprop computes the exact composed derivative directly in a reverse pass.
+    267 +
+    268 +Likely question: Is the multiplier the same as an ePC error? Answer: no. The ePC error is an optimization coordinate that reconstructs the current hidden state. The multipl
+         ier is accumulated constraint pressure. At an ALM endpoint, residuals vanish but multipliers need not.
+    269 +
+    270 +Likely question: Why not raise the PC penalty? Answer: it tightens the soft constraints but increases curvature and can restrict numerical step sizes. ALM can enforce feasi
+         bility at finite penalty under a convergent solve, at the cost of dual state and coupled dynamics.
+    271 +
+    272 +Likely question: Does this work with cycles, attention, or cross-entropy? Answer: some extensions have plausible local formulations, but the paper's theorem and experiments
+          do not establish them. A differentiable supervised loss can be substituted in the KKT algebra; stability and practical performance still need analysis and testing. Cycles
+         also change the meaning and uniqueness of the forward solution.
+    273 +
+    274 +Likely question: Should we combine ePC and ALM? Answer: possibly as a separate measured experiment. Warm-starting ALM from ePC changes the published initialization, and ePC
+          uses global differentiation, so any locality claim must state that. Do not accidentally present a hybrid result as the paper's algorithm."""),
+    275 +
+    276 +slide("Notation and conventions", "Backup · one symbol, one meaning in this presentation", 0, "BACKUP A", ["P", "R"],
+    277 +"""Use this slide to resolve notation rather than to add new claims. In particular, the prediction residual, ePC error coordinate, ALM multiplier, and BP derivative are dis
+         tinct roles. The sign convention is state minus prediction throughout.""",
+    278 +"""Recurring symbols: x is the input; y is the target; ŷ is the model's readout prediction; L counts weight-bearing layers; N is uniform hidden width when discussing the ex
+         periments; i indexes a hidden layer; W_i is its weight matrix; θ collects all weights; h_i is its activation and h_0=x; σ is the elementwise activation; σ′ is its derivativ
+         e; J_{i+1} is the adjacent layer's derivative with respect to h_i; ℓ is the supervised loss; F_PC is the PC energy; L_ρ is the augmented Lagrangian.
+    279 +
+    280 +r_i=h_i−σ(W_i h_{i−1}) is the hidden constraint residual. ε_i is the optimized error coordinate in ePC; it equals that residual when the derived state is consistent. λ_i is
+          the ALM multiplier for the hidden constraint. c_i=λ_i+ρr_i is composite credit. δ_i=dℓ/dh_i is the BP activation derivative at the forward state. At a feasible stationary
+         ALM endpoint, λ_i=−δ_i. Never use λ alone to mean a curvature eigenvalue in this presentation; that scalar is called κ in the backup stability material.
+    281 +
+    282 +ρ is the hidden penalty strength; α is the dual ascent rate; η_h is the state descent rate; η_ε is the ePC error-coordinate rate; η_θ is the weight learning rate; T counts
+         activity steps in the paper's Algorithm 1. A star denotes a settled value. The transpose superscript T in a matrix expression is unrelated to the step count T. The norm is
+         Euclidean for vectors and Frobenius for a weight matrix. The Hadamard product ⊙ multiplies components elementwise.
+    283 +
+    284 +In the linear stability appendix only, A maps stacked hidden activations to the linear hidden constraints, b contains the input-dependent offsets, C maps stacked hidden act
+         ivations to the output readout, B=CᵀC is supervised activity curvature, and M is the joint primal-dual iteration matrix. These are separate from a minibatch, which is alway
+         s spelled out here."""),
+    285 +
+    286 +slide("Derive the scalar example by hand", "Backup · all endpoint values follow from two scalar derivatives", 0, "BACKUP B", ["P"],
+    287 +"""Differentiate the PC energy with respect to h and set it to zero to get h=0.6. For ALM, the fixed dual update requires h=0.2; substituting that into the stationary activ
+         ity derivative gives λ=0.8. The corresponding local weight gradients then reproduce the two BP derivatives.""",
+    288 +"""For general scalar x, y, w₁, w₂, and penalty ρ, define F_PC(h)=½(y−w₂h)²+(ρ/2)(h−w₁x)². Its derivative is −w₂(y−w₂h)+ρ(h−w₁x). Setting it to zero gives h_PC=(w₂y+ρw₁x)/(
+         w₂²+ρ). Its curvature w₂²+ρ is positive, so the solution is unique.
+    289 +
+    290 +For ALM add λ(h−w₁x). A fixed point with α>0 requires h_ALM=w₁x. Stationarity then gives λ_ALM=w₂(y−w₂w₁x). The weight gradients at that endpoint are ∂L_ρ/∂w₁=−λ_ALM x and
+         ∂L_ρ/∂w₂=−(y−w₂w₁x)w₁x. Directly differentiating the composed loss ½(y−w₂w₁x)² yields the same two values.
+    291 +
+    292 +At our numerical values, PC's relaxed energy is 0.16 and the feedforward loss is 0.32. Those are different objective values at different states, so the smaller relaxed ener
+         gy is not evidence of a better forward prediction. The forward output remains 0.2 until the weights are actually updated. At ALM feasibility the hidden energy contribution
+         vanishes and the augmented objective equals the forward loss, while the multiplier still affects the derivative taken with respect to unconstrained local variables.
+    293 +
+    294 +For our selected rates, the linear error-state recurrence has matrix [[0.6,−0.2],[0.3,0.9]] around the fixed point. Its eigenvalues have magnitude √0.6≈0.7746, below one, s
+         o the teaching trace converges. The code checks the endpoint gradients and a finite Algorithm 1 schedule independently. In one dimension, ePC's h=0.2+ε transform is a trans
+         lation, so its energy Hessian and equally stepped trajectory are the same as sPC's."""),
+    295 +
+    296 +slide("Why ePC changes dynamics but preserves the objective", "Backup · acyclic error coordinates induce a different state-space metric", 0, "BACKUP C", ["R", "T", "D"],
+    297 +"""The error-to-state transformation has an invertible triangular Jacobian. That preserves stationary points of the energy. But gradient descent depends on coordinates. An
+         error-space gradient step produces a state-space update shaped by the Jacobian times its transpose, which couples distant layers. This accounts for faster signal access wit
+         hout changing the relaxed objective.""",
+    298 +"""For this backup derivation, define Q=∂h/∂ε, the full Jacobian from stacked free errors to stacked free hidden states on a directed acyclic graph. The recurrence h_i=σ(W_
+         i h_{i−1})+ε_i makes Q block lower triangular with identity diagonal blocks. Therefore Q is invertible even when an individual W_i is singular.
+    299 +
+    300 +The chain rule gives ∇_εE=Qᵀ∇_hF_PC. Thus ∇_εE=0 if and only if ∇_hF_PC=0. At a stationary point, the Hessians satisfy H_ε=QᵀH_hQ, where H_h=∇²_hF_PC and H_ε=∇²_εE. Terms i
+         nvolving second derivatives of the coordinate map vanish there because ∇_hF_PC=0. This congruence preserves the numbers of positive and negative curvature directions, but g
+         enerally changes eigenvalues and conditioning.
+    301 +
+    302 +For a small error gradient step, Δh≈QΔε=−η_εQQᵀ∇_hF_PC. Because Q includes downstream dependence, QQᵀ can couple nonadjacent states. The energy has not gained a dual constr
+         aint term; its optimization geometry changed. A finite step in a nonlinear transformation additionally has higher-order terms.
+    303 +
+    304 +Near a positive quadratic mode of curvature κ, a gradient step multiplies its distance to equilibrium by 1−η_εκ. After T steps the relaxed fraction is 1−(1−η_εκ)^T. This is
+          exact for fixed quadratic dynamics and a local approximation otherwise. Negative curvature modes do not represent relaxation toward a minimum. The repository measures thes
+         e properties, but the thresholds used to label ‘BP-like’ or ‘near PC equilibrium’ are descriptive choices, not universal mathematical phase boundaries."""),
+    305 +
+    306 +slide("Linear stability is a property of the joint update", "Backup · the simple bound omits the supervised-loss curvature block", 0, "BACKUP D", ["P"],
+    307 +"""The full theorem requires all eigenvalues of the joint activity-and-multiplier iteration to lie strictly inside the unit circle. The frequently quoted scalar bound is de
+         rived after dropping the supervised-loss curvature. It is useful intuition, but it should not be used as a universal safe hyperparameter rule for a nonlinear FabricPC model
+         .""",
+    308 +"""Stack all hidden activations into h and write linear residuals as r=Ah+b. A is block lower bidiagonal for a chain, with identity blocks on the diagonal and negative adja
+         cent linear maps below them; b holds the clamped-input offsets. Let C map h to the readout prediction and B=CᵀC. B is positive semidefinite and represents the supervised sq
+         uared-loss curvature with respect to hidden states.
+    309 +
+    310 +Define K=I−η_h(B+ρAᵀA). A primal step maps a perturbation of h and λ to KΔh−η_hAᵀΔλ. The following dual update uses the NEW primal state, giving joint matrix M=[[K,−η_hAᵀ],
+         [αAK,I−αη_hAAᵀ]]. The spectral radius spr(M) is the largest absolute eigenvalue. For the fixed linear system, positive ρ, α, and η_h with spr(M)<1 imply convergence to the
+         unique feasible stationary endpoint. This is not a global nonlinear convergence result.
+    311 +
+    312 +If B=0, diagonalizing by singular modes of A gives the condition η_h s²(2ρ+α)<4 for every singular value s, with positive rates and a full-rank constraint operator. The cor
+         responding PC condition is η_h s²·2ρ<4. In our notation s is a singular value, avoiding conflict with the activation function σ. The simplified bound narrows as α rises. At
+          α=0 the primal dynamics reduce to PC with frozen zero multipliers; the entire joint-state matrix retains trivial constant dual modes, so one should not require strict join
+         t contraction of unused dual variables in that special case.
+    313 +
+    314 +The paper's approximate numerical caps depend on architecture and parameterization. Including B can change stability. With nonlinear maps, Jacobians and curvature change as
+          activities and weights move. A linear spectral check is a diagnostic or local approximation in that setting, and finite-step oscillations can still damage training before
+         a simplistic threshold flags divergence."""),
+    315 +
+    316 +slide("Integration details that affect the algorithm", "Backup · objective semantics and update order are part of correctness", 0, "BACKUP E", ["N", "I", "W", "T"],
+    317 +"""The main engineering risks are mathematical contract mismatches. Multipliers must be per example and must reach both local derivative paths. The dual step must read new-
+         state residuals. The output loss must remain a loss. Scaling, custom energies, and cyclic schedules must be audited before claiming the paper's guarantees apply.""",
+    318 +"""A conceptual step is: compute each hidden prediction at old states; form the local augmented terms with old multipliers; accumulate all adjacent activity derivatives; up
+         date all free activities; recompute predictions and true residuals at new states; update the hidden multipliers unless this is the final primal step; after inference, recom
+         pute local augmented weight derivatives at final states. The input clamp and supervised target remain fixed during this process. All hidden multipliers reset at the next in
+         dependent batch.
+    319 +
+    320 +Sources and supervised heads have different roles from constrained hidden nodes. In a simple clamped-output Gaussian representation, the output node's mismatch is the super
+         vised task loss and has no ALM multiplier. Internal hidden Gaussian errors are the constrained quantities. If a custom node energy includes an attractor or regularizer in a
+         ddition to reconstruction error, the proposal must specify which part is a hard constraint and which remains an objective term. Multiplying every scalar node energy by a mu
+         ltiplier is not the augmented Lagrangian derived in the paper.
+    321 +
+    322 +The NodeState extension must propagate through initialization, JAX pytrees, tracking snapshots, device sharding, and any state constructors. A batch-wide vector of multipli
+         ers would mix unrelated examples and is incorrect. A persistent multiplier across different samples would change Algorithm 1; any deliberate reuse would need a sample-index
+         ing and stale-state argument.
+    323 +
+    324 +Existing μPC helpers scale inputs and gradients differently. Apply derivatives of the actual chosen objective and justify any preconditioner; otherwise KKT cancellation and
+          the α=0 equivalence check may fail. Convolutions and attention can in principle supply local vector–Jacobian products through their own forward map, but their internal act
+         ivations, masks, normalization, and batch dependence need attention. Cyclic constraints can be written algebraically, but may have multiple or no feasible solutions and are
+          not the paper's unique feedforward inner problem. Treat those as explicit later scope, with updated tests and claims."""),
+    325 +
+    326 +slide("Sources and reproducibility", "Backup · paper claims, repository observations, and proposals are kept distinct", 0, "BACKUP F", ["P", "E", "R", "I", "N", "W", "G", "
+         D", "T"],
+    327 +"""The links here point to the supplied paper and the exact FabricPC commit inspected. The separate guide includes the full derivations, source references, caveats, and pro
+         posed tests. The scalar plots can be regenerated from the included build script.""",
+    328 +"""Primary paper: Jeffrey Seely and Julian Gould, Augmented Lagrangian Predictive Coding, arXiv:2605.31022v1, 29 May 2026. Mechanism: equations 1–13 and Algorithm 1. Endpoi
+         nt identity: Appendix A. Linear dynamics and conditional convergence: Appendix C. Wavefront approximation: Appendix D. Compute comparison: Figure 8 and Appendix E. Experime
+         ntal scope: Appendix F. Limitations: Appendix G. Slides 13 and 14 reproduce Figures 3 and 2, respectively, from the supplied PDF.
+    329 +
+    330 +Related ePC paper: Cédric Goemaere, Gaspard Oliviers, Rafal Bogacz, and Thomas Demeester, ePC: Fast and Deep Predictive Coding in Digital Simulation, arXiv:2505.20137. The
+         work previously appeared under an Error Optimization title. Our technical implementation claims are grounded in FabricPC source rather than assuming every historical paper
+         version uses the current library semantics.
+    331 +
+    332 +FabricPC source snapshot: commit 8406e6a838442391fd3089958e1a2c1b44c57eda, retrieved 22 September 2026. The solver's global error differentiation is in core/inference_epc.p
+         y. The sPC lifecycle is in core/inference.py. Dynamic state and pytree registrations are in core/types.py. The local learning path is in core/learning.py. The ePC user guid
+         e describes regime measurement, and the report and tests document long-run observations and equivalence qualifications. These are code/document inspection findings; they we
+         re not re-benchmarked here.
+    333 +
+    334 +The presentation build checks the scalar endpoint calculations, schedule length, slide bounds, note separation, and document output. The paper's plots are reproduced as lab
+         eled source figures rather than redrawn from guessed data. Proposed FabricPC class structure, tests, and experiments remain proposals. The complete private notes are embedd
+         ed in the PowerPoint notes part and also supplied separately; the audience PDF contains only slides."""),
+    335 +]
+    336 +
+    337 +assert len(SLIDES) == 26
+    338 +assert sum(s["seconds"] for s in SLIDES) == 1800
+
+• The narrative and detailed notes are drafted. I’ve included a hand-worked scalar example showing exactly why PC’s gradient differs from BP and how the multiplier restores it. I’m
+  now laying out the slides, adding the paper’s figures, and checking the calculations, timing, and separation of speaker notes from audience-facing content.
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages'); import pymupdf as f;
+  │ d=f.open('2605.31022v1.pdf'); print([(i+1, tuple(d[i].rect),[(round(b[1]),round(b[3]),b[4][:100]) for b in d[i].get_text('blocks') if 'Figure' in b[4]]) for i in (3,4)]);
+  │ import runpy; c=runpy.run_path('presentation/content.py'); print(len(c['SLIDES']), sum(s['seconds'] for s in c['SLIDES']),sum(len((s['talk']+' '+s['prep']).split()) for s in
+  │ … +1 lines
+  └ (no output)
+
+• Added presentation/build_presentation.py (+618 -0)
+      1 +"""Build an editable slide deck, audience PDF, and separate presenter documents.
+      2 +
+      3 +All audience formats use the same positioned text, shapes, equations, and plots.
+      4 +The only computation experiment here is the independently checked scalar example.
+      5 +"""
+      6 +
+      7 +from pathlib import Path
+      8 +import io
+      9 +import json
+     10 +import math
+     11 +import sys
+     12 +import textwrap
+     13 +from xml.sax.saxutils import escape
+     14 +import zipfile
+     15 +
+     16 +import matplotlib
+     17 +matplotlib.use("Agg")
+     18 +import matplotlib.pyplot as plt
+     19 +import numpy as np
+     20 +from PIL import Image, ImageDraw, ImageFont
+     21 +import pymupdf
+     22 +from pptx import Presentation
+     23 +from pptx.dml.color import RGBColor
+     24 +from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+     25 +from pptx.enum.text import MSO_ANCHOR
+     26 +from pptx.util import Inches, Pt
+     27 +from reportlab.pdfgen import canvas
+     28 +from reportlab.pdfbase import pdfmetrics
+     29 +from reportlab.pdfbase.ttfonts import TTFont
+     30 +from reportlab.lib import colors
+     31 +from reportlab.lib.styles import ParagraphStyle
+     32 +from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, KeepTogether
+     33 +from docx import Document
+     34 +from docx.shared import Inches as DocInches, Pt as DocPt, RGBColor as DocRGB
+     35 +
+     36 +ROOT = Path(__file__).resolve().parent
+     37 +sys.path.insert(0, str(ROOT))
+     38 +from content import SLIDES, SOURCES, PAPER, REPO, COMMIT
+     39 +
+     40 +ASSETS = ROOT / "assets"
+     41 +ASSETS.mkdir(exist_ok=True)
+     42 +PAGE_W, PAGE_H = 13.333333, 7.5
+     43 +NAVY, TEAL, CORAL = "14344B", "087F79", "C55F48"
+     44 +INK, MUTED, LIGHT = "203A4D", "526878", "F5F5EF"
+     45 +WHITE, BORDER, PALE, GOLD = "FFFFFF", "DCE3DF", "E5F2EE", "A77322"
+     46 +FONT_DIR = Path("/usr/share/fonts/truetype/lato")
+     47 +pdfmetrics.registerFont(TTFont("Lato", str(FONT_DIR / "Lato-Regular.ttf")))
+     48 +pdfmetrics.registerFont(TTFont("Lato-Bold", str(FONT_DIR / "Lato-Bold.ttf")))
+     49 +pdfmetrics.registerFont(TTFont("Guide", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+     50 +pdfmetrics.registerFont(TTFont("Guide-Bold", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"))
+     51 +plt.rcParams.update({"font.family": "DejaVu Sans", "mathtext.fontset": "dejavusans",
+     52 +                     "axes.spines.top": False, "axes.spines.right": False})
+     53 +
+     54 +
+     55 +def rgb(value):
+     56 +    return RGBColor.from_string(value)
+     57 +
+     58 +
+     59 +def cpdf(value):
+     60 +    return colors.HexColor("#" + value)
+     61 +
+     62 +
+     63 +def wrap(text, width, size, bold=False):
+     64 +    font = "Lato-Bold" if bold else "Lato"
+     65 +    lines = []
+     66 +    for paragraph in text.split("\n"):
+     67 +        words = paragraph.split()
+     68 +        if not words:
+     69 +            lines.append("")
+     70 +            continue
+     71 +        line = words.pop(0)
+     72 +        for word in words:
+     73 +            if pdfmetrics.stringWidth(line + " " + word, font, size) <= width * 72:
+     74 +                line += " " + word
+     75 +            else:
+     76 +                lines.append(line)
+     77 +                line = word
+     78 +        lines.append(line)
+     79 +    return lines
+     80 +
+     81 +
+     82 +class Deck:
+     83 +    def __init__(self):
+     84 +        self.prs = Presentation()
+     85 +        self.prs.slide_width, self.prs.slide_height = Inches(PAGE_W), Inches(PAGE_H)
+     86 +        self.prs.core_properties.title = "Augmented Lagrangian Predictive Coding — FabricPC"
+     87 +        self.prs.core_properties.subject = "30-minute research presentation with private speaker notes"
+     88 +        self.prs.core_properties.author = "FabricPC research presentation"
+     89 +        self.pdf = canvas.Canvas(str(ROOT / "ALPC_FabricPC_slides.pdf"),
+     90 +                                 pagesize=(PAGE_W * 72, PAGE_H * 72))
+     91 +        self.pdf.setTitle("Augmented Lagrangian Predictive Coding — audience slides")
+     92 +        self.bounds = []
+     93 +
+     94 +    def new(self, index):
+     95 +        self.index = index
+     96 +        self.slide = self.prs.slides.add_slide(self.prs.slide_layouts[6])
+     97 +        self.rect(0, 0, PAGE_W, PAGE_H, LIGHT)
+     98 +        self.rect(0, 0, PAGE_W, .10, TEAL)
+     99 +        s = SLIDES[index]
+    100 +        self.text(s["section"], .5, .27, 11.8, 11, TEAL, True)
+    101 +        if index != 0:
+    102 +            self.text(s["title"], .5, .68, 12.25, 31, NAVY, True, max_lines=2)
+    103 +            self.text(s["subtitle"], .52, 1.68, 12.2, 17, MUTED, max_lines=2)
+    104 +        self.line(.5, 7.0, 12.83, 7.0, BORDER, .8)
+    105 +        source_codes = s["sources"]
+    106 +        if source_codes:
+    107 +            label = "SOURCES  " + " · ".join(f"[{code}]" for code in source_codes)
+    108 +            if "P" in source_codes:
+    109 +                label += "  Seely & Gould, 2026"
+    110 +            if any(code not in ("P", "E") for code in source_codes):
+    111 +                label += "  |  FabricPC @ 8406e6a"
+    112 +            self.text(label, .52, 7.15, 10.7, 10, MUTED,
+    113 +                      link=SOURCES[source_codes[0]][1])
+    114 +        else:
+    115 +            self.text("FABRICPC · RESEARCH DISCUSSION", .52, 7.15, 10.7, 10, MUTED)
+    116 +        self.text(f"{index+1:02d}" + (" / 20" if index < 20 else " · BACKUP"),
+    117 +                  11.65, 7.12, 1.1, 12, MUTED)
+    118 +
+    119 +    def rect(self, x, y, w, h, fill, stroke=None, radius=False):
+    120 +        shape = self.slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE if radius else MSO_SHAPE.RECTANGLE,
+    121 +                                             Inches(x), Inches(y), Inches(w), Inches(h))
+    122 +        shape.fill.solid(); shape.fill.fore_color.rgb = rgb(fill)
+    123 +        if stroke:
+    124 +            shape.line.color.rgb = rgb(stroke); shape.line.width = Pt(.7)
+    125 +        else:
+    126 +            shape.line.fill.background()
+    127 +        if radius:
+    128 +            shape.adjustments[0] = .09
+    129 +        self.pdf.setFillColor(cpdf(fill))
+    130 +        self.pdf.setStrokeColor(cpdf(stroke or fill))
+    131 +        if radius:
+    132 +            self.pdf.roundRect(x*72, (PAGE_H-y-h)*72, w*72, h*72, 7, fill=1, stroke=bool(stroke))
+    133 +        else:
+    134 +            self.pdf.rect(x*72, (PAGE_H-y-h)*72, w*72, h*72, fill=1, stroke=bool(stroke))
+    135 +        self.bounds.append((self.index, "shape", x, y, w, h))
+    136 +        return shape
+    137 +
+    138 +    def text(self, content, x, y, w, size=22, color=INK, bold=False, max_lines=None, link=None):
+    139 +        lines = wrap(content, w, size, bold)
+    140 +        if max_lines is not None and len(lines) > max_lines:
+    141 +            raise ValueError(f"Slide {self.index+1} text needs {len(lines)} lines, max {max_lines}: {content}")
+    142 +        leading = size * 1.23
+    143 +        h = (len(lines)*leading+4)/72
+    144 +        box = self.slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
+    145 +        tf = box.text_frame; tf.clear(); tf.word_wrap = False
+    146 +        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    147 +        tf.vertical_anchor = MSO_ANCHOR.TOP
+    148 +        for i, line in enumerate(lines):
+    149 +            p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+    150 +            p.space_before = Pt(0); p.space_after = Pt(0); p.line_spacing = Pt(leading)
+    151 +            run = p.add_run(); run.text = line
+    152 +            run.font.name = "Lato"; run.font.size = Pt(size); run.font.bold = bold
+    153 +            run.font.color.rgb = rgb(color)
+    154 +            if link: run.hyperlink.address = link
+    155 +            self.pdf.setFont("Lato-Bold" if bold else "Lato", size)
+    156 +            self.pdf.setFillColor(cpdf(color))
+    157 +            self.pdf.drawString(x*72, (PAGE_H-y)*72 - size*.86 - i*leading, line)
+    158 +        if link:
+    159 +            self.pdf.linkURL(link, (x*72, (PAGE_H-y-h)*72, (x+w)*72, (PAGE_H-y)*72), relative=0)
+    160 +        self.bounds.append((self.index, "text", x, y, w, h))
+    161 +        return h
+    162 +
+    163 +    def line(self, x1, y1, x2, y2, color=TEAL, width=2):
+    164 +        shape = self.slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+    165 +                    Inches(x1), Inches(y1), Inches(x2), Inches(y2))
+    166 +        shape.line.color.rgb = rgb(color); shape.line.width = Pt(width)
+    167 +        self.pdf.setStrokeColor(cpdf(color)); self.pdf.setLineWidth(width)
+    168 +        self.pdf.line(x1*72, (PAGE_H-y1)*72, x2*72, (PAGE_H-y2)*72)
+    169 +
+    170 +    def arrow(self, x1, y1, x2, y2, color=TEAL):
+    171 +        self.line(x1, y1, x2, y2, color, 2)
+    172 +        angle = math.atan2(y2-y1, x2-x1)
+    173 +        for side in (-.45, .45):
+    174 +            self.line(x2, y2, x2-.13*math.cos(angle+side), y2-.13*math.sin(angle+side), color, 2)
+    175 +
+    176 +    def picture(self, path, x, y, w, h=None):
+    177 +        im = Image.open(path)
+    178 +        ih = w * im.height / im.width if h is None else h
+    179 +        self.slide.shapes.add_picture(str(path), Inches(x), Inches(y), width=Inches(w), height=Inches(ih))
+    180 +        self.pdf.drawImage(str(path), x*72, (PAGE_H-y-ih)*72, width=w*72, height=ih*72, mask="auto")
+    181 +        self.bounds.append((self.index, "image", x, y, w, ih))
+    182 +        return ih
+    183 +
+    184 +    def equation(self, formula, x, y, w, color=NAVY, size=26, max_h=.85):
+    185 +        key = f"eq_{self.index+1}_{len(self.bounds)}.png"
+    186 +        path = ASSETS/key
+    187 +        fig = plt.figure(figsize=(1, 1)); fig.patch.set_alpha(0)
+    188 +        fig.text(0, 0, "$"+formula+"$", fontsize=size, color="#"+color)
+    189 +        fig.savefig(path, dpi=240, transparent=True, bbox_inches="tight", pad_inches=.04)
+    190 +        plt.close(fig)
+    191 +        im = Image.open(path)
+    192 +        actual_w = min(w, max_h*im.width/im.height, im.width/240)
+    193 +        self.picture(path, x, y, actual_w)
+    194 +
+    195 +    def panel(self, x, y, w, h, label, body, accent=TEAL, body_size=21):
+    196 +        self.rect(x, y, w, h, WHITE, BORDER, True)
+    197 +        self.rect(x+.2, y+.24, .07, .35, accent)
+    198 +        self.text(label, x+.42, y+.23, w-.65, 22, accent, True)
+    199 +        self.text(body, x+.28, y+.98, w-.56, body_size, INK)
+    200 +
+    201 +    def takeaway(self, content):
+    202 +        self.rect(.5, 6.18, 12.33, .60, NAVY, radius=True)
+    203 +        self.text(content, .73, 6.32, 11.9, 18, WHITE, max_lines=1)
+    204 +
+    205 +    def finish(self):
+    206 +        s = SLIDES[self.index]
+    207 +        text = speaker_note(self.index, s)
+    208 +        self.slide.notes_slide.notes_text_frame.text = text
+    209 +        self.pdf.showPage()
+    210 +
+    211 +    def save(self):
+    212 +        self.prs.save(ROOT/"ALPC_FabricPC_presentation.pptx")
+    213 +        self.pdf.save()
+    214 +        for slide_i, kind, x, y, w, h in self.bounds:
+    215 +            assert x >= -.005 and y >= -.005 and x+w <= PAGE_W+.005 and y+h <= PAGE_H+.005, (
+    216 +                slide_i+1, kind, x, y, w, h)
+    217 +
+    218 +
+    219 +def time_range(index):
+    220 +    start = sum(s["seconds"] for s in SLIDES[:index])
+    221 +    end = start + SLIDES[index]["seconds"]
+    222 +    if not SLIDES[index]["seconds"]: return "Optional backup"
+    223 +    return f"{start//60:02d}:{start%60:02d}–{end//60:02d}:{end%60:02d}"
+    224 +
+    225 +
+    226 +def speaker_note(index, s):
+    227 +    parts = [f"SLIDE {index+1} — {s['title'].replace(chr(10),' ')}", time_range(index),
+    228 +             "TALK TRACK", s["talk"], "FROM FIRST PRINCIPLES / PREPARATION", s["prep"]]
+    229 +    if s["transition"]: parts += ["TRANSITION", s["transition"]]
+    230 +    if s["sources"]:
+    231 +        parts += ["SOURCES", "\n".join(f"[{k}] {SOURCES[k][0]}\n{SOURCES[k][1]}" for k in s["sources"])]
+    232 +    return "\n\n".join(parts)
+    233 +
+    234 +
+    235 +def assets():
+    236 +    doc = pymupdf.open(ROOT.parent/"2605.31022v1.pdf")
+    237 +    for page, clip, name in [(3,(34,25,576,325),"paper_fig2.png"), (4,(35,25,578,260),"paper_fig3.png")]:
+    238 +        doc[page].get_pixmap(matrix=pymupdf.Matrix(3,3), clip=pymupdf.Rect(clip), alpha=False).save(ASSETS/name)
+    239 +    eta, alpha, h0, dual0 = .2, .5, .2, 0.
+    240 +    pc, alm, dual = [h0], [h0], [dual0]
+    241 +    for _ in range(45):
+    242 +        pc.append(pc[-1]-eta*(2*pc[-1]-1.2))
+    243 +        new = alm[-1]-eta*(2*alm[-1]-1.2+dual[-1])
+    244 +        alm.append(new); dual.append(dual[-1]+alpha*(new-.2))
+    245 +    fig, axes = plt.subplots(1,2,figsize=(11.9,2.8),layout="constrained")
+    246 +    fig.patch.set_facecolor("#"+WHITE)
+    247 +    axes[0].plot(pc, color="#"+CORAL, lw=2.5, label="sPC state")
+    248 +    axes[0].plot(alm, color="#"+TEAL, lw=2.5, label="PC-ALM state")
+    249 +    axes[0].axhline(.2, color="#"+MUTED, ls=":", lw=1)
+    250 +    axes[0].set(ylabel="Hidden activation h", xlabel="Primal-dual cycles (PC: activity steps)", ylim=(.05,.69))
+    251 +    axes[0].legend(loc="upper right", frameon=False, fontsize=10)
+    252 +    axes[1].plot(dual, color="#"+TEAL, lw=2.5, label="Multiplier λ")
+    253 +    axes[1].axhline(.8, color="#"+NAVY, ls=":", label="−BP activation derivative = 0.8")
+    254 +    axes[1].set(ylabel="Multiplier λ", xlabel="Primal-dual cycles", ylim=(-.04,1.03))
+    255 +    axes[1].legend(loc="lower right", frameon=False, fontsize=9)
+    256 +    for ax in axes:
+    257 +        ax.grid(axis="y", color="#"+BORDER, linewidth=.7)
+    258 +        ax.tick_params(labelsize=10)
+    259 +        ax.set_xlim(0,45)
+    260 +        ax.set_axisbelow(True)
+    261 +    fig.savefig(ASSETS/"scalar_dynamics.png", dpi=190, facecolor="white")
+    262 +    plt.close(fig)
+    263 +    # Independent closed forms and Algorithm 1 endpoint check.
+    264 +    x=y=w2=rho=1.; w1=.2
+    265 +    h_pc=(w2*y+rho*w1*x)/(w2*w2+rho)
+    266 +    grad_pc=np.array([-rho*(h_pc-w1*x)*x, (w2*h_pc-y)*h_pc])
+    267 +    grad_bp=np.array([(w2*w1*x-y)*w2*x, (w2*w1*x-y)*w1*x])
+    268 +    h,lam=w1*x,0.
+    269 +    for _ in range(199):
+    270 +        h-=eta*(w2*(w2*h-y)+rho*(h-w1*x)+lam)
+    271 +        lam+=alpha*(h-w1*x)
+    272 +    h-=eta*(w2*(w2*h-y)+rho*(h-w1*x)+lam)
+    273 +    grad_alm=np.array([-(lam+rho*(h-w1*x))*x, (w2*h-y)*h])
+    274 +    assert np.allclose(grad_pc,[-.4,-.24],atol=1e-12)
+    275 +    assert np.allclose(grad_bp,[-.8,-.16],atol=1e-12)
+    276 +    assert np.allclose(grad_alm,grad_bp,atol=1e-12)
+    277 +    eig=np.linalg.eigvals(np.array([[.6,-.2],[.3,.9]]))
+    278 +    return dict(pc_hidden=h_pc, alm_hidden=h, alm_multiplier=lam,
+    279 +                pc_gradient=grad_pc.tolist(), bp_gradient=grad_bp.tolist(),
+    280 +                alm_gradient=grad_alm.tolist(), spectral_radius=float(np.max(abs(eig))))
+    281 +
+    282 +
+    283 +def row(d, y, cols, widths, header=False, height=.64):
+    284 +    x=.52
+    285 +    for j,(label,w) in enumerate(zip(cols,widths)):
+    286 +        d.rect(x,y,w-.035,height,NAVY if header else (WHITE if j%2 else PALE), BORDER)
+    287 +        d.text(label,x+.13,y+.14,w-.27,17 if header else 16.5,
+    288 +               WHITE if header else INK, header, max_lines=3)
+    289 +        x+=w
+    290 +
+    291 +
+    292 +def build_slides():
+    293 +    d=Deck()
+    294 +    for i,s in enumerate(SLIDES):
+    295 +        d.new(i)
+    296 +        if i==0:
+    297 +            d.text(s["title"],.65,1.18,11.9,44,NAVY,True,max_lines=2)
+    298 +            d.text(s["subtitle"],.68,3.02,11.8,25,MUTED)
+    299 +            d.text("Jeffrey Seely & Julian Gould · Sakana AI · May 2026",.70,3.66,11.8,19,MUTED)
+    300 +            for x,label,sub,color in [( .7,"sPC","Relax hidden states",CORAL),(4.85,"ePC","Optimize error coordinates",TEAL),(9.,"PC-ALM","Accumulate local dual credit",NAV
+         Y)]:
+    301 +                d.rect(x,4.65,3.6,1.28,WHITE,BORDER,True)
+    302 +                d.text(label,x+.2,4.83,3.2,25,color,True)
+    303 +                d.text(sub,x+.2,5.35,3.2,16,INK)
+    304 +            d.text("30-MINUTE TEAM PRESENTATION  ·  27 MIN TALK + 3 MIN DISCUSSION",.7,6.4,11.9,12,TEAL,True)
+    305 +        elif i==1:
+    306 +            for j,(label,sub) in enumerate([("Input x","Observed data"),("Hidden h₁","Learned features"),("Hidden h₂","Learned features"),("Prediction ŷ","Compared with tar
+         get y")]):
+    307 +                x=.6+j*3.18
+    308 +                d.rect(x,2.38,2.6,1.04,WHITE,BORDER,True)
+    309 +                d.text(label,x+.2,2.58,2.25,23,TEAL,True)
+    310 +                d.text(sub,x+.05,3.64,2.8,16,MUTED)
+    311 +                if j<3: d.arrow(x+2.65,2.90,x+3.08,2.90)
+    312 +            d.equation(r"h_i=\sigma(W_i h_{i-1}),\qquad \hat y=W_L h_{L-1}",.8,4.32,11.7,size=29)
+    313 +            d.equation(r"\ell=\frac{1}{2}\|y-\hat y\|^2",.8,5.26,4.6,size=27)
+    314 +            d.text("Weights W are shared. Hidden states h belong to an example.",5.6,5.13,6.35,21,INK)
+    315 +            d.takeaway("Predictive coding makes hidden activations adjustable during training.")
+    316 +        elif i==2:
+    317 +            d.panel(.55,2.25,4.1,3.63,"The derivative we need","How much would the final loss change if this hidden activation changed?",body_size=23)
+    318 +            d.text("δᵢ: BP derivative of loss with respect to hᵢ",5.0,2.38,7.2,21,TEAL,True)
+    319 +            d.equation(r"\delta_{L-1}=W_L^{\mathsf T}(\hat y-y)",5.0,3.13,7.3,size=29)
+    320 +            d.equation(r"\delta_i=J_{i+1}^{\mathsf T}\delta_{i+1}",5.0,4.04,7.3,size=29)
+    321 +            d.text("Jᵢ₊₁ is the adjacent layer’s Jacobian: its table of local sensitivities.",5.0,4.95,7.4,21)
+    322 +            d.takeaway("BP computes these signals in a reverse pass through the composed network.")
+    323 +        elif i==3:
+    324 +            d.equation(r"r_i=h_i-\sigma(W_i h_{i-1})",.8,2.27,11.8,size=29)
+    325 +            d.equation(r"F_{\mathrm{PC}}=\ell+\frac{\rho}{2}\sum_{i=1}^{L-1}\|r_i\|^2",.8,3.10,11.8,size=29,max_h=1.0)
+    326 +            d.panel(.6,4.45,5.94,1.43,"1  Infer states","Fixed weights; take T steps on h.",body_size=19)
+    327 +            d.panel(6.75,4.45,5.94,1.43,"2  Learn weights","Fixed final states; use local gradients.",body_size=19)
+    328 +            d.text("r = state − prediction     ρ > 0 = penalty strength     T = inference steps",6.15,2.52,6.1,19,MUTED)
+    329 +            d.takeaway("An interior activity gradient depends only on its own and adjacent layer terms.")
+    330 +        elif i==4:
+    331 +            d.panel(.55,2.28,5.9,3.6,"A compromise is allowed","Lower the supervised loss by moving a hidden state away from its forward prediction.",accent=CORAL,body_size
+         =23)
+    332 +            d.text("ONE HIDDEN SCALAR",6.87,2.36,5.4,13,TEAL,True)
+    333 +            d.equation(r"F_{\mathrm{PC}}(h)=\frac12(1-h)^2+\frac12(h-0.2)^2",6.85,3.0,5.7,size=23)
+    334 +            d.text("Forward hidden state",6.90,4.00,3.7,21)
+    335 +            d.text("0.2",11.25,3.9,1.2,31,NAVY,True)
+    336 +            d.text("Settled PC hidden state",6.90,4.92,3.85,21)
+    337 +            d.text("0.6",11.25,4.82,1.2,31,CORAL,True)
+    338 +            d.takeaway("Faster inference alone cannot remove a finite-penalty difference from BP.")
+    339 +        elif i==5:
+    340 +            d.equation(r"h_i(\varepsilon)=\sigma(W_i h_{i-1}(\varepsilon))+\varepsilon_i",.8,2.32,11.7,size=30)
+    341 +            d.equation(r"E(\varepsilon)=F_{\mathrm{PC}}(h(\varepsilon)),\quad \varepsilon\leftarrow\varepsilon-\eta_\varepsilon\nabla_\varepsilon E",.8,3.29,11.8,size=28)
+    342 +            d.panel(.6,4.48,5.94,1.47,"Forward: errors → states","An early error changes downstream states.",body_size=18)
+    343 +            d.panel(6.75,4.48,5.94,1.47,"Reverse: energy → error gradients","FabricPC differentiates the full derived graph.",body_size=18)
+    344 +            d.takeaway("ePC uses global error inference and retains a local final weight update.")
+    345 +        elif i==6:
+    346 +            d.panel(.55,2.32,5.9,3.52,"Small error step","From zero hidden errors, the first error gradient is the BP activation derivative.\n\nWeight gradients are BP-like
+          to first order.",body_size=21)
+    347 +            d.panel(6.7,2.32,6.08,3.52,"Near PC equilibrium","More relaxation solves the PC energy’s tradeoff.\n\nStable convergence does not make that objective equal to B
+         P’s.",accent=CORAL,body_size=21)
+    348 +            d.takeaway("Compare both ePC regimes; report step size, optimizer, and curvature stability.")
+    349 +        elif i==7:
+    350 +            d.equation(r"\mathcal{L}_\rho=\ell+\sum_i\lambda_i^{\mathsf T}r_i+\frac{\rho}{2}\sum_i\|r_i\|^2",.75,2.4,12.0,size=32,max_h=1)
+    351 +            d.panel(.6,3.92,3.88,1.98,"Task loss ℓ","Fits the observed target.",body_size=21)
+    352 +            d.panel(4.72,3.92,3.88,1.98,"Multiplier λ","Accumulates each hidden constraint’s violations.",body_size=21)
+    353 +            d.panel(8.84,3.92,3.88,1.98,"Penalty ρ","Supplies quadratic curvature.",body_size=21)
+    354 +            d.takeaway("Descend in hidden states h; ascend in sample-specific multipliers λ.")
+    355 +        elif i==8:
+    356 +            steps=[("01","Initialize","Forward states; hidden multipliers λ = 0."),
+    357 +                   ("02","Primal step","All free states descend the augmented objective."),
+    358 +                   ("03","Dual step","Recompute new-state residuals; λ ← λ + αr."),
+    359 +                   ("04","Finish and learn","Final primal only; recompute local weight gradients.")]
+    360 +            for j,(n,label,body) in enumerate(steps):
+    361 +                y=2.22+j*.89
+    362 +                d.rect(.58,y,.55,.56,TEAL,radius=True)
+    363 +                d.text(n,.67,y+.11,.40,17,WHITE,True)
+    364 +                d.text(label,1.36,y+.06,3.00,22,NAVY,True)
+    365 +                d.text(body,4.65,y+.08,7.67,20)
+    366 +            d.text("Repeat steps 02–03 exactly T−1 times. Weights stay fixed until 04.",1.36,5.86,11.0,17,MUTED)
+    367 +            d.takeaway("The dual step reads NEW residuals. α is a separate rate; each new batch resets λ.")
+    368 +        elif i==9:
+    369 +            d.text("COMPOSITE CREDIT",.8,2.25,4.4,14,TEAL,True)
+    370 +            d.equation(r"c_i=\lambda_i+\rho r_i",.8,2.70,5.0,size=34)
+    371 +            d.text("λ = accumulated violation\nρr = current mismatch pressure",7.0,2.60,5.5,21,MUTED)
+    372 +            d.equation(r"\nabla_{h_i}\mathcal L_\rho=c_i-J_{i+1}^{\mathsf T}c_{i+1}",.8,3.91,11.8,size=29)
+    373 +            d.equation(r"\nabla_{W_i}\mathcal L_\rho=-\left(c_i\odot\sigma'(W_i h_{i-1})\right)h_{i-1}^{\mathsf T}",.8,4.90,11.8,size=28)
+    374 +            d.takeaway("Use the augmented signal in BOTH inference and learning. Keep the true residual separate.")
+    375 +        elif i==10:
+    376 +            for x,label,formula,sub in [(.65,"1  Feasibility",r"r_i=0","States return to forward values."),(4.84,"2  Stationarity",r"\lambda_i=-\delta_i","Multipliers repro
+         duce BP credit."),(9.03,"3  Learning",r"\nabla_\theta\mathcal L_\rho=\nabla_\theta\ell","Local weight gradients equal BP.")]:
+    377 +                d.rect(x,2.43,3.64,2.73,WHITE,BORDER,True)
+    378 +                d.text(label,x+.19,2.68,3.3,22,TEAL,True)
+    379 +                d.equation(formula,x+.20,3.39,3.23,size=27,max_h=.65)
+    380 +                d.text(sub,x+.2,4.35,3.25,18)
+    381 +            d.text("Endpoint identity: differentiable feedforward maps.\nConvergence theorem: stable linear dynamics with fixed weights.",.75,5.46,11.9,18,MUTED)
+    382 +            d.takeaway("An endpoint characterization is not a finite-step or nonlinear convergence guarantee.")
+    383 +        elif i==11:
+    384 +            d.text("x = y = 1     w₁ = 0.2     w₂ = 1     ρ = 1     ηₕ = 0.2     α = 0.5",.67,2.17,12,16,MUTED)
+    385 +            d.picture(ASSETS/"scalar_dynamics.png",.65,2.64,12.0)
+    386 +            d.text("Weight gradients (w₁, w₂)",.75,5.58,3.6,18,NAVY,True)
+    387 +            d.text("sPC: (−0.40, −0.24)",4.55,5.58,3.8,19,CORAL,True)
+    388 +            d.text("ALM = BP: (−0.80, −0.16)",8.50,5.58,4.1,19,TEAL,True)
+    389 +            d.takeaway("Independent teaching calculation. Traces show repeated cycles; endpoint values are checked.")
+    390 +        elif i==12:
+    391 +            d.rect(.55,2.17,12.23,3.59,WHITE,BORDER,True)
+    392 +            d.picture(ASSETS/"paper_fig3.png",.71,2.23,11.93,3.43)
+    393 +            d.text("Figure 3 · ReLU residual MLP · width 32 · depth 64 · one Fashion-MNIST sample at initialization",.7,5.88,12,14,MUTED)
+    394 +            d.takeaway("“Ballistic” describes a wavefront; it does not imply instant credit or complete convergence.")
+    395 +        elif i==13:
+    396 +            d.rect(.55,2.18,8.53,3.77,WHITE,BORDER,True)
+    397 +            d.picture(ASSETS/"paper_fig2.png",.68,2.24,8.26,3.60)
+    398 +            d.text("THE TESTED GRID",9.42,2.31,3.35,14,TEAL,True)
+    399 +            d.text("Widths + depths\n8, 16, 32, 64, 128\n\nIdentity, tanh, ReLU\n\nT = 2L activity steps\n\nOne training epoch",9.42,2.84,3.15,19)
+    400 +            d.takeaway("Reported BP-level performance in this grid. No ePC baseline or long-training result.")
+    401 +        elif i==14:
+    402 +            d.panel(.55,2.25,3.91,3.62,"Theory","BP endpoint identity.\n\nConditional linear convergence.\n\nNonlinear convergence remains open.",body_size=20)
+    403 +            d.panel(4.71,2.25,3.91,3.62,"Evidence","Two small datasets.\n\nResidual MLPs.\n\nOne epoch; no FabricPC or ePC benchmark.",accent=CORAL,body_size=20)
+    404 +            d.panel(8.87,2.25,3.91,3.62,"Cost","Extra dual tensor and residual work.\n\nCoupled rate tuning.\n\nMeasure actual time and memory.",body_size=20)
+    405 +            d.takeaway("The paper’s compute gain is versus widening PC for credit alignment, not versus BP or ePC.")
+    406 +        elif i==15:
+    407 +            widths=[2.28,3.34,3.34,3.34]
+    408 +            row(d,2.25,["Property","sPC","ePC in FabricPC","PC-ALM"],widths,True,.58)
+    409 +            for y,values in zip([2.87,3.55,4.23,4.91],[
+    410 +                ["Relaxed variables","Hidden states h","Errors ε; derive h","States h + multipliers λ"],
+    411 +                ["Inference coupling","Adjacent-layer derivatives","Full derived-graph reverse pass","Adjacent primal-dual updates"],
+    412 +                ["Target endpoint","Soft PC-energy stationary point","Same PC-energy stationary points*","BP at feasible stationary point"],
+    413 +                ["Main tradeoff","Simple local energy; finite-penalty gap","Fast signal access; global AD + curvature","Local BP credit; extra state + stability"]]):
+    414 +                row(d,y,values,widths,height=.64)
+    415 +            d.text("* Compatible acyclic objective and gradient dynamics. Cyclic unrolling and nonlinear μPC need separate treatment.",.6,5.74,12.1,13,MUTED)
+    416 +            d.takeaway("An optimized error ε and an accumulated multiplier λ are different variables with different jobs.")
+    417 +        elif i==16:
+    418 +            d.panel(.58,2.26,5.97,1.70,"State contract","Per-example hidden dual state; initialization, reset, pytrees, batching.",body_size=19)
+    419 +            d.panel(6.79,2.26,5.97,1.70,"Objective + learning","Augmented local term in both activity and weight derivative paths.",body_size=19)
+    420 +            d.panel(.58,4.22,5.97,1.70,"Inference lifecycle","New-state residuals; exact dual schedule; final primal-only step.",body_size=19)
+    421 +            d.panel(6.79,4.22,5.97,1.70,"Diagnostics + scope","Residual, dual, credit, stationarity; audit clamps, energies, scaling.",body_size=19)
+    422 +            d.takeaway("Start with an acyclic Gaussian model and extend the shared contracts consistently.")
+    423 +        elif i==17:
+    424 +            d.panel(.55,2.27,3.91,3.64,"1  Algebra","Scalar + linear graphs.\n\nα = 0 reproduces sPC.\n\nSettled stable ALM gradients match BP.",body_size=20)
+    425 +            d.panel(4.71,2.27,3.91,3.64,"2  Fair baselines","BP, sPC, both ePC regimes, PC-ALM.\n\nMeasure gradient error, time, memory, and stability.",body_size=20)
+    426 +            d.panel(8.87,2.27,3.91,3.64,"3  Transfer","Reproduce the paper.\n\nThen longer training and CIFAR conv models.\n\nMultiple seeds + tuned rates.",body_size=20)
+    427 +            d.takeaway("Success should be a measured benefit at comparable cost, with the learning objective stated.")
+    428 +        elif i==18:
+    429 +            d.text("Build a bounded research implementation\nand compare it with the ePC we actually use.",.75,2.6,11.8,33,NAVY,True,max_lines=3)
+    430 +            d.panel(.7,4.25,5.83,1.63,"If locality is the objective","PC-ALM is a compelling mechanism to test.",body_size=20)
+    431 +            d.panel(6.77,4.25,5.83,1.63,"If GPU speed is the objective","The advantage over ePC is still unmeasured.",body_size=20)
+    432 +            d.takeaway("A zero residual can coexist with a nonzero learning signal: the multiplier carries the credit.")
+    433 +        elif i==19:
+    434 +            for y,n,label in [(2.65,"01","Local dynamics that reproduce BP credit?"),(3.76,"02","Better learning in deep, narrow networks?"),(4.87,"03","Lower time or memor
+         y than our current ePC?")]:
+    435 +                d.text(n,.80,y,.75,25,TEAL,True)
+    436 +                d.text(label,1.8,y,10.7,28,NAVY,True)
+    437 +            d.takeaway("Proposed first step: a linear acyclic solver, then one matched deep–narrow experiment.")
+    438 +        elif i==20:
+    439 +            pairs=[("hᵢ / Wᵢ","Hidden activation / layer weight matrix"),("rᵢ / εᵢ","Measured residual / optimized ePC error coordinate"),("λᵢ / cᵢ","Multiplier / composite
+          credit λᵢ + ρrᵢ"),("δᵢ / Jᵢ₊₁","BP activation derivative / adjacent layer Jacobian"),("ρ / α","Penalty strength / dual ascent rate"),("ηₕ / ηε / ηθ","Activity / error-coor
+         dinate / weight step sizes"),("L / N / T","Depth / width / inference activity-step count")]
+    440 +            for j,(a,b) in enumerate(pairs):
+    441 +                d.text(a,.8,2.26+j*.49,2.55,20,TEAL,True)
+    442 +                d.text(b,3.65,2.26+j*.49,8.7,20)
+    443 +            d.takeaway("Sign convention: r = state − prediction; at the ALM endpoint λ = −δ.")
+    444 +        elif i==21:
+    445 +            d.equation(r"h^*_{\mathrm{PC}}=\frac{w_2 y+\rho w_1x}{w_2^2+\rho}",.8,2.33,11.6,size=30,max_h=1.1)
+    446 +            d.equation(r"h^*_{\mathrm{ALM}}=w_1x,\qquad\lambda^*=w_2(y-w_2w_1x)",.8,3.66,11.6,size=29)
+    447 +            d.equation(r"\nabla_{w_1}\mathcal L_\rho=-\lambda^*x,\qquad\nabla_{w_2}\mathcal L_\rho=(w_2w_1x-y)w_1x",.8,4.85,11.6,size=27)
+    448 +            d.takeaway("At x = y = w₂ = ρ = 1 and w₁ = 0.2: hPC = 0.6; hALM = 0.2; λALM = 0.8.")
+    449 +        elif i==22:
+    450 +            d.text("Q = ∂h/∂ε is invertible and block lower triangular on a DAG.",.75,2.3,11.8,23,TEAL,True)
+    451 +            d.equation(r"\nabla_\varepsilon E=Q^{\mathsf T}\nabla_hF_{\mathrm{PC}}",.8,3.1,11.7,size=30)
+    452 +            d.equation(r"\Delta h\approx-\eta_\varepsilon QQ^{\mathsf T}\nabla_hF_{\mathrm{PC}}",.8,4.09,11.7,size=30)
+    453 +            d.text("Same stationary points; changed geometry and trajectories.\nAt a stationary point: Hε = Qᵀ Hh Q.",.8,5.12,11.4,21)
+    454 +            d.takeaway("Global signal access comes from the error-to-state dependency graph, not a new objective.")
+    455 +        elif i==23:
+    456 +            d.text("Linear residual r = Ah + b; readout ŷ = Ch; curvature B = CᵀC.",.75,2.22,11.8,20,TEAL,True)
+    457 +            d.equation(r"K=I-\eta_h(B+\rho A^{\mathsf T}A)",.8,2.91,11.5,size=27)
+    458 +            # Four matrix blocks are laid out explicitly to avoid a TeX dependency.
+    459 +            d.text("M =",.8,3.95,1.2,29,NAVY,True)
+    460 +            d.rect(2.14,3.59,10.42,1.46,WHITE,BORDER,True)
+    461 +            for x,y,f in [(2.5,3.77,r"K"),(7.2,3.77,r"-\eta_h A^{\mathsf T}"),(2.5,4.43,r"\alpha A K"),(7.2,4.43,r"I-\alpha\eta_h A A^{\mathsf T}")]:
+    462 +                d.equation(f,x,y,4.7,size=25,max_h=.48)
+    463 +            d.text("Require spectral radius spr(M) < 1. If B = 0 only: ηₕs²(2ρ + α) < 4 for every singular value s of A.",.8,5.34,11.8,19)
+    464 +            d.takeaway("The constraint-only bound is not a universal guarantee for a nonlinear supervised model.")
+    465 +        elif i==24:
+    466 +            d.panel(.57,2.25,5.96,3.63,"Preserve mathematical meaning","error remains state − prediction.\n\nDuals belong to examples.\n\nThe supervised loss is not a hidde
+         n equality constraint.",body_size=20)
+    467 +            d.panel(6.78,2.25,5.96,3.63,"Audit all derivative paths","Recomputed residual after primal.\n\nAugmented term in local learning.\n\nScaling, custom energies, cy
+         cles, and masks require explicit scope.",body_size=20)
+    468 +            d.takeaway("A buffer containing composite credit cannot substitute for the augmented objective contract.")
+    469 +        elif i==25:
+    470 +            d.text("[P] Seely & Gould · Augmented Lagrangian Predictive Coding",.7,2.2,11.7,22,NAVY,True,link=PAPER)
+    471 +            d.text("arXiv:2605.31022v1 · supplied paper · Algorithm 1; Appendices A, C–G",.7,2.71,11.7,17,MUTED)
+    472 +            d.text("[E] Goemaere et al. · ePC: Fast and Deep Predictive Coding in Digital Simulation",.7,3.25,11.7,21,NAVY,True,link=SOURCES["E"][1])
+    473 +            d.text("arXiv:2505.20137 · implementation comparison grounded in FabricPC",.7,3.76,11.7,17,MUTED)
+    474 +            d.text("FabricPC source snapshot · 22 September 2026",.7,4.30,11.7,22,TEAL,True,link=REPO)
+    475 +            d.text(COMMIT,.7,4.83,11.7,17,MUTED)
+    476 +            d.text("[I] inference   [R] ePC   [N] state types   [W] learning   [G] guide   [D] report   [T] tests",.7,5.36,11.7,16,INK)
+    477 +            d.takeaway("Full links and derivations are in the private speaker guide. Code and plots are reproducible.")
+    478 +        d.finish()
+    479 +    d.save()
+    480 +    return d
+    481 +
+    482 +
+    483 +def build_guides():
+    484 +    md=["# Augmented Lagrangian Predictive Coding — speaker guide",
+    485 +        "27 minutes of prepared material + 3 minutes of discussion. Slides 21–26 are optional backup.",
+    486 +        "Use the talk track during the presentation. Preparation paragraphs provide extensive derivations and caveats; do not read them all aloud.",
+    487 +        "## Running order"]
+    488 +    for i,s in enumerate(SLIDES): md.append(f"- {i+1:02d}. {time_range(i)} — {s['title'].replace(chr(10),' ')}")
+    489 +    for i,s in enumerate(SLIDES):
+    490 +        md += [f"\n## Slide {i+1}: {s['title'].replace(chr(10),' ')}",f"**Timing:** {time_range(i)}",
+    491 +               "### Talk track",s["talk"],"### From first principles / preparation",s["prep"]]
+    492 +        if s["transition"]: md += ["### Transition",s["transition"]]
+    493 +        md += ["### Sources"]+[f"- [{k}] [{SOURCES[k][0]}]({SOURCES[k][1]})" for k in s["sources"]]
+    494 +    (ROOT/"ALPC_FabricPC_speaker_guide.md").write_text("\n\n".join(md),encoding="utf-8")
+    495 +
+    496 +    document=Document()
+    497 +    sec=document.sections[0]
+    498 +    sec.top_margin=sec.bottom_margin=DocInches(.7)
+    499 +    sec.left_margin=sec.right_margin=DocInches(.75)
+    500 +    normal=document.styles["Normal"]
+    501 +    normal.font.name="DejaVu Sans"; normal.font.size=DocPt(10)
+    502 +    normal.paragraph_format.space_after=DocPt(7)
+    503 +    normal.paragraph_format.line_spacing=1.12
+    504 +    for name in ("Title","Heading 1","Heading 2"):
+    505 +        document.styles[name].font.name="Lato"
+    506 +        document.styles[name].font.color.rgb=DocRGB.from_string(NAVY)
+    507 +    document.add_heading("Augmented Lagrangian\nPredictive Coding",0)
+    508 +    document.add_paragraph("PRIVATE SPEAKER GUIDE",style="Subtitle")
+    509 +    document.add_paragraph("27-minute talk + 3-minute discussion • 20 main slides + 6 backup slides")
+    510 +    document.add_paragraph("The Talk track is the suggested spoken explanation. From first principles / preparation contains additional derivations and caveats for rehearsa
+         l and questions. The complete notes are also embedded privately in the PowerPoint. The audience PDF has no speaker notes.")
+    511 +    document.add_heading("Running order",1)
+    512 +    for i,s in enumerate(SLIDES):
+    513 +        document.add_paragraph(f"{i+1:02d}   {time_range(i)}   {s['title'].replace(chr(10),' ')}")
+    514 +    for i,s in enumerate(SLIDES):
+    515 +        document.add_page_break()
+    516 +        document.add_heading(f"{i+1:02d}  {s['title'].replace(chr(10),' ')}",1)
+    517 +        document.add_paragraph(time_range(i),style="Subtitle")
+    518 +        for heading,key in [("Talk track","talk"),("From first principles / preparation","prep"),("Transition","transition")]:
+    519 +            if s[key]:
+    520 +                document.add_heading(heading,2)
+    521 +                for para in s[key].split("\n\n"): document.add_paragraph(para)
+    522 +        if s["sources"]:
+    523 +            document.add_heading("Sources",2)
+    524 +            for k in s["sources"]:
+    525 +                p=document.add_paragraph(f"[{k}] {SOURCES[k][0]}\n{SOURCES[k][1]}")
+    526 +                for run in p.runs: run.font.size=DocPt(8)
+    527 +    document.core_properties.title="ALPC — private speaker guide"
+    528 +    document.save(ROOT/"ALPC_FabricPC_speaker_guide.docx")
+    529 +
+    530 +    styles={
+    531 +        "title":ParagraphStyle("title",fontName="Guide-Bold",fontSize=27,leading=33,textColor=cpdf(NAVY),spaceAfter=16),
+    532 +        "h1":ParagraphStyle("h1",fontName="Guide-Bold",fontSize=18,leading=23,textColor=cpdf(NAVY),spaceAfter=10),
+    533 +        "h2":ParagraphStyle("h2",fontName="Guide-Bold",fontSize=11,leading=15,textColor=cpdf(TEAL),spaceBefore=12,spaceAfter=7,keepWithNext=True),
+    534 +        "body":ParagraphStyle("body",fontName="Guide",fontSize=10.1,leading=14.2,spaceAfter=8),
+    535 +        "source":ParagraphStyle("source",fontName="Guide",fontSize=7.9,leading=10.2,spaceAfter=6,textColor=cpdf(MUTED)),
+    536 +        "toc":ParagraphStyle("toc",fontName="Guide",fontSize=9,leading=12,spaceAfter=6),
+    537 +    }
+    538 +    story=[]
+    539 +    def add(text,style="body"):
+    540 +        story.append(Paragraph(escape(text).replace("\n","<br/>"),styles[style]))
+    541 +    add("Augmented Lagrangian\nPredictive Coding","title")
+    542 +    add("PRIVATE SPEAKER GUIDE","h2")
+    543 +    add("27-minute talk + 3-minute discussion\n20 main slides + 6 optional backup slides")
+    544 +    add("Use Talk track during the allotted time. From first principles / preparation is additional rehearsal and reference material. This guide contains approximately 8,40
+         0 words; it is not a script to read in full during a half-hour slot.")
+    545 +    add("The notes are also embedded in the PowerPoint notes pane. The separate audience PDF contains slides only. Sources are linked after each slide’s notes, with a pinne
+         d FabricPC commit for reproducibility.")
+    546 +    add("Source distinction","h2")
+    547 +    add("Paper findings are attributed to the supplied Seely–Gould preprint. The scalar example is independently computed. Repository statements come from code and document
+         ation inspection, not new library benchmarks. The FabricPC integration and evaluation sequence are proposals.")
+    548 +    story.append(PageBreak())
+    549 +    add("Running order","h1")
+    550 +    for i,s in enumerate(SLIDES): add(f"{i+1:02d}   {time_range(i)}   {s['title'].replace(chr(10),' ')}","toc")
+    551 +    for i,s in enumerate(SLIDES):
+    552 +        story.append(PageBreak())
+    553 +        add(f"{i+1:02d}  {s['title'].replace(chr(10),' ')}","h1")
+    554 +        add(time_range(i),"source")
+    555 +        for heading,key in [("Talk track","talk"),("From first principles / preparation","prep"),("Transition","transition")]:
+    556 +            if s[key]:
+    557 +                add(heading,"h2")
+    558 +                for para in s[key].split("\n\n"): add(para)
+    559 +        if s["sources"]:
+    560 +            add("Sources","h2")
+    561 +            for k in s["sources"]:
+    562 +                title,url=SOURCES[k]
+    563 +                story.append(Paragraph(f'[{k}] <a href="{escape(url)}" color="#{TEAL}">{escape(title)}</a>',styles["source"]))
+    564 +    def footer(c,doc):
+    565 +        c.saveState(); c.setFont("Guide",8); c.setFillColor(cpdf(MUTED))
+    566 +        c.drawString(48,29,"ALPC · PRIVATE SPEAKER GUIDE")
+    567 +        c.drawRightString(564,29,str(doc.page)); c.restoreState()
+    568 +    SimpleDocTemplate(str(ROOT/"ALPC_FabricPC_speaker_guide.pdf"),pagesize=(612,792),
+    569 +                      rightMargin=48,leftMargin=48,topMargin=45,bottomMargin=46,
+    570 +                      title="ALPC — private speaker guide").build(story,onFirstPage=footer,onLaterPages=footer)
+    571 +
+    572 +
+    573 +def validate_and_render(numerics):
+    574 +    slide_pdf=pymupdf.open(ROOT/"ALPC_FabricPC_slides.pdf")
+    575 +    notes_pdf=pymupdf.open(ROOT/"ALPC_FabricPC_speaker_guide.pdf")
+    576 +    assert len(slide_pdf)==26
+    577 +    source_text="\n".join(p.get_text() for p in slide_pdf)
+    578 +    assert "FROM FIRST PRINCIPLES / PREPARATION" not in source_text
+    579 +    assert "TALK TRACK" not in source_text
+    580 +    with zipfile.ZipFile(ROOT/"ALPC_FabricPC_presentation.pptx") as z:
+    581 +        private_parts=[n for n in z.namelist() if n.startswith("ppt/notesSlides/notesSlide") and n.endswith(".xml")]
+    582 +        assert len(private_parts)==26
+    583 +        assert all("FROM FIRST PRINCIPLES / PREPARATION" in z.read(n).decode() for n in private_parts)
+    584 +        audience_parts=[n for n in z.namelist() if n.startswith("ppt/slides/slide") and n.endswith(".xml")]
+    585 +        assert all("FROM FIRST PRINCIPLES / PREPARATION" not in z.read(n).decode() for n in audience_parts)
+    586 +    thumbs=[]
+    587 +    thumb_w=480
+    588 +    for i,page in enumerate(slide_pdf):
+    589 +        pix=page.get_pixmap(matrix=pymupdf.Matrix(thumb_w/page.rect.width,thumb_w/page.rect.width))
+    590 +        thumb=Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
+    591 +        thumbs.append(thumb)
+    592 +        if i in (0,7,8,9,11,12,13,15,16,23):
+    593 +            page.get_pixmap(matrix=pymupdf.Matrix(1.5,1.5)).save(ASSETS/f"preview_slide_{i+1:02d}.png")
+    594 +    tile_h=300
+    595 +    sheet=Image.new("RGB",(4*500,math.ceil(len(thumbs)/4)*tile_h),"#e7e9e5")
+    596 +    draw=ImageDraw.Draw(sheet)
+    597 +    font=ImageFont.truetype(str(FONT_DIR/"Lato-Regular.ttf"),14)
+    598 +    for i,im in enumerate(thumbs):
+    599 +        x=10+(i%4)*500; y=8+(i//4)*tile_h
+    600 +        sheet.paste(im,(x,y)); draw.text((x,y+273),f"{i+1:02d}  {SLIDES[i]['section']}",font=font,fill="#"+NAVY)
+    601 +    sheet.save(ROOT/"slide_contact_sheet.png")
+    602 +    notes_pdf[3].get_pixmap(matrix=pymupdf.Matrix(1.3,1.3)).save(ASSETS/"preview_speaker_guide.png")
+    603 +    report={"slides":len(slide_pdf),"main_slides":20,"backup_slides":6,"talk_seconds":1620,
+    604 +            "discussion_seconds":180,"private_notes_parts":26,"speaker_guide_pages":len(notes_pdf),
+    605 +            "speaker_guide_words":sum(len((s['talk']+' '+s['prep']).split()) for s in SLIDES),
+    606 +            "fabricpc_commit":COMMIT,"scalar_verification":numerics,
+    607 +            "audience_slides_contain_private_note_sections":False,
+    608 +            "rendering":"PDF and PowerPoint generated from shared positioned primitives; PDF previews inspected separately.",
+    609 +            "limitations":"No native PowerPoint/LibreOffice renderer used. No new FabricPC or paper training benchmark run."}
+    610 +    (ROOT/"validation.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
+    611 +    print(json.dumps(report,indent=2))
+    612 +
+    613 +
+    614 +if __name__=="__main__":
+    615 +    numerical_checks=assets()
+    616 +    build_slides()
+    617 +    build_guides()
+    618 +    validate_and_render(numerical_checks)
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys,runpy; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages');
+  │ runpy.run_path('presentation/build_presentation.py',run_name='__main__')"
+  └ Traceback (most recent call last):
+      File "<string>", line 1, in <module>
+    … +51 lines (ctrl + t to view transcript)
+                      ^
+    ParseSyntaxException: Unknown symbol: \mathsf, found '\'  (at char 18), (line:1, col:19)
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import subprocess;... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import subprocess; subprocess.run(['\''apply_patch'\'',"*** Begin Patch\n*** Update File: presentation/
+  │ build_presentation.py\n@@\n     def equation(self, formula, x, y, w, color=NAVY, size=26, max_h=.85):\n+        formula = formula.replace(r\"\\mathsf T\", r\"\
+  │ \mathsf{T}\").replace(r\"\\mathcal L\", r\"\\mathcal{L}\")\n+        formula = formula.replace(r\"\\frac12\", r\"\\frac{1}{2}\")\n*** End Patch"],check=True)'
+  └ Success. Updated the following files:
+    M presentation/build_presentation.py
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys,runpy; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages');
+  │ runpy.run_path('presentation/build_presentation.py',run_name='__main__')"
+  └ {
+      "slides": 26,
+    … +28 lines (ctrl + t to view transcript)
+      "limitations": "No native PowerPoint/LibreOffice renderer used. No new FabricPC or paper training benchmark run."
+    }
+
+• The first build is complete: 20 main slides, 6 backup slides, and a 31-page speaker guide. The timing totals 30 minutes, the scalar example’s gradients match the hand calculation,
+  and the speaker notes are embedded privately in the PowerPoint. I’m checking the rendered slides for readability and layout issues before handing them over.
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; ... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; im=Image.open('\''presentation/slide_contact_sheet.png'\'');
+  │ b=io.BytesIO(); im.save(b,format='\''JPEG'\'',quality=70); print(base64.b64encode(b.getvalue()).decode())'
+  └ /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7O
+    zs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/
+    … +4675 lines (ctrl + t to view transcript)
+    UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAU
+    UUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH/9k=
+
+• Running /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; b=io.BytesIO(); Image.open('\''presentation/assets/
+  │ preview_speaker_guide.png'\'').save(b,format='\''JPEG'\'',quality=82); print(base64.b64encode(b.getvalue()).decode())'
+
+• Running /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; b=io.BytesIO(); Image.open('\''presentation/assets/
+  │ preview_slide_16.png'\'').save(b,format='\''JPEG'\'',quality=85); print(base64.b64encode(b.getvalue()).decode())'
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; ... this time
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import pymupdf; d=... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import pymupdf; d=pymupdf.open('\''presentation/ALPC_FabricPC_speaker_guide.pdf'\'');
+  │ print([(i+1,len(p.get_text().split()),p.get_text()[:60].replace(chr(10),'\'' / '\'')) for i,p in enumerate(d)])'
+  └ [(1, 131, 'ALPC · PRIVATE SPEAKER GUIDE / 1 / Augmented Lagrangian / Predicti'), (2, 223, 'ALPC · PRIVATE SPEAKER GUIDE / 2 / Running order / 01 00:00–00:30 '), (3, 265, 'ALPC ·
+    PRIVATE SPEAKER GUIDE / 3 / 01 Augmented Lagrangian Predi'), (4, 372, 'ALPC · PRIVATE SPEAKER GUIDE / 4 / 02 First: what are we trying '), (5, 304, 'ALPC · PRIVATE SPEAKER
+    … +11 lines (ctrl + t to view transcript)
+    Linear stability is a pro'), (30, 400, 'ALPC · PRIVATE SPEAKER GUIDE / 30 / 25 Integration details that '), (31, 359, 'ALPC · PRIVATE SPEAKER GUIDE / 31 / 26 Sources and
+    reproducibili')]
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; ... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; b=io.BytesIO(); Image.open('\''presentation/assets/
+  │ preview_speaker_guide.png'\'').save(b,format='\''JPEG'\'',quality=82); print(base64.b64encode(b.getvalue()).decode())'
+  └ /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJ
+    CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/
+    … +1450 lines (ctrl + t to view transcript)
+    AUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA
+    UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf//Z
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; b=io.BytesIO(); Image.open('\''presentation/assets/
+  │ preview_slide_16.png'\'').save(b,format='\''JPEG'\'',quality=85); print(base64.b64encode(b.getvalue()).decode())'
+  └ /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eH
+    h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/
+    … +1487 lines (ctrl + t to view transcript)
+    oooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoo
+    ooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD//Z
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import subprocess;... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import subprocess; subprocess.run(['\''apply_patch'\'',"*** Begin Patch\n*** Update File: presentation/
+  │ build_presentation.py\n@@\n import math\n+import re\n@@\n def row(d, y, cols, widths, header=False, height=.64):\n@@\n-        d.text(label,x+.13,y+.14,w-.27,17 if header else
+  │ 16.5,\n+        d.text(label,x+.13,y+.09,w-.27,17 if header else 16,\n@@\n         elif i==12:\n-            d.rect(.55,2.17,12.23,3.59,WHITE,BORDER,True)\n-
+  │ … +24 lines
+  └ Success. Updated the following files:
+    M presentation/build_presentation.py
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys,runpy; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages');
+  │ runpy.run_path('presentation/build_presentation.py',run_name='__main__')"
+  └ {
+      "slides": 26,
+    … +28 lines (ctrl + t to view transcript)
+      "limitations": "No native PowerPoint/LibreOffice renderer used. No new FabricPC or paper training benchmark run."
+    }
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; ... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; a=Image.open('\''presentation/assets/preview_slide_13.png'\'');
+  │ b=Image.open('\''presentation/assets/preview_slide_14.png'\''); c=Image.open('\''presentation/assets/preview_slide_16.png'\''); o=Image.new('\''RGB'\'',
+  │ (a.width,a.height*3),'\''white'\''); o.paste(a,(0,0)); o.paste(b,(0,a.height)); o.paste(c,(0,a.height*2)); z=io.BytesIO(); o.save(z,format='\''JPEG'\'',quality=77);
+  │ … +1 lines
+  └ /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAcFBgYGBQcGBgYICAcJCxIMCwoKCxcQEQ0SGxccHBoXGhkdISokHR8oIBkaJTIlKCwtLzAvHSM0ODQuNyouLy7/2wBDAQgICAsKCxYMDBYuHhoeLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uL
+    i4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi7/
+    … +3300 lines (ctrl + t to view transcript)
+    iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi
+    iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/2Q==
+
+• The visual review caught a cramped comparison table and excess whitespace around the paper figures; I’m cleaning those up. I’ve also checked the key technical qualifications: the
+  multiplier sign convention, the final primal-only step, ePC’s dependence on inference regime, and the limits of the linear stability result.
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import subprocess;... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import subprocess; subprocess.run(['\''apply_patch'\'',"*** Begin Patch\n*** Update File: presentation/
+  │ build_presentation.py\n@@\n from docx import Document\n+from docx.oxml import OxmlElement\n+from docx.oxml.ns import qn\n+from docx.opc.constants import
+  │ RELATIONSHIP_TYPE\n@@\n from content import SLIDES, SOURCES, PAPER, REPO, COMMIT\n+\n+SOURCE_SHORT = {\"P\": \"Paper v1\", \"E\": \"ePC paper\", \"I\": \"sPC solver\", \"R\":
+  │ … +20 lines
+  └ Success. Updated the following files:
+    M presentation/build_presentation.py
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys,runpy; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages');
+  │ runpy.run_path('presentation/build_presentation.py',run_name='__main__')"
+  └ {
+      "slides": 26,
+    … +28 lines (ctrl + t to view transcript)
+      "limitations": "No native PowerPoint/LibreOffice renderer used. No new FabricPC or paper training benchmark run."
+    }
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c "import sys; sys.path.insert(0,'/tmp/alm-slides-venv/lib/python3.12/site-packages'); import pymupdf, pathlib,
+  │ zipfile; p=pathlib.Path('presentation'); d=pymupdf.open(p/'ALPC_FabricPC_speaker_guide.pdf'); print('Sparse note pages:',[(i+1,len(q.get_text().split())) for i,q in
+  │ enumerate(d) if i>1 and len(q.get_text().split())<120]); print('Files:',[(x.name,round(x.stat().st_size/1024)) for x in p.iterdir() if x.suffix in ('.pptx','.pdf','.docx')]);
+  │ … +3 lines
+  └ Sparse note pages: []
+    Files: [('ALPC_FabricPC_presentation.pptx', 720), ('ALPC_FabricPC_speaker_guide.docx', 62), ('ALPC_FabricPC_speaker_guide.pdf', 127), ('ALPC_FabricPC_slides.pdf', 770)]
+    Editable text shapes 478
+    Guide links 56
+    DOCX package check None
+
+✔ You approved codex to run /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; ... this time
+
+• Ran /home/ni/repos/freeFabricPC/virt-envs/ffpc1/bin/python -c 'import base64,io; from PIL import Image; a=Image.open('\''presentation/assets/preview_slide_13.png'\'');
+  │ b=Image.open('\''presentation/assets/preview_slide_14.png'\''); c=Image.new('\''RGB'\'',(a.width,a.height*2),'\''white'\''); c.paste(a,(0,0)); c.paste(b,(0,a.height));
+  │ z=io.BytesIO(); c.save(z,format='\''JPEG'\'',quality=75); print(base64.b64encode(z.getvalue()).decode())'
+  └ /9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyM
+    jIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/
+    … +2293 lines (ctrl + t to view transcript)
+    UUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUU
+    UUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//2Q==
+
+• Created a 30-minute presentation: 20 main slides, 6 backup slides, and a detailed 28-page speaker guide.
+
+  - PowerPoint deck with private speaker notes (presentation/ALPC_FabricPC_presentation.pptx)
+  - Audience slides — PDF (presentation/ALPC_FabricPC_slides.pdf)
+  - Detailed speaker guide — PDF (presentation/ALPC_FabricPC_speaker_guide.pdf)
+  - Editable speaker guide — Word (presentation/ALPC_FabricPC_speaker_guide.docx)
+
+  Includes first-principles derivations, a checked numerical example, sPC/ePC comparisons, advantages and limitations, and a concrete FabricPC integration proposal. Timing allows 27
+  minutes of presentation plus 3 minutes of discussion.
+
+  Worked for 33m 49s · done 6:46 AM
