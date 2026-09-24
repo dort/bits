@@ -1,0 +1,68 @@
+; Automatic magic-sets rewriting for positive, range-restricted Datalog.
+; Include common.mm2 as well. All rewriting happens in MM2.
+; A variant is a predicate with a b/f list. A walk carries its original
+; rule ID, mask, adorned head, magic guard, unvisited body, bound names,
+; and reversed prefix of already-adorned body atoms.
+
+(exec (0 facts) (, (fact $pred $values)) (, (ms (tuple (base $pred) $values))))
+(exec (0 queries) (, (query $id (atom $pred $args))) (, (ms (adornq $args nil))))
+
+((step queryProject) (, (query $id (atom $pred $args)) (idb $pred)
+                        (ms (adorn $args nil $mask)))
+  (, (next (variant $pred $mask)) (next (projectq $args $mask))
+     (next (clause (query $id) (atom (answer $id $pred) $args)
+                   (cons (atom (rel $pred $mask) $args) nil)))))
+((step queryGround) (, (query $id (atom $pred $args)) (idb $pred)
+                       (ms (adorn $args nil $mask)) (ms (project $args $mask $selected)))
+  (, (next (substq $selected nil))))
+((step querySeed) (, (query $id (atom $pred $args)) (idb $pred)
+                     (ms (adorn $args nil $mask)) (ms (project $args $mask $selected))
+                     (ms (subst $selected nil $values)))
+  (, (next (tuple (magic $pred $mask) $values))))
+((step queryEDB) (, (query $id (atom $pred $args)) (edb $pred))
+  (, (next (clause (query $id) (atom (answer $id $pred) $args)
+                   (cons (atom (base $pred) $args) nil)))))
+
+((step variantProject) (, (ms (variant $pred $mask))
+                          (rule $id (atom $pred $args) $body))
+  (, (next (projectq $args $mask))))
+((step variantBind) (, (ms (variant $pred $mask))
+                       (rule $id (atom $pred $args) $body)
+                       (ms (project $args $mask $selected)))
+  (, (next (bindq $selected nil))))
+((step variantWalk) (, (ms (variant $pred $mask))
+                       (rule $id (atom $pred $args) $body)
+                       (ms (project $args $mask $selected)) (ms (bind $selected nil $bound)))
+  (, (next (walk $id $mask (atom (rel $pred $mask) $args)
+                 (atom (magic $pred $mask) $selected) $body $bound nil))))
+
+; Once a positive body atom succeeds, all of its variables are bound for
+; subsequent atoms. The atom's own adornment uses bindings BEFORE that step.
+((step walkHelpers)
+  (, (ms (walk $id $mask $head $guard (cons (atom $pred $args) $tail) $bound $prefix)))
+  (, (next (bindq $args $bound)) (next (adornq $args $bound))
+     (next (reverseq $prefix nil))))
+((step walkEDB)
+  (, (ms (walk $id $mask $head $guard (cons (atom $pred $args) $tail) $bound $prefix))
+     (edb $pred) (ms (bind $args $bound $out)))
+  (, (next (walk $id $mask $head $guard $tail $out
+                 (cons (atom (base $pred) $args) $prefix)))))
+((step walkIDB)
+  (, (ms (walk $id $mask $head $guard (cons (atom $pred $args) $tail) $bound $prefix))
+     (idb $pred) (ms (adorn $args $bound $childmask)) (ms (bind $args $bound $out)))
+  (, (next (variant $pred $childmask)) (next (projectq $args $childmask))
+     (next (walk $id $mask $head $guard $tail $out
+                 (cons (atom (rel $pred $childmask) $args) $prefix)))))
+; Each IDB call receives a demand rule guarded by its parent's demand and
+; all preceding body atoms. The remaining body identifies this call site.
+((step walkDemand)
+  (, (ms (walk $id $mask $head $guard (cons (atom $pred $args) $tail) $bound $prefix))
+     (idb $pred) (ms (adorn $args $bound $childmask))
+     (ms (project $args $childmask $selected)) (ms (reverse $prefix nil $body)))
+  (, (next (clause (demand $id $mask (cons (atom $pred $args) $tail))
+                   (atom (magic $pred $childmask) $selected) (cons $guard $body)))))
+((step walkEndq) (, (ms (walk $id $mask $head $guard nil $bound $prefix)))
+  (, (next (reverseq $prefix nil))))
+((step walkEndd) (, (ms (walk $id $mask $head $guard nil $bound $prefix))
+                    (ms (reverse $prefix nil $body)))
+  (, (next (clause (modified $id $mask) $head (cons $guard $body)))))

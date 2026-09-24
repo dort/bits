@@ -1,0 +1,19 @@
+; path(x,y) :- edge(x,y).
+; path(x,y) :- edge(x,z), path(z,y).
+; Query path(a,y); the u-v-w component is irrelevant.
+(edb edge)
+(idb path)
+(rule direct
+  (atom path (cons (v x) (cons (v y) nil)))
+  (cons (atom edge (cons (v x) (cons (v y) nil))) nil))
+(rule transitive
+  (atom path (cons (v x) (cons (v y) nil)))
+  (cons (atom edge (cons (v x) (cons (v z) nil)))
+    (cons (atom path (cons (v z) (cons (v y) nil))) nil)))
+(fact edge (cons a (cons b nil)))
+(fact edge (cons b (cons c nil)))
+(fact edge (cons c (cons b nil)))
+(fact edge (cons c (cons d nil)))
+(fact edge (cons u (cons v nil)))
+(fact edge (cons v (cons w nil)))
+(query from-a (atom path (cons (c a) (cons (v destination) nil))))

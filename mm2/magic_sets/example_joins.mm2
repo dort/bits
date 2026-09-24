@@ -1,0 +1,28 @@
+; eligible(person,city) :- resident(person,city), connected(city,hub), hub(hub).
+; connected(x,y) :- flight(x,y).
+; connected(x,y) :- flight(x,z), connected(z,y).
+; The query's person binding flows through resident into the recursive call.
+(edb resident)
+(edb flight)
+(edb hub)
+(idb eligible)
+(idb connected)
+(rule eligibility
+  (atom eligible (cons (v person) (cons (v city) nil)))
+  (cons (atom resident (cons (v person) (cons (v city) nil)))
+    (cons (atom connected (cons (v city) (cons (v destination) nil)))
+      (cons (atom hub (cons (v destination) nil)) nil))))
+(rule direct
+  (atom connected (cons (v x) (cons (v y) nil)))
+  (cons (atom flight (cons (v x) (cons (v y) nil))) nil))
+(rule indirect
+  (atom connected (cons (v x) (cons (v y) nil)))
+  (cons (atom flight (cons (v x) (cons (v z) nil)))
+    (cons (atom connected (cons (v z) (cons (v y) nil))) nil)))
+(fact resident (cons alice (cons boston nil)))
+(fact resident (cons bob (cons denver nil)))
+(fact flight (cons boston (cons chicago nil)))
+(fact flight (cons chicago (cons seattle nil)))
+(fact flight (cons denver (cons miami nil)))
+(fact hub (cons seattle nil))
+(query alice-city (atom eligible (cons (c alice) (cons (v city) nil))))

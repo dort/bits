@@ -1,0 +1,172 @@
+; Shared finite-relation evaluator and structural helpers.
+; Datalog variables are (v NAME), constants are (c VALUE).
+; Lists use (cons ITEM REST) and nil; environments contain (entry NAME VALUE).
+; ms contains accepted facts; next contains proposals for the next sweep.
+; Every step reads ms and writes next, so each sweep has a stable snapshot.
+
+; Look up a variable name x in environment e; distinguish missing from present.
+((step lookup0) (, (ms (lookupq $x nil)))
+  (, (next (lookup $x nil none))))
+((step lookup1) (, (ms (lookupq $x (cons (entry $x $value) $tail))))
+  (, (next (lookup $x (cons (entry $x $value) $tail) (some $value)))))
+; MORK's != compares stored expressions. Reify the two names before comparing.
+((step lookupNames) (, (ms (lookupq $x (cons (entry $y $value) $tail))))
+  (, (next (name $x)) (next (name $y))))
+((step lookupRest)
+  (I (BTM (ms (lookupq $x (cons (entry $y $value) $tail))))
+     (!= (ms (name $x)) (ms (name $y))))
+  (, (next (lookupq $x $tail))))
+((step lookupDone)
+  (I (BTM (ms (lookupq $x (cons (entry $y $value) $tail))))
+     (!= (ms (name $x)) (ms (name $y)))
+     (BTM (ms (lookup $x $tail $result))))
+  (, (next (lookup $x (cons (entry $y $value) $tail) $result))))
+
+; Reverse a list into an accumulator. Used to restore rule body order.
+((step reverse0) (, (ms (reverseq nil $acc)))
+  (, (next (reverse nil $acc $acc))))
+((step reverse1) (, (ms (reverseq (cons $item $tail) $acc)))
+  (, (next (reverseq $tail (cons $item $acc)))))
+((step reverse2) (, (ms (reverseq (cons $item $tail) $acc))
+                    (ms (reverse $tail (cons $item $acc) $out)))
+  (, (next (reverse (cons $item $tail) $acc $out))))
+
+; Select the elements whose adornment is b (bound); f means free.
+((step project0) (, (ms (projectq nil nil)))
+  (, (next (project nil nil nil))))
+((step project1) (, (ms (projectq (cons $item $tail) (cons $mark $mask))))
+  (, (next (projectq $tail $mask))))
+((step projectB) (, (ms (projectq (cons $item $tail) (cons b $mask)))
+                    (ms (project $tail $mask $out)))
+  (, (next (project (cons $item $tail) (cons b $mask) (cons $item $out)))))
+((step projectF) (, (ms (projectq (cons $item $tail) (cons f $mask)))
+                    (ms (project $tail $mask $out)))
+  (, (next (project (cons $item $tail) (cons f $mask) $out))))
+
+; Infer an adornment from terms and an environment of already-bound names.
+((step adorn0) (, (ms (adornq nil $env)))
+  (, (next (adorn nil $env nil))))
+((step adornRest) (, (ms (adornq (cons $term $tail) $env)))
+  (, (next (adornq $tail $env))))
+((step adornLookup) (, (ms (adornq (cons (v $x) $tail) $env)))
+  (, (next (lookupq $x $env))))
+((step adornC) (, (ms (adornq (cons (c $value) $tail) $env))
+                  (ms (adorn $tail $env $mask)))
+  (, (next (adorn (cons (c $value) $tail) $env (cons b $mask)))))
+((step adornB) (, (ms (adornq (cons (v $x) $tail) $env))
+                  (ms (lookup $x $env (some $value))) (ms (adorn $tail $env $mask)))
+  (, (next (adorn (cons (v $x) $tail) $env (cons b $mask)))))
+((step adornF) (, (ms (adornq (cons (v $x) $tail) $env))
+                  (ms (lookup $x $env none)) (ms (adorn $tail $env $mask)))
+  (, (next (adorn (cons (v $x) $tail) $env (cons f $mask)))))
+
+; Extend compile-time bindings with every variable in a selected term list.
+; The value bound is just a presence marker, never a runtime data value.
+((step bind0) (, (ms (bindq nil $env)))
+  (, (next (bind nil $env $env))))
+((step bindCq) (, (ms (bindq (cons (c $value) $tail) $env)))
+  (, (next (bindq $tail $env))))
+((step bindCd) (, (ms (bindq (cons (c $value) $tail) $env))
+                  (ms (bind $tail $env $out)))
+  (, (next (bind (cons (c $value) $tail) $env $out))))
+((step bindVq) (, (ms (bindq (cons (v $x) $tail) $env)))
+  (, (next (bindq $tail (cons (entry $x bound) $env)))))
+((step bindVd) (, (ms (bindq (cons (v $x) $tail) $env))
+                  (ms (bind $tail (cons (entry $x bound) $env) $out)))
+  (, (next (bind (cons (v $x) $tail) $env $out))))
+
+; Substitute a fully bound term list into a ground value list.
+((step subst0) (, (ms (substq nil $env)))
+  (, (next (subst nil $env nil))))
+((step substRest) (, (ms (substq (cons $term $tail) $env)))
+  (, (next (substq $tail $env))))
+((step substLookup) (, (ms (substq (cons (v $x) $tail) $env)))
+  (, (next (lookupq $x $env))))
+((step substC) (, (ms (substq (cons (c $value) $tail) $env))
+                  (ms (subst $tail $env $out)))
+  (, (next (subst (cons (c $value) $tail) $env (cons $value $out)))))
+((step substV) (, (ms (substq (cons (v $x) $tail) $env))
+                  (ms (lookup $x $env (some $value))) (ms (subst $tail $env $out)))
+  (, (next (subst (cons (v $x) $tail) $env (cons $value $out)))))
+
+; Match a term list against values, extending a runtime environment.
+; Existing bindings must agree, which enforces repeated-variable equality.
+((step unify0) (, (ms (unifyq nil nil $env)))
+  (, (next (unify nil nil $env $env))))
+((step unifyLookup) (, (ms (unifyq (cons (v $x) $terms) (cons $value $values) $env)))
+  (, (next (lookupq $x $env))))
+((step unifyCq) (, (ms (unifyq (cons (c $value) $terms) (cons $value $values) $env)))
+  (, (next (unifyq $terms $values $env))))
+((step unifyCd) (, (ms (unifyq (cons (c $value) $terms) (cons $value $values) $env))
+                   (ms (unify $terms $values $env $out)))
+  (, (next (unify (cons (c $value) $terms) (cons $value $values) $env $out))))
+((step unifyBq) (, (ms (unifyq (cons (v $x) $terms) (cons $value $values) $env))
+                   (ms (lookup $x $env (some $value))))
+  (, (next (unifyq $terms $values $env))))
+((step unifyBd) (, (ms (unifyq (cons (v $x) $terms) (cons $value $values) $env))
+                   (ms (lookup $x $env (some $value))) (ms (unify $terms $values $env $out)))
+  (, (next (unify (cons (v $x) $terms) (cons $value $values) $env $out))))
+((step unifyFq) (, (ms (unifyq (cons (v $x) $terms) (cons $value $values) $env))
+                   (ms (lookup $x $env none)))
+  (, (next (unifyq $terms $values (cons (entry $x $value) $env)))))
+((step unifyFd) (, (ms (unifyq (cons (v $x) $terms) (cons $value $values) $env))
+                   (ms (lookup $x $env none))
+                   (ms (unify $terms $values (cons (entry $x $value) $env) $out)))
+  (, (next (unify (cons (v $x) $terms) (cons $value $values) $env $out))))
+
+; Evaluate generated clauses from left to right. A cursor stores the clause
+; identifier, head, remaining body and bindings for that body prefix.
+((step evalStart) (, (ms (clause $id $head $body)))
+  (, (next (cursor $id $head $body nil))))
+((step evalScan) (, (ms (cursor $id $head (cons (atom $pred $args) $tail) $env)))
+  (, (next (scan $pred $args $env))))
+; Resolve the first argument before searching tuples, allowing MORK to seek
+; directly to its bound prefix. Other positions are checked by unify.
+((step scan0) (, (ms (scan $pred nil $env)) (ms (tuple $pred nil)))
+  (, (next (candidate $pred nil $env nil))))
+((step scanC) (, (ms (scan $pred (cons (c $value) $args) $env))
+                 (ms (tuple $pred (cons $value $values))))
+  (, (next (candidate $pred (cons (c $value) $args) $env (cons $value $values)))))
+((step scanLookup) (, (ms (scan $pred (cons (v $x) $args) $env)))
+  (, (next (lookupq $x $env))))
+((step scanB) (, (ms (scan $pred (cons (v $x) $args) $env))
+                 (ms (lookup $x $env (some $value)))
+                 (ms (tuple $pred (cons $value $values))))
+  (, (next (candidate $pred (cons (v $x) $args) $env (cons $value $values)))))
+((step scanF) (, (ms (scan $pred (cons (v $x) $args) $env))
+                 (ms (lookup $x $env none)) (ms (tuple $pred $values)))
+  (, (next (candidate $pred (cons (v $x) $args) $env $values))))
+((step candidate) (, (ms (candidate $pred $args $env $values)))
+  (, (next (unifyq $args $values $env))))
+((step evalNext) (, (ms (cursor $id $head (cons (atom $pred $args) $tail) $env))
+                    (ms (candidate $pred $args $env $values))
+                    (ms (unify $args $values $env $out)))
+  (, (next (cursor $id $head $tail $out))))
+((step evalHeadq) (, (ms (cursor $id (atom $pred $args) nil $env)))
+  (, (next (substq $args $env))))
+((step evalHeadd) (, (ms (cursor $id (atom $pred $args) nil $env))
+                     (ms (subst $args $env $values)))
+  (, (next (tuple $pred $values))))
+
+; A sweep applies every step, subtracts known facts, promotes new facts,
+; and reschedules only if something was added. There is no depth bound or
+; counter. Cycles terminate because the input and derived relations are sets.
+; Priorities a < b < c < d < e; z exports only after quiescence.
+(exec (a loop)
+  (, (exec (a loop) $patterns $templates) ((step $name) $body $writes))
+  (, (exec (b $name) $body $writes)
+     (exec (c prune) (, (next $fact) (ms $fact)) (O (- (next $fact))))
+     (exec (d accept) (, (next $fact)) (, (ms $fact)))
+     (exec (e again) (, (next $fact))
+       (O (- (next $fact)) (+ (exec (a loop) $patterns $templates))))))
+
+(exec (z answers) (, (ms (tuple (answer $id $pred) $values)))
+  (, (result $id (atom $pred $values))))
+(exec (z clauses) (, (ms (clause $id $head $body)))
+  (, (generated $id $head $body)))
+(exec (z magic) (, (ms (tuple (magic $pred $mask) $values)))
+  (, (magic $pred $mask $values)))
+(exec (z derived) (, (ms (tuple (rel $pred $mask) $values)))
+  (, (derived $pred $mask $values)))
+(exec (z closure) (, (ms (tuple (plain $pred) $values)))
+  (, (closure $pred $values)))
