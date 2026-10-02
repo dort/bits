@@ -1,5 +1,5 @@
 ; Full-closure reference mode. Same evaluator, with no magic restriction.
-; Include common.mm2. Namespace original EDB/IDB predicates consistently.
+; Include common.mm2 and builtins.mm2. Namespace EDB/IDB predicates consistently.
 (exec (0 facts) (, (fact $pred $values)) (, (ms (tuple (base $pred) $values))))
 ((step plainBodyq) (, (rule $id $head $body)) (, (next (renameq $body))))
 ((step rename0) (, (ms (renameq nil))) (, (next (rename nil nil))))
@@ -10,6 +10,9 @@
 ((step renameIDB) (, (ms (renameq (cons (atom $pred $args) $tail)))
                      (idb $pred) (ms (rename $tail $out)))
   (, (next (rename (cons (atom $pred $args) $tail) (cons (atom (plain $pred) $args) $out)))))
+((step renameBuiltin) (, (ms (renameq (cons (builtin $op $args) $tail)))
+                         (ms (rename $tail $out)))
+  (, (next (rename (cons (builtin $op $args) $tail) (cons (builtin $op $args) $out)))))
 ((step plainRule) (, (rule $id (atom $pred $args) $body) (ms (rename $body $out)))
   (, (next (clause (original $id) (atom (plain $pred) $args) $out))))
 ((step plainQueryEDB) (, (query $id (atom $pred $args)) (edb $pred))

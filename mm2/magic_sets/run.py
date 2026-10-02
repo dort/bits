@@ -10,6 +10,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_MORK = HERE.parents[2] / "MORK/target/release/mork"
+BUILTINS = {"add_i64": 3, "sub_i64": 3, "ge_i64": 2}
 
 
 def parse(text):
@@ -78,11 +79,7 @@ def validate(program):
             raise ValueError(f"inconsistent arity for {name}: {arities[name]} and {size}")
         arities[name] = size
 
-    def atom(expr, kind=None):
-        if not isinstance(expr, tuple) or len(expr) != 3 or expr[0] != "atom":
-            raise ValueError(f"expected (atom PREDICATE TERMS): {sexpr(expr)}")
-        terms = items(expr[2])
-        predicate(expr[1], len(terms), kind)
+    def term_vars(terms):
         variables = set()
         for term in terms:
             if not isinstance(term, tuple) or len(term) != 2 or term[0] not in ("v", "c"):
@@ -91,6 +88,13 @@ def validate(program):
             if term[0] == "v":
                 variables.add(term[1])
         return variables
+
+    def atom(expr, kind=None):
+        if not isinstance(expr, tuple) or len(expr) != 3 or expr[0] != "atom":
+            raise ValueError(f"expected (atom PREDICATE TERMS): {sexpr(expr)}")
+        terms = items(expr[2])
+        predicate(expr[1], len(terms), kind)
+        return term_vars(terms)
 
     for expr in program:
         tag = expr[0]
@@ -110,7 +114,20 @@ def validate(program):
             head_vars = atom(head, "idb")
             body_vars = set()
             for literal in items(body):
-                body_vars.update(atom(literal))
+                if isinstance(literal, tuple) and len(literal) == 3 and literal[0] == "builtin":
+                    op, args = literal[1:]
+                    if not isinstance(op, str) or op not in BUILTINS:
+                        raise ValueError(f"unsupported builtin: {sexpr(op)}")
+                    terms = items(args)
+                    if len(terms) != BUILTINS[op]:
+                        raise ValueError(f"{op} requires {BUILTINS[op]} terms")
+                    variables = term_vars(terms)
+                    missing = term_vars(terms[:2]) - body_vars
+                    if missing:
+                        raise ValueError(f"unbound builtin inputs in rule {name}: {sorted(missing)}")
+                    body_vars.update(variables)
+                else:
+                    body_vars.update(atom(literal))
             if not head_vars <= body_vars:
                 raise ValueError(f"unsafe rule {name}: head variables absent from body: {sorted(head_vars - body_vars)}")
         elif tag == "query" and len(expr) == 3:
@@ -130,7 +147,7 @@ def run_file(path, engine="magic", timeout=60):
     binary = os.environ.get("MORK", str(DEFAULT_MORK))
     completed = subprocess.run(
         [binary, "run", str(path), "--aux-path", str(HERE / f"{engine}_engine.mm2"),
-         "--aux-path", str(HERE / "common.mm2")],
+         "--aux-path", str(HERE / "common.mm2"), "--aux-path", str(HERE / "builtins.mm2")],
         text=True, capture_output=True, timeout=timeout, check=True,
     )
     log, marker, dump = completed.stdout.partition("result:\n")
@@ -139,6 +156,9 @@ def run_file(path, engine="magic", timeout=60):
     space = parse(dump)
     if any(isinstance(expr, tuple) and expr and expr[0] == "exec" for expr in space):
         raise RuntimeError("MORK stopped with unexecuted instructions; result is incomplete")
+    errors = [sexpr(expr) for expr in space if isinstance(expr, tuple) and expr and expr[0] == "ERROR"]
+    if errors:
+        raise RuntimeError("\n".join(errors))
     return space, log
 
 

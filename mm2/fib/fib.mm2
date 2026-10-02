@@ -1,0 +1,65 @@
+; Fibonacci as an input program for ../magic_sets/magic_engine.mm2.
+; n is the requested index; value is F(n); previous/earlier are n-1/n-2;
+; first/second are the two recursive results. All arithmetic runs in MORK
+; pure via ../magic_sets/builtins.mm2. No Fibonacci values are precomputed.
+;
+; fib(0,0).
+; fib(1,1).
+; fib(n,value) :- index(n), n>=2, previous=n-1, earlier=n-2,
+;                 fib(previous,first), fib(earlier,second), value=first+second.
+;
+; The query binds n, giving the bf adornment. The generated magic guard
+; precedes index(n), so only demanded indices enter the recursive rule.
+(edb index)
+(idb fib)
+(rule zero
+  (atom fib (cons (c 0) (cons (c 0) nil)))
+  nil)
+(rule one
+  (atom fib (cons (c 1) (cons (c 1) nil)))
+  nil)
+(rule recurrence
+  (atom fib (cons (v n) (cons (v value) nil)))
+  (cons (atom index (cons (v n) nil))
+    (cons (builtin ge_i64 (cons (v n) (cons (c 2) nil)))
+      (cons (builtin sub_i64 (cons (v n) (cons (c 1) (cons (v previous) nil))))
+        (cons (builtin sub_i64 (cons (v n) (cons (c 2) (cons (v earlier) nil))))
+          (cons (atom fib (cons (v previous) (cons (v first) nil)))
+            (cons (atom fib (cons (v earlier) (cons (v second) nil)))
+              (cons (builtin add_i64 (cons (v first) (cons (v second) (cons (v value) nil))))
+                nil))))))))
+
+; A finite index domain keeps the ORIGINAL, unguarded Datalog program
+; well-moded and finite too. F(92) is the last Fibonacci value in signed i64.
+; These are indices only; predecessors and Fibonacci sums are grounded.
+(fact index (cons 0 nil)) (fact index (cons 1 nil)) (fact index (cons 2 nil))
+(fact index (cons 3 nil)) (fact index (cons 4 nil)) (fact index (cons 5 nil))
+(fact index (cons 6 nil)) (fact index (cons 7 nil)) (fact index (cons 8 nil))
+(fact index (cons 9 nil)) (fact index (cons 10 nil)) (fact index (cons 11 nil))
+(fact index (cons 12 nil)) (fact index (cons 13 nil)) (fact index (cons 14 nil))
+(fact index (cons 15 nil)) (fact index (cons 16 nil)) (fact index (cons 17 nil))
+(fact index (cons 18 nil)) (fact index (cons 19 nil)) (fact index (cons 20 nil))
+(fact index (cons 21 nil)) (fact index (cons 22 nil)) (fact index (cons 23 nil))
+(fact index (cons 24 nil)) (fact index (cons 25 nil)) (fact index (cons 26 nil))
+(fact index (cons 27 nil)) (fact index (cons 28 nil)) (fact index (cons 29 nil))
+(fact index (cons 30 nil)) (fact index (cons 31 nil)) (fact index (cons 32 nil))
+(fact index (cons 33 nil)) (fact index (cons 34 nil)) (fact index (cons 35 nil))
+(fact index (cons 36 nil)) (fact index (cons 37 nil)) (fact index (cons 38 nil))
+(fact index (cons 39 nil)) (fact index (cons 40 nil)) (fact index (cons 41 nil))
+(fact index (cons 42 nil)) (fact index (cons 43 nil)) (fact index (cons 44 nil))
+(fact index (cons 45 nil)) (fact index (cons 46 nil)) (fact index (cons 47 nil))
+(fact index (cons 48 nil)) (fact index (cons 49 nil)) (fact index (cons 50 nil))
+(fact index (cons 51 nil)) (fact index (cons 52 nil)) (fact index (cons 53 nil))
+(fact index (cons 54 nil)) (fact index (cons 55 nil)) (fact index (cons 56 nil))
+(fact index (cons 57 nil)) (fact index (cons 58 nil)) (fact index (cons 59 nil))
+(fact index (cons 60 nil)) (fact index (cons 61 nil)) (fact index (cons 62 nil))
+(fact index (cons 63 nil)) (fact index (cons 64 nil)) (fact index (cons 65 nil))
+(fact index (cons 66 nil)) (fact index (cons 67 nil)) (fact index (cons 68 nil))
+(fact index (cons 69 nil)) (fact index (cons 70 nil)) (fact index (cons 71 nil))
+(fact index (cons 72 nil)) (fact index (cons 73 nil)) (fact index (cons 74 nil))
+(fact index (cons 75 nil)) (fact index (cons 76 nil)) (fact index (cons 77 nil))
+(fact index (cons 78 nil)) (fact index (cons 79 nil)) (fact index (cons 80 nil))
+(fact index (cons 81 nil)) (fact index (cons 82 nil)) (fact index (cons 83 nil))
+(fact index (cons 84 nil)) (fact index (cons 85 nil)) (fact index (cons 86 nil))
+(fact index (cons 87 nil)) (fact index (cons 88 nil)) (fact index (cons 89 nil))
+(fact index (cons 90 nil)) (fact index (cons 91 nil)) (fact index (cons 92 nil))

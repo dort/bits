@@ -1,0 +1,144 @@
+; =====================================================================
+; Sieve of Eratosthenes in MM2, with magic sets
+; =====================================================================
+;
+; Input:   (query N)     one fact, N >= 1 an i64 literal
+; Output:  (prime K)     one fact per prime K <= N
+;
+; All arithmetic is grounded in Rust via the pure sink (sum_i64,
+; product_i64, clamp_i64, ifnz); numbers are plain i64 symbols.
+;
+; MAGIC SETS. The natural Datalog sieve is unsafe bottom-up — "generate
+; candidates, generate multiples" ranges over all naturals. The magic
+; transformation pushes the query's bound N into demand predicates so
+; that only facts relevant to THIS query are ever derived:
+;
+;   magic_upto(N)    :- query(N).                 % here: the (query N)
+;                                                 % fact itself
+;   cand(K)          :- magic_upto(N), 2 <= K <= N.
+;   magic_base(B)    :- cand(B), B*B <= N.        % demand to sieve by B
+;                                                 % only below sqrt(N)
+;   reach(B, B)      :- magic_base(B).            % demanded multiples
+;   reach(B, M)      :- reach(B,M1), reach(B,M2), % of B: closed under
+;                       M = M1+M2, M <= N.        % addition, bounded
+;   composite(M)     :- reach(B, M), M != B.
+;   prime(K)         :- cand(K), not composite(K).
+;
+; Every rule's output is bounded by the demand chain rooted at the
+; query: no candidate, base, or multiple beyond what (query N) asks
+; for exists in the space. Two renderings differ from the textbook:
+;
+; * The candidate and multiple demand chains are textbook linear
+;   recursions (K+1, M+B); here both are computed as additive closures
+;   ((nat a)+(nat b), (reach b m1)+(reach b m2)) which derive exactly
+;   the same demanded sets in O(log N) sweeps instead of O(N) — the
+;   same magic set, materialized by doubling.
+; * Classical Eratosthenes crosses off multiples of PRIMES only.
+;   "B is prime" is not known until the sieve finishes — the textbook
+;   program needs stratified negation for it, which MM2 lacks — so the
+;   demand includes every candidate base up to sqrt(N), prime or not.
+;   Redundant (a composite base's multiples were already crossed off
+;   by its own factors) but sound and still query-bounded.
+; * The final rule's negation is the one legitimately non-monotonic
+;   step of the sieve (survivors = candidates minus crossed-off), and
+;   it maps to MM2's set-difference sinks: add every candidate as
+;   (prime K), then remove (prime M) for every composite M.
+;
+; GROUNDED COMPARISON IDIOMS (no comparison predicates exist):
+;   X <= N    write both the raw value and clamp_i64(X, 1, N); join
+;             them with a repeated pattern variable — they unify
+;             exactly when the clamp changed nothing.
+;   X != Y    ifnz on X-Y, reified as a YES/NO fact.
+;
+; SCHEDULING. One driver runs the rule store once per entry of the
+; (nextround r s) table — a fixed sweep budget replacing the
+; inexpressible "until nothing changes". The additive closures double
+; their coverage every sweep, so 15 sweeps support N in the thousands;
+; extend the table to go higher. Within a sweep, instances run in
+; rule-name order and symbols compare LENGTH-FIRST, so the dependency
+; chain below uses uniform 4-character names in lexicographic chain
+; order (anat -> bcnd -> ccnd -> dsq* -> ebas -> fsee -> grs* -> hrch
+; -> insf -> jcmp).
+;
+; Tags: (0 _) seeds < (d0 _) sweep instances < (dz _) driver
+;       < (y1 _) add primes < (y2 _) subtract composites.
+
+; ---------------------------------------------------------------------
+; Seeds: the demand root. nat facts are clamped into [1, N] from birth,
+; so a query of 1 demands nothing beyond (nat 1).
+; ---------------------------------------------------------------------
+(exec (0 s1) (, (query $n))
+  (O (pure (nat $s) $s
+           (i64_to_string (clamp_i64 (i64_one) (i64_one) (i64_from_string $n))))))
+(exec (0 s2) (, (query $n))
+  (O (pure (nat $s) $s
+           (i64_to_string (clamp_i64 (sum_i64 (i64_one) (i64_one))
+                                     (i64_one) (i64_from_string $n))))))
+
+; ---------------------------------------------------------------------
+; Sweep rule store ((srule NAME) PATTERNS TEMPLATES)
+; ---------------------------------------------------------------------
+; demanded numbers: additive closure of {1, 2} clamped into [1, N] —
+; exactly [1, N], nothing past the query's bound
+((srule anat) (, (nat $a) (nat $b) (query $n))
+              (O (pure (nat $t) $t
+                       (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $a) (i64_from_string $b))
+                                                 (i64_one) (i64_from_string $n))))))
+
+; candidates: demanded numbers from 2 up (K >= 2 iff K-1 != 0, K >= 1)
+((srule bcnd) (, (nat $k))
+              (O (pure (cnd1 $k $g) $g
+                       (ifnz (sub_i64 (i64_from_string $k) (i64_one)) then YES else NO))))
+((srule ccnd) (, (nat $k) (cnd1 $k YES)) (, (cand $k)))
+
+; magic base demand: cand B with B*B <= N (raw square joins clamped
+; square exactly when the square is within the bound)
+((srule dsqc) (, (cand $b) (query $n))
+              (O (pure (sqc $b $t) $t
+                       (i64_to_string (clamp_i64 (product_i64 (i64_from_string $b) (i64_from_string $b))
+                                                 (i64_one) (i64_from_string $n))))))
+((srule dsqq) (, (cand $b))
+              (O (pure (sqr $b $s) $s
+                       (i64_to_string (product_i64 (i64_from_string $b) (i64_from_string $b))))))
+((srule ebas) (, (sqr $b $s) (sqc $b $s)) (, (mbase $b)))
+
+; demanded multiples of each base: additive closure of {B}, bounded by
+; N via the same raw/clamped join
+((srule fsee) (, (mbase $b)) (, (reach $b $b)))
+((srule grsc) (, (reach $b $m1) (reach $b $m2) (query $n))
+              (O (pure (rsc $b $t) $t
+                       (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m1) (i64_from_string $m2))
+                                                 (i64_one) (i64_from_string $n))))))
+((srule grsm) (, (reach $b $m1) (reach $b $m2))
+              (O (pure (rsm $b $s) $s
+                       (i64_to_string (sum_i64 (i64_from_string $m1) (i64_from_string $m2))))))
+((srule hrch) (, (rsm $b $s) (rsc $b $s)) (, (reach $b $s)))
+
+; composites: reached multiples other than the base itself
+((srule insf) (, (reach $b $m))
+              (O (pure (nself $b $m $g) $g
+                       (ifnz (sub_i64 (i64_from_string $m) (i64_from_string $b)) then YES else NO))))
+((srule jcmp) (, (reach $b $m) (nself $b $m YES)) (, (comp $m)))
+
+; ---------------------------------------------------------------------
+; Sweep driver: one full sweep per (nextround r s) entry
+; ---------------------------------------------------------------------
+(nextround r01 r02) (nextround r02 r03) (nextround r03 r04)
+(nextround r04 r05) (nextround r05 r06) (nextround r06 r07)
+(nextround r07 r08) (nextround r08 r09) (nextround r09 r10)
+(nextround r10 r11) (nextround r11 r12) (nextround r12 r13)
+(nextround r13 r14) (nextround r14 r15) (nextround r15 r16)
+
+(exec (dz r01)
+  (, (exec (dz $r) $p $t)
+     (nextround $r $r2)
+     ((srule $k) $sp $st))
+  (, (exec (d0 ($r $k)) $sp $st)
+     (exec (dz $r2) $p $t)))
+
+; ---------------------------------------------------------------------
+; The sieve's one non-monotonic step: survivors = candidates minus
+; crossed-off (the set-difference sinks)
+; ---------------------------------------------------------------------
+(exec (y1 add) (, (cand $k)) (O (+ (prime $k))))
+(exec (y2 del) (, (comp $m)) (O (- (prime $m))))

@@ -6,7 +6,9 @@ MM2 infers binding patterns, rewrites the reachable rule variants, and evaluates
 the generated program. No rules or predicate names are hard-coded for reachability.
 
 `magic_engine.mm2` performs the transformation. `common.mm2` supplies list and
-binding operations, a rule interpreter, and a fixed-point scheduler.
+binding operations, a rule interpreter, and an incremental fixed-point scheduler.
+`builtins.mm2` implements grounded signed-integer body literals with checked
+arithmetic through the MORK `pure` sink.
 `plain_engine.mm2` uses the same interpreter to compute full Datalog closure
 without magic restrictions. `run.py` validates the input, invokes MORK, and
 selects output records; it does not transform rules or evaluate Datalog.
@@ -35,7 +37,7 @@ The MM2 files can also be run directly:
 
 ```bash
 ../../../MORK/target/release/mork run example.mm2 \
-  --aux-path magic_engine.mm2 --aux-path common.mm2
+  --aux-path magic_engine.mm2 --aux-path common.mm2 --aux-path builtins.mm2
 ```
 
 Direct invocation bypasses input validation and prints the entire MORK space,
@@ -98,6 +100,7 @@ defines the fields used in the syntax:
 | `(idb P)` | Predicate name `P` denotes an intensional relation defined by rules. |
 | `(fact P VALUES)` | `VALUES` is a list of ground symbols forming a tuple of `P`. |
 | `(atom P TERMS)` | `TERMS` is a list of constants or named Datalog variables. |
+| `(builtin OP TERMS)` | `OP` is `add_i64`, `sub_i64`, or `ge_i64`; `TERMS` gives two inputs followed by the arithmetic output, if any. |
 | `(v X)` | `X` is a variable name, local to its enclosing rule or query. |
 | `(c V)` | `V` is a constant symbol. |
 | `(rule R HEAD BODY)` | `R` is a unique rule identifier, `HEAD` an IDB atom, and `BODY` an ordered list of positive atoms. |
@@ -131,9 +134,38 @@ Names and constants are bare symbols containing letters, digits, `_`, `.`, `:`,
 `/`, `+`, or `-`. Constants such as `1`, `1.0`, and `nil` are distinct lexical
 values, with no implicit numeric conversion. Semicolon comments are supported.
 Quoted strings, native MM2 `$variables`, function terms, negation, disjunction,
-aggregates, arithmetic builtins, and arbitrary `exec` directives are outside this
+aggregates, other arithmetic operations, and arbitrary `exec` directives are outside this
 input language and rejected by the runner. Predicate declarations must distinguish
 EDB from IDB; facts are supplied only for EDB predicates.
+
+### Grounded integer literals
+
+Arithmetic literals appear in rule bodies and do not need predicate declarations:
+
+```scheme
+; Here n is an index already bound by a preceding relational literal;
+; previous is the subtraction's output variable.
+(builtin ge_i64 (cons (v n) (cons (c 2) nil)))
+(builtin sub_i64 (cons (v n) (cons (c 1) (cons (v previous) nil))))
+```
+
+`add_i64` and `sub_i64` take two inputs and one output term. `ge_i64` takes two
+inputs and succeeds when the first is greater than or equal to the second.
+The validator requires every input variable to be bound by preceding positive
+atoms or preceding builtin outputs. A head/query binding alone is insufficient;
+this keeps the source program evaluable by the plain engine as well. An output
+may be a new variable, an existing variable, or a constant; it is unified with
+the computed value, so conflicting values reject that branch.
+
+The transformer retains these literals in their original position and in
+magic-rule prefixes, and makes arithmetic output variables available to later
+adornment analysis. Both evaluators use the same implementation. Inputs are
+parsed as signed 64-bit integers; results are canonical decimal strings.
+Arithmetic widens to signed 128-bit before calculating and checks the signed
+64-bit result range. Failed comparisons are ordinary unsuccessful branches;
+invalid numeric inputs and overflow emit `(ERROR builtin ...)` and cause the
+runner to fail rather than publish incomplete answers. The
+[Fibonacci example](../fib/README.md) uses these literals with a finite domain.
 
 ## How the engine works
 
@@ -163,18 +195,27 @@ a tuple. The first argument, when bound, is resolved before tuple lookup so
 MORK can seek its predicate-and-value prefix; other argument constraints are
 checked during unification.
 
-The scheduler evaluates all `(step ...)` templates against accepted `(ms ...)`
-facts, producing `(next ...)` proposals. After a sweep, it removes proposals
-already present in `ms`, accepts the remaining facts, and starts another sweep
-only if there were new facts. Rewriting and evaluation both participate in this
-fixed point. The scheduler has no depth budget, Peano representation, or numeric
-counter. Finite inputs and range-restricted, function-free rules give finite
-tuple, variant, cursor, and helper-relation sets, including for cyclic programs.
+The scheduler bootstraps every `(step ...)` template once, then activates
+specialized rule instances from newly accepted `(delta ...)` facts. MM2 itself
+compiles `(wake ...)` templates for each dynamic source of a step. Matching a
+delta fact binds that source before executing the other joins. Both variable-name
+sources of internal disequality are watched too, so delayed bindings are not
+missed. The current internal step patterns use conjunctions of one through five
+sources, plus the two explicit disequality-source shapes in `common.mm2`.
+
+Instances produce `(next ...)` proposals. Each round removes proposals already
+present in accepted `(ms ...)` facts, accepts the remaining facts, and queues them
+as deltas. It continues only while new facts arrive. Rewriting and evaluation
+both participate in this fixed point. There is no depth budget, Peano
+representation, or numeric counter. Purely relational, finite, range-restricted
+inputs give finite tuple, variant, cursor, and helper-relation sets, including
+for cyclic programs. Programs using arithmetic must also keep generated values
+bounded; the runner's timeout remains an operational limit.
 
 `!=` is used internally to compare reified variable-name facts during environment
-lookup. It is not Datalog negation. Deletion is confined to staging the `next`
-work set; accepted facts are monotonic. Priorities put all sweep steps before
-pruning, acceptance, rescheduling, and final output collection.
+lookup. It is not Datalog negation. Deletion manages `next` and `delta` work sets
+and final error checks; accepted facts are monotonic. Priorities sequence delta
+activation, joins, pruning, acceptance, rescheduling, and final output collection.
 
 ## Output and verification
 
@@ -190,15 +231,16 @@ closure implementation. It covers all four binary binding patterns, multiple
 queries, duplicates, repeated variables, constants, empty answers, cycles,
 left recursion, nonlinear recursion, mutual recursion, ternary atoms, bodies
 with several joins, nullary predicates, ground empty-body rules, input errors,
-and deterministically generated graphs. It also checks that disconnected
+checked arithmetic, numeric failures, and deterministically generated graphs.
+It also checks that disconnected
 components are excluded from the example's derived facts and that modified
 clauses have a leading magic guard.
 
 This implementation is intended for inspecting and developing the transformation.
-It memoizes structural operations but still sweeps its rules and materializes
-interpreter state. On the small bundled examples, rewriting overhead makes
-magic evaluation slower despite deriving fewer IDB tuples. The relation counts
-demonstrate relevance pruning, not a general runtime speedup. Written body order
+It memoizes structural operations and incrementally activates rules, but still
+materializes interpreter state. Rewriting overhead can make magic evaluation
+slower despite deriving fewer IDB tuples. The relation counts demonstrate
+relevance pruning, not a general runtime speedup. Written body order
 also matters: a free query or an unselective early literal can require most of
 the original closure. `--stats` reports actual MORK counters for comparison.
 

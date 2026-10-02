@@ -148,17 +148,102 @@
                      (ms (subst $args $env $values)))
   (, (next (tuple $pred $values))))
 
-; A sweep applies every step, subtracts known facts, promotes new facts,
-; and reschedules only if something was added. There is no depth bound or
-; counter. Cycles terminate because the input and derived relations are sets.
-; Priorities a < b < c < d < e; z exports only after quiescence.
-(exec (a loop)
-  (, (exec (a loop) $patterns $templates) ((step $name) $body $writes))
-  (, (exec (b $name) $body $writes)
-     (exec (c prune) (, (next $fact) (ms $fact)) (O (- (next $fact))))
-     (exec (d accept) (, (next $fact)) (, (ms $fact)))
-     (exec (e again) (, (next $fact))
-       (O (- (next $fact)) (+ (exec (a loop) $patterns $templates))))))
+; Incremental activation: compile a wake template for each dynamic ms source
+; of every step. Current conjunctions have one through five sources. Static
+; input sources (rule/query/edb/idb) need only the initial bootstrap. A delta
+; fact specializes a wake template, so its other joins start with bindings.
+; The I-source cases also watch the name facts used by disequality.
+(exec (0 (watch1 0))
+  (, ((step $name) (, (ms $fact)) $writes))
+  (, (wake $fact $name (, (ms $fact)) $writes)))
+
+(exec (0 (watch2 0))
+  (, ((step $name) (, (ms $fact) $p1) $writes))
+  (, (wake $fact $name (, (ms $fact) $p1) $writes)))
+
+(exec (0 (watch2 1))
+  (, ((step $name) (, $p0 (ms $fact)) $writes))
+  (, (wake $fact $name (, $p0 (ms $fact)) $writes)))
+
+(exec (0 (watch3 0))
+  (, ((step $name) (, (ms $fact) $p1 $p2) $writes))
+  (, (wake $fact $name (, (ms $fact) $p1 $p2) $writes)))
+
+(exec (0 (watch3 1))
+  (, ((step $name) (, $p0 (ms $fact) $p2) $writes))
+  (, (wake $fact $name (, $p0 (ms $fact) $p2) $writes)))
+
+(exec (0 (watch3 2))
+  (, ((step $name) (, $p0 $p1 (ms $fact)) $writes))
+  (, (wake $fact $name (, $p0 $p1 (ms $fact)) $writes)))
+
+(exec (0 (watch4 0))
+  (, ((step $name) (, (ms $fact) $p1 $p2 $p3) $writes))
+  (, (wake $fact $name (, (ms $fact) $p1 $p2 $p3) $writes)))
+
+(exec (0 (watch4 1))
+  (, ((step $name) (, $p0 (ms $fact) $p2 $p3) $writes))
+  (, (wake $fact $name (, $p0 (ms $fact) $p2 $p3) $writes)))
+
+(exec (0 (watch4 2))
+  (, ((step $name) (, $p0 $p1 (ms $fact) $p3) $writes))
+  (, (wake $fact $name (, $p0 $p1 (ms $fact) $p3) $writes)))
+
+(exec (0 (watch4 3))
+  (, ((step $name) (, $p0 $p1 $p2 (ms $fact)) $writes))
+  (, (wake $fact $name (, $p0 $p1 $p2 (ms $fact)) $writes)))
+
+(exec (0 (watch5 0))
+  (, ((step $name) (, (ms $fact) $p1 $p2 $p3 $p4) $writes))
+  (, (wake $fact $name (, (ms $fact) $p1 $p2 $p3 $p4) $writes)))
+
+(exec (0 (watch5 1))
+  (, ((step $name) (, $p0 (ms $fact) $p2 $p3 $p4) $writes))
+  (, (wake $fact $name (, $p0 (ms $fact) $p2 $p3 $p4) $writes)))
+
+(exec (0 (watch5 2))
+  (, ((step $name) (, $p0 $p1 (ms $fact) $p3 $p4) $writes))
+  (, (wake $fact $name (, $p0 $p1 (ms $fact) $p3 $p4) $writes)))
+
+(exec (0 (watch5 3))
+  (, ((step $name) (, $p0 $p1 $p2 (ms $fact) $p4) $writes))
+  (, (wake $fact $name (, $p0 $p1 $p2 (ms $fact) $p4) $writes)))
+
+(exec (0 (watch5 4))
+  (, ((step $name) (, $p0 $p1 $p2 $p3 (ms $fact)) $writes))
+  (, (wake $fact $name (, $p0 $p1 $p2 $p3 (ms $fact)) $writes)))
+
+(exec (0 (watchI 2))
+  (, ((step $name) (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y)))) $writes))
+  (, (wake $request $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y)))) $writes)
+     (wake (name $x) $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y)))) $writes)
+     (wake (name $y) $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y)))) $writes)))
+
+(exec (0 (watchI 3))
+  (, ((step $name) (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y))) (BTM (ms $response))) $writes))
+  (, (wake $request $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y))) (BTM (ms $response))) $writes)
+     (wake (name $x) $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y))) (BTM (ms $response))) $writes)
+     (wake (name $y) $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y))) (BTM (ms $response))) $writes)
+     (wake $response $name (I (BTM (ms $request)) (!= (ms (name $x)) (ms (name $y))) (BTM (ms $response))) $writes)))
+
+(exec (0 boot) (, ((step $name) $body $writes))
+  (, (exec (b $name) $body $writes)))
+
+; Each round consumes delta, executes only awakened instances, removes known
+; proposals, and accepts new facts. Reschedule only when delta is nonempty.
+; There is no depth counter. Accepted ms facts are monotonic; next/delta are
+; staging relations. z exports only after the queue reaches quiescence.
+(exec (a run)
+  (, (exec (a run) $patterns $templates))
+  (, (exec (a 0)
+       (, (delta $fact) (wake $fact $name $body $writes))
+       (, (exec (b $name) $body $writes)))
+     (exec (a 1) (, (delta $fact)) (O (- (delta $fact))))
+     (exec (c 0) (, (next $fact) (ms $fact)) (O (- (next $fact))))
+     (exec (c 1) (, (next $fact))
+       (O (+ (ms $fact)) (+ (delta $fact)) (- (next $fact))))
+     (exec (c 2) (, (delta $fact))
+       (, (exec (a run) $patterns $templates)))))
 
 (exec (z answers) (, (ms (tuple (answer $id $pred) $values)))
   (, (result $id (atom $pred $values))))

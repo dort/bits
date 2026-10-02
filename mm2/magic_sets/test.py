@@ -36,6 +36,10 @@ def rule(name, head, *body):
     return ("rule", name, head, linked(body))
 
 
+def builtin(op, *terms):
+    return ("builtin", op, linked(terms))
+
+
 def match(terms, values, env):
     """Ordinary Python unification, independent of the MM2 work queue."""
     env = dict(env)
@@ -62,9 +66,26 @@ def oracle(program):
         added = False
         for _, _, head, body in rules:
             environments = [{}]
-            for _, pred, args in items(body):
-                environments = [extended for env in environments for values in relations[pred]
-                                if (extended := match(items(args), values, env)) is not None]
+            for kind, pred, args in items(body):
+                terms = items(args)
+                if kind == "atom":
+                    environments = [extended for env in environments for values in relations[pred]
+                                    if (extended := match(terms, values, env)) is not None]
+                else:
+                    outputs = []
+                    for env in environments:
+                        left, right = [int(name if tag == "c" else env[name]) for tag, name in terms[:2]]
+                        if pred == "ge_i64":
+                            if left >= right:
+                                outputs.append(env)
+                        else:
+                            value = left + right if pred == "add_i64" else left - right
+                            if not -(2**63) <= value < 2**63:
+                                raise OverflowError("oracle i64 overflow")
+                            extended = match(terms[2:], [str(value)], env)
+                            if extended is not None:
+                                outputs.append(extended)
+                    environments = outputs
             for env in environments:
                 values = tuple(name if tag == "c" else env[name] for tag, name in items(head[2]))
                 if values not in relations[head[1]]:
@@ -200,6 +221,48 @@ class MagicSetsTests(unittest.TestCase):
                 self.compare(paths(edges, [("from-a", (const("a"), Y)),
                                            ("to-d", (X, const("d")))]))
 
+    def test_grounded_integer_literals(self):
+        program = [("edb", "number"), ("idb", "computed"), ("idb", "selected"),
+                   fact("number", "5"), fact("number", "-2"),
+                   rule("arithmetic", atom("computed", X, Z), atom("number", X),
+                        builtin("sub_i64", X, const("1"), Y),
+                        builtin("add_i64", X, Y, Z)),
+                   rule("guarded", atom("selected", X, Y), atom("number", X),
+                        builtin("ge_i64", X, const("0")), atom("computed", X, Y)),
+                   ("query", "computed", atom("computed", X, Y)),
+                   ("query", "selected", atom("selected", X, Y))]
+        magic, _ = self.compare(program)
+        self.assertIn(("result", "computed", atom("computed", "-2", "-5")), magic)
+        self.assertIn(("result", "selected", atom("selected", "5", "9")), magic)
+
+    def test_integer_boundaries_and_output_unification(self):
+        low, high = str(-(2**63)), str(2**63 - 1)
+        program = [("edb", "number"), ("idb", "p"), ("idb", "q"),
+                   fact("number", low), fact("number", high), fact("number", "0"),
+                   rule("repeated", atom("p", X), atom("number", X),
+                        builtin("add_i64", X, const("0"), X),
+                        builtin("ge_i64", X, const(high))),
+                   rule("constant", atom("q", X), atom("number", X),
+                        builtin("sub_i64", X, X, const("0")),
+                        builtin("ge_i64", X, const(low))),
+                   ("query", "p", atom("p", X)), ("query", "q", atom("q", X))]
+        magic, _ = self.compare(program)
+        self.assertEqual({expr for expr in magic if expr[0] == "result" and expr[1] == "p"},
+                         {("result", "p", atom("p", high))})
+
+    def test_integer_runtime_errors(self):
+        for op, left, right in [("add_i64", str(2**63 - 1), "1"),
+                                ("sub_i64", str(-(2**63)), "1"),
+                                ("add_i64", "not-a-number", "0"),
+                                ("ge_i64", str(2**63), "0")]:
+            outputs = [] if op == "ge_i64" else [Y]
+            program = [("edb", "number"), ("idb", "p"), fact("number", left),
+                       rule("bad", atom("p", X), atom("number", X),
+                            builtin(op, X, const(right), *outputs)),
+                       ("query", "p", atom("p", X))]
+            with self.subTest(op=op, left=left), self.assertRaisesRegex(RuntimeError, "builtin"):
+                self.run_program(program, "magic")
+
     def test_input_rejections(self):
         invalid = [
             "(edb p) (idb p)",
@@ -215,6 +278,9 @@ class MagicSetsTests(unittest.TestCase):
             "(exec 0 (,) (, bad))",
             "(edb p) (fact p (cons a wrong-tail))",
             "(edb p) (fact p (cons \"quoted\" nil))",
+            "(idb p) (rule r (atom p (cons (v x) nil)) (cons (builtin add_i64 (cons (v y) (cons (c 1) (cons (v x) nil)))) nil))",
+            "(idb p) (rule r (atom p nil) (cons (builtin unknown nil) nil))",
+            "(idb p) (rule r (atom p nil) (cons (builtin ge_i64 (cons (c 1) nil)) nil))",
         ]
         for source in invalid:
             with self.subTest(source=source), self.assertRaises(ValueError):

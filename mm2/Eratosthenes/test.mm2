@@ -1,0 +1,20 @@
+; Test for the magic-set Sieve of Eratosthenes:
+;   ./run.sh test.mm2
+; Expected output: (CORRECT 50) and no MISTAKE facts.
+;
+; Symmetric-difference harness in the style of the wiki page
+; "MM2 Example: Testing Your Code": produced (prime K) facts against
+; the expected set for N = 50.
+
+(query 50)
+
+(expected 2)  (expected 3)  (expected 5)  (expected 7)  (expected 11)
+(expected 13) (expected 17) (expected 19) (expected 23) (expected 29)
+(expected 31) (expected 37) (expected 41) (expected 43) (expected 47)
+
+; MISTAKE = (prime U expected) \ (prime /\ expected)
+(exec (zzt 0) (, (prime $k)) (O (+ (MISTAKE $k))))
+(exec (zzt 0) (, (expected $k)) (O (+ (MISTAKE $k))))
+(exec (zzt 1) (, (prime $k) (expected $k)) (O (- (MISTAKE $k))))
+(exec (zzt 2) (, (query $n)) (, (CORRECT $n)))
+(exec (zzt 3) (, (MISTAKE $k) (query $n)) (O (- (CORRECT $n))))

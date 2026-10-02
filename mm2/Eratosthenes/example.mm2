@@ -1,0 +1,9 @@
+; Example input for the magic-set Sieve of Eratosthenes.
+; Run:  ./run.sh            (this file)
+;       ./run.sh test.mm2   (the test suite)
+; Output: one (prime K) fact per prime K <= N.
+; One query per run; N >= 1, an i64 literal. The default sweep budget
+; (15 rounds in sieve.mm2's nextround table) covers N into the
+; thousands; extend the table to go higher.
+
+(query 10000)

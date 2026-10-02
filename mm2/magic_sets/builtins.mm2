@@ -1,0 +1,67 @@
+; Grounded integer body literals, shared by magic and plain evaluation.
+; Each literal has two bound input terms, followed by zero or one output.
+; op names the operation; left/right are input terms; outputs is a term list;
+; values is the substituted input list; env/out are input/output environments.
+
+((step builtinSubst)
+  (, (ms (cursor $id $head (cons (builtin $op (cons $left (cons $right $outputs))) $tail) $env)))
+  (, (next (substq (cons $left (cons $right nil)) $env))))
+((step builtinCall)
+  (, (ms (cursor $id $head (cons (builtin $op (cons $left (cons $right $outputs))) $tail) $env))
+     (ms (subst (cons $left (cons $right nil)) $env $values)))
+  (, (next (call $op $values))))
+((step builtinMatch)
+  (, (ms (cursor $id $head (cons (builtin $op (cons $left (cons $right $outputs))) $tail) $env))
+     (ms (subst (cons $left (cons $right nil)) $env $values))
+     (ms (called $op $values (ok $results))))
+  (, (next (unifyq $outputs $results $env))))
+((step builtinNext)
+  (, (ms (cursor $id $head (cons (builtin $op (cons $left (cons $right $outputs))) $tail) $env))
+     (ms (subst (cons $left (cons $right nil)) $env $values))
+     (ms (called $op $values (ok $results))) (ms (unify $outputs $results $env $out)))
+  (, (next (cursor $id $head $tail $out))))
+
+; a/b are parsed signed-64 inputs; wide is the decimal signed-128 result.
+; Widen BEFORE arithmetic: the installed Rust i64 add/sub do not check overflow.
+((step integerAdd) (, (ms (call add_i64 (cons $a (cons $b nil)))))
+  (O (pure (next (arithmetic add_i64 (cons $a (cons $b nil)) $wide)) $wide
+       (i128_to_string (sum_i128 (i64_as_i128 (i64_from_string $a))
+                                 (i64_as_i128 (i64_from_string $b)))))))
+((step integerSub) (, (ms (call sub_i64 (cons $a (cons $b nil)))))
+  (O (pure (next (arithmetic sub_i64 (cons $a (cons $b nil)) $wide)) $wide
+       (i128_to_string (sub_i128 (i64_as_i128 (i64_from_string $a))
+                                 (i64_as_i128 (i64_from_string $b)))))))
+; Range checking cannot itself overflow: wide is the sum/difference of two i64s.
+((step integerRange) (, (ms (arithmetic $op $values $wide)))
+  (O (pure (next (checked $op $values $wide $status)) $status
+       (ifnz (sub_i128 (i128_from_string $wide)
+                      (clamp_i128 (i128_from_string $wide)
+                                  (i128_from_string -9223372036854775808)
+                                  (i128_from_string 9223372036854775807)))
+         then overflow else ok))))
+((step integerOK) (, (ms (checked $op $values $wide ok)))
+  (, (next (called $op $values (ok (cons $wide nil))))))
+((step integerOverflow) (, (ms (checked $op $values $wide overflow)))
+  (, (next (called $op $values overflow))))
+
+; min(a,b) = b iff a >= b; widen the comparison difference as well.
+((step integerGE) (, (ms (call ge_i64 (cons $a (cons $b nil)))))
+  (O (pure (next (comparison (cons $a (cons $b nil)) $status)) $status
+       (ifnz (sub_i128 (i64_as_i128 (min_i64 (i64_from_string $a) (i64_from_string $b)))
+                      (i64_as_i128 (i64_from_string $b)))
+         then fail else pass))))
+((step integerPass) (, (ms (comparison $values pass)))
+  (, (next (called ge_i64 $values (ok nil)))))
+((step integerFail) (, (ms (comparison $values fail)))
+  (, (next (called ge_i64 $values false))))
+
+; A pure parsing failure emits no response. After quiescence, subtract all
+; completed calls to expose those failures explicitly. False guards are normal
+; completed calls; arithmetic overflow is a separate error. The runner rejects
+; any ERROR rather than reporting partial query answers as complete.
+(exec (z 0) (, (ms (call $op $values)))
+  (, (ERROR builtin $op $values invalid-i64)))
+(exec (z 1) (, (ms (called $op $values $outcome)))
+  (O (- (ERROR builtin $op $values invalid-i64))))
+(exec (z 2) (, (ms (called $op $values overflow)))
+  (, (ERROR builtin $op $values overflow)))

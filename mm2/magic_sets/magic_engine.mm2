@@ -1,5 +1,5 @@
 ; Automatic magic-sets rewriting for positive, range-restricted Datalog.
-; Include common.mm2 as well. All rewriting happens in MM2.
+; Include common.mm2 and builtins.mm2 as well. All rewriting happens in MM2.
 ; A variant is a predicate with a b/f list. A walk carries its original
 ; rule ID, mask, adorned head, magic guard, unvisited body, bound names,
 ; and reversed prefix of already-adorned body atoms.
@@ -66,3 +66,15 @@
 ((step walkEndd) (, (ms (walk $id $mask $head $guard nil $bound $prefix))
                     (ms (reverse $prefix nil $body)))
   (, (next (clause (modified $id $mask) $head (cons $guard $body)))))
+
+; A grounded builtin remains in place in the body and every demand-rule
+; prefix. Validation ensures its two inputs are already bound; successful
+; arithmetic also binds its output before subsequent IDB calls are adorned.
+((step walkBuiltinq)
+  (, (ms (walk $id $mask $head $guard (cons (builtin $op $args) $tail) $bound $prefix)))
+  (, (next (bindq $args $bound))))
+((step walkBuiltind)
+  (, (ms (walk $id $mask $head $guard (cons (builtin $op $args) $tail) $bound $prefix))
+     (ms (bind $args $bound $out)))
+  (, (next (walk $id $mask $head $guard $tail $out
+                 (cons (builtin $op $args) $prefix)))))

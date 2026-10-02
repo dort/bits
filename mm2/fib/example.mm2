@@ -1,0 +1,3 @@
+; Load with fib.mm2 and the shared magic-sets engine, common, and builtins.
+(query fib-10 (atom fib (cons (c 10) (cons (v value) nil))))
+(query fib-20 (atom fib (cons (c 20) (cons (v value) nil))))
