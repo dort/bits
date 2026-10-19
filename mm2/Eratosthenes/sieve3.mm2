@@ -1,0 +1,172 @@
+; =====================================================================
+; Sieve of Eratosthenes in MM2, with magic sets — fast evaluation plan
+; =====================================================================
+;
+; Same magic-set program as sieve.mm2 (see its header for the Datalog
+; derivation), same interface:
+;   Input:   (query N)   one fact, N >= 2 an i64 literal
+;   Output:  (prime K)   one fact per prime K <= N
+; but a different evaluation plan. Run with ./run2.sh; the shipped
+; ladders cover N <= 65535 at i64 precision.
+;
+; WHY sieve.mm2 BOGS DOWN. Two compounding costs:
+;   1. All-pairs closures: its candidate and multiple sets grow by
+;      joining a set with itself ((nat a)+(nat b)), a quadratic join —
+;      10^8 bindings per sweep at N = 10000 — each paying a Rust call.
+;   2. A sweep driver with no delta: every sweep re-instantiates every
+;      rule against the WHOLE database, re-deriving everything already
+;      known. The quadratic join is paid ~15 times over.
+;
+; WHAT THIS PLAN DOES INSTEAD.
+;   * Binary doubling, not pairwise addition. The demanded numbers are
+;     the closure of {2,3} under k -> 2k and k -> 2k+1 — every integer
+;     >= 2 is built once, most-significant-bit first, in at most
+;     bits(k) steps. The demanded multiples of base B are the closure
+;     of {2B, 3B} under m -> 2m and m -> 2m+B (the same construction
+;     scaled by B). Total work is linear in the number of facts.
+;   * One-shot ladders, not a sweep driver. Each closure needs only
+;     log2(N) rounds, so the rounds are unrolled into a static ladder
+;     of execs ordered by tag. An exec fires once and is consumed —
+;     nothing is ever re-derived. (The driver machinery earns its keep
+;     when the round count depends on the data; log2 of the query
+;     bound does not.)
+;   * Saturating clamps that cannot lie. Every generated value is
+;     clamped into its demanded range at birth. For naturals the range
+;     is [2, N] — a saturated value is still a demanded natural. For
+;     multiples of B the range is [2B, M_B] with M_B = B*(N div B),
+;     the largest multiple of B within the bound (div_i64 grounds the
+;     division) — a saturated value is still a genuine multiple. So no
+;     raw/clamped equality joins, no junk facts, one Rust call per
+;     derived fact.
+;   * reach IS the composite set. Multiples start at 2B, so the base
+;     itself never appears and no inequality test is needed.
+;
+; The magic-set discipline is unchanged: every generator joins
+; (query $n) or a fact derived from it, and clamps against its bound.
+; Delete the query fact and nothing derives.
+;
+; All exec tags are 3-character symbols (symbols compare length-first,
+; so mixing lengths would reorder the phases):
+;   a01       seeds                      (nat 2), (nat 3)
+;   b01..b14  natural-number ladder      closure under 2k, 2k+1
+;   c01..c03  magic base demand          B*B <= N via raw/clamped join
+;   c04       per-base cap               M_B = B*(N div B)
+;   c05..c06  multiple seeds             2B, clamp(3B)
+;   d01..d14  multiples ladder           closure under 2m, 2m+B
+;   y01, y02  the sieve's set difference add candidates, remove reached
+
+; ---------------------------------------------------------------------
+; Seeds (clamped so N = 2 stays correct: clamp(3,2,2) = 2)
+; ---------------------------------------------------------------------
+(exec (a01 s2) (, (query $n))
+  (O (pure (nat $t) $t
+           (i64_to_string (clamp_i64 (sum_i64 (i64_one) (i64_one))
+                                     (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (a01 s3) (, (query $n))
+  (O (pure (nat $t) $t
+           (i64_to_string (clamp_i64 (sum_i64 (i64_one) (i64_one) (i64_one))
+                                     (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+
+; ---------------------------------------------------------------------
+; Natural-number ladder: one doubling round per step; (d) is k -> 2k,
+; (e) is k -> 2k+1, both clamped into [2, N]
+; ---------------------------------------------------------------------
+(exec (b01 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b01 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b02 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b02 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b03 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b03 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b04 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b04 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b05 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b05 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b06 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b06 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b07 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b07 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b08 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b08 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b09 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b09 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b10 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b10 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b11 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b11 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b12 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b12 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b13 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b13 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b14 d) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (b14 e) (, (nat $k) (query $n)) (O (pure (nat $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $k) (i64_from_string $k) (i64_one)) (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+
+; ---------------------------------------------------------------------
+; Magic base demand: B with B*B <= N (raw square joins clamped square
+; exactly when within the bound), then the per-base cap and seeds
+; ---------------------------------------------------------------------
+(exec (c01 r) (, (nat $b))
+  (O (pure (sqr $b $s) $s
+           (i64_to_string (product_i64 (i64_from_string $b) (i64_from_string $b))))))
+(exec (c02 s) (, (nat $b) (query $n))
+  (O (pure (sqc $b $t) $t
+           (i64_to_string (clamp_i64 (product_i64 (i64_from_string $b) (i64_from_string $b))
+                                     (sum_i64 (i64_one) (i64_one)) (i64_from_string $n))))))
+(exec (c03 t) (, (sqr $b $s) (sqc $b $s)) (, (mbase $b)))
+
+; cap: M_B = B * (N div B), the largest multiple of B within the bound
+(exec (c04 u) (, (mbase $b) (query $n))
+  (O (pure (caph $b $h) $h
+           (i64_to_string (product_i64 (i64_from_string $b)
+                                       (div_i64 (i64_from_string $n) (i64_from_string $b)))))))
+
+; multiple seeds 2B and 3B (3B clamped: for N < 3B it saturates to M_B,
+; still a genuine multiple); 2B <= B*B <= N always holds for a base
+(exec (c05 v) (, (mbase $b))
+  (O (pure (reach $b $m) $m
+           (i64_to_string (sum_i64 (i64_from_string $b) (i64_from_string $b))))))
+(exec (c06 w) (, (mbase $b) (caph $b $h))
+  (O (pure (reach $b $m) $m
+           (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $b) (i64_from_string $b) (i64_from_string $b))
+                                     (sum_i64 (i64_from_string $b) (i64_from_string $b))
+                                     (i64_from_string $h))))))
+
+; ---------------------------------------------------------------------
+; Multiples ladder: (x) is m -> 2m, (y) is m -> 2m+B, both clamped into
+; [2B, M_B] — every output is a genuine multiple of B and >= 2B, so
+; reach is exactly the demanded composite set
+; ---------------------------------------------------------------------
+(exec (d01 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d01 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d02 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d02 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d03 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d03 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d04 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d04 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d05 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d05 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d06 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d06 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d07 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d07 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d08 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d08 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d09 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d09 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d10 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d10 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d11 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d11 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d12 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d12 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d13 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d13 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d14 x) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+(exec (d14 y) (, (reach $b $m) (caph $b $h)) (O (pure (reach $b $t) $t (i64_to_string (clamp_i64 (sum_i64 (i64_from_string $m) (i64_from_string $m) (i64_from_string $b)) (sum_i64 (i64_from_string $b) (i64_from_string $b)) (i64_from_string $h))))))
+
+; ---------------------------------------------------------------------
+; The sieve's set difference: survivors = demanded numbers minus
+; reached multiples
+; ---------------------------------------------------------------------
+(exec (y01 a) (, (nat $k)) (O (+ (prime $k))))
+(exec (y02 b) (, (reach $b $m)) (O (- (prime $m))))

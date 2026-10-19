@@ -1,0 +1,3 @@
+The goal is to ingest the entirety of a git repository into mm2 so that queries can be done even more efficiently on that data than with git log and other native git tools.
+
+As a first prototype, let's try to load everything currently in this bits/ repo (including all commit messages) into /home/ni/repos/m/bits-git-info.mm2 but truncating values over 10K in size so we don't end up trying to create giant BLOBs (or equivalent) for the larger entries. We just want to get the mechanics working initially, and see how we can then construct a toolkit to do searches on what gets loaded.
