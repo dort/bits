@@ -1,0 +1,133 @@
+
+
+
+
+; (rule <rule_name> (atom <relation_name> <args_list>) <goal_list>?)
+;
+(rule_ zero       (fib (c 0) (c 0)))
+(rule_ one        (fib (c 1) (c 1)))
+(rule_ recurrence (fib (v n) (v value))
+  (/\ (atom    index  (v n))
+      (builtin ge_i64 (v n) (c 2))
+      (builtin sub_i64 (v n) (c 1) (v previous))
+      (builtin sub_i64 (v n) (c 2) (v earlier))
+      (atom    fib (v previous) (v first))
+      (atom    fib (v earlier) (v second))
+      (builtin add_i64 (v first) (v second) (v value))
+  )
+)
+
+           ; arity 3
+(exec 0 (, (rule_ $rule_name $relation)
+           (listify $relation (cons $relation_name $args))
+        )
+        (, (rule $rule_name (atom $relation_name $args) nil)
+        )
+)
+
+
+(make_list 
+    (/\
+       (builtin ge_i64 (cons (v n) (cons (c 2) nil)))
+       (builtin sub_i64 (cons (v n) (cons (c 1) (cons (v previous) nil))))
+       (builtin sub_i64 (cons (v n) (cons (c 2) (cons (v earlier) nil))))
+       (atom fib (cons (v previous) (cons (v first) nil)))
+       (atom fib (cons (v earlier) (cons (v second) nil)))
+       (builtin add_i64 (cons (v first) (cons (v second) (cons (v value) nil))))
+    )
+)
+
+(map_tup $f ($0 $1 $2 $3 $4 $5 $6) 
+    ( 
+        ($f $0)
+        ($f $1)
+        ($f $2)
+        ($f $3)
+        ($f $4)
+        ($f $5)
+        ($f $6)
+    )
+)
+
+(exec 0 (,  (make_list $ml)
+            (map_tup convert_op $ml $mapped)
+            (listify $mapped (cons (convert_op /\) $rest))
+        )        
+        (,  
+            (seq $rest)
+            (exec ((write_seq))
+                (, (exec ((write_seq)) $p $t)
+                   (seq (cons (convert_op $op) $op_rest))
+                )
+                (O (- (seq (cons (convert_op $op) $op_rest)))
+                   (+ (seq $op_rest) )
+                   (+ (convert_op $op) )
+                   (+ (exec ((write_seq)) $p $t) )
+                )
+            )
+        )
+)
+
+(listify ($0 $1 $2 $3 $4 $5 $6)
+    (cons $0
+    (cons $1
+    (cons $2
+    (cons $3
+    (cons $4
+    (cons $5
+    (cons $6
+    nil)))))))
+)
+(listify ($0 $1 $2 $3 $4)
+    (cons $0
+    (cons $1
+    (cons $2
+    (cons $3
+    (cons $4
+    nil)))))
+)
+(listify ($0 $1 $2)
+    (cons $0
+    (cons $1
+    (cons $2
+    nil)))
+)
+
+; (exec 0 (, (make_list $l) (listify $l (cons /\ $l_rest))) 
+;         (, (made_list $l_rest))
+; ) 
+
+
+
+; (rule zero
+;   (atom fib (cons (c 0) (cons (c 0) nil)))
+;   nil)
+; (rule one
+;   (atom fib (cons (c 1) (cons (c 1) nil)))
+;   nil)
+; (rule recurrence
+;   (atom fib (cons (v n) (cons (v value) nil)))
+;   (cons (atom index (cons (v n) nil))
+;     (cons (builtin ge_i64 (cons (v n) (cons (c 2) nil)))
+;       (cons (builtin sub_i64 (cons (v n) (cons (c 1) (cons (v previous) nil))))
+;         (cons (builtin sub_i64 (cons (v n) (cons (c 2) (cons (v earlier) nil))))
+;           (cons (atom fib (cons (v previous) (cons (v first) nil)))
+;             (cons (atom fib (cons (v earlier) (cons (v second) nil)))
+;               (cons (builtin add_i64 (cons (v first) (cons (v second) (cons (v value) nil))))
+;                 nil))))))))
+
+
+; (convert_op (builtin sub_i64 (v n) (c 1) (v previous)))
+; (convert_op (builtin ge_i64 (cons (v n) (cons (c 2) nil)))                            )
+; (convert_op (builtin sub_i64 (cons (v n) (cons (c 1) (cons (v previous) nil))))       )
+; (convert_op (builtin sub_i64 (cons (v n) (cons (c 2) (cons (v earlier) nil))))        )
+; (convert_op (atom fib (cons (v previous) (cons (v first) nil)))                       )
+; (convert_op (atom fib (cons (v earlier) (cons (v second) nil)))                       )
+; (convert_op (builtin add_i64 (cons (v first) (cons (v second) (cons (v value) nil)))) )
+
+; (converted_op (builtin ge_i64 (cons (v n) (cons (c 2) nil))))
+(exec 10 (, (convert_op $op)
+           (listify $op (cons $builtin_or_atom (cons $builtin_or_atom_name $rest)) )
+        )
+        (, (converted_op ($builtin_or_atom $builtin_or_atom_name $rest)))
+)
