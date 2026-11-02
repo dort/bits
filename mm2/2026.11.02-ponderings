@@ -1,0 +1,109 @@
+3:52am
+
+i have a little over an hour for this
+
+and i don't know where to start
+
+so i'm going to start by journaling
+
+it feels like a real problem would be the answer
+
+or should i go back to the sieve of eratosthenes?
+
+
+4:21am
+
+what i did instead was to reach out to Sam (who I'll meet with this afternoon), since he can bring me mathematical grounding for what i feel is a "gap" right here with this stuff...
+
+
+and now i'm daydreaming more about my new office project (in the hopes that I can successfully be working on my big monitor for that meeting there (though it may make more sense for me to stay home until after that meeting happens today?))
+
+yeah, let me try to come back to mm2
+
+what i had wanted to write about here was this:
+
+
+
+
+i think i need real projects
+
+so two real projects are
+
+
+
+arghh
+
+ok, not that much time went by
+
+i'm getting chilly
+
+
+4:35am
+
+i just got up and turned on the heater, took off my sweater and closed the office door
+
+
+anyhow, back to the projects:
+
+
+    git history
+
+    email archive(s)
+
+
+i think a lot of the (initial?) work with either of those projects will be around crafting proper import scripts (essentially translating huge documents to mm2 files that can be loaded)
+
+or maybe that can wait -- maybe the first problem would be to create the structure
+
+
+   so let's go with the 2nd option:
+
+
+     Each email has at least some of the following headings (and potentially more)
+Return-Path:
+Delivered-To:
+Received:
+Dmarc-Filter:
+Authentication-Results:
+Dkim-Signature:
+Message-Id:
+Date:
+Mime-Version:
+To:
+Content-Language:
+Cc:
+From:
+Subject:
+Content-Type:
+Content-Transfer-Encoding:
+X-Evolution-Source:
+Body:
+Attachment(s):
+
+     Received: headers
+     Dkim-signature: header
+     Date: header
+     (and perhaps others?) get broken down further
+        structure for Received:
+   from
+<source>
+   by
+<receiver>
+   with
+<id>
+   for
+<recipient>
+   ;
+<timestamp>
+
+     with each of these elements (what's in <>)
+     potentially having additional internal structure
+
+
+Attachment handling should be a reference back to the original corpus with
+perhaps some metadata about filetype, filesize, and hash
+
+No need to actually store the attachments themselves.
+
+Bonus points for disambiguating html content and pulling out useful information from html emails
+
