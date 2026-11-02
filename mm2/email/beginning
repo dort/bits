@@ -1,0 +1,48 @@
+     Each email has at least some of the following headers (and potentially more)
+Return-Path:
+Delivered-To:
+Received:
+Dmarc-Filter:
+Authentication-Results:
+Dkim-Signature:
+Message-Id:
+Date:
+Mime-Version:
+To:
+Content-Language:
+Cc:
+From:
+Subject:
+Content-Type:
+Content-Transfer-Encoding:
+X-Evolution-Source:
+Body:
+Attachment(s):
+
+     Received: headers
+     Dkim-signature: header
+     Date: header
+     (and perhaps others?) get broken down further
+        structure for Received:
+   from
+<source>
+   by
+<receiver>
+   with
+<id>
+   for
+<recipient>
+   ;
+<timestamp>
+
+     with each of these elements (what's in <>)
+     potentially having additional internal structure
+
+
+Attachment handling should be a reference back to the original corpus with
+perhaps some metadata about filetype, filesize, and hash
+
+No need to actually store the attachments themselves.
+
+Bonus points for disambiguating html content and pulling out useful information from html emails
+

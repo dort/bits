@@ -59,7 +59,7 @@ or maybe that can wait -- maybe the first problem would be to create the structu
    so let's go with the 2nd option:
 
 
-     Each email has at least some of the following headings (and potentially more)
+     Each email has at least some of the following headers (and potentially more)
 Return-Path:
 Delivered-To:
 Received:
