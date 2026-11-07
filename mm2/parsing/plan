@@ -1,0 +1,2 @@
+the goal is to create a lexer/tokenizer using python that will process input text and take rules that will allow the resulting stream of tokens to properly be ingested into mm2
+
