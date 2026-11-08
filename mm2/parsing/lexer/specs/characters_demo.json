@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "rules": [
+    {"name": "character", "pattern": ".", "flags": ["DOTALL"], "kind": "CHAR"}
+  ]
+}

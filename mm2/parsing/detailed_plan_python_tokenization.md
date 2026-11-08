@@ -45,10 +45,10 @@ Do not introduce multiple recognition backends, a plugin registry, or compatibil
 
 ### Python 3.14 environment
 
-After the source build is ready, create a project-local environment from that exact executable. In the following planned commands, `PYTHON314` is the absolute path to the user's built or installed CPython 3.14 executable; replace the example path before running them from `parsing/`:
+The source-built interpreter is installed at `/usr/local/bin/python3.14`; on 2026-11-08 it reported CPython 3.14.10 and Unicode database 16.0.0. Create the project-local environment from that executable when implementation starts. In the following planned commands, `PYTHON314` is its absolute path; update it if the installation moves, and run the commands from `parsing/`:
 
 ```bash
-PYTHON314=/absolute/path/to/python3.14
+PYTHON314=/usr/local/bin/python3.14
 "$PYTHON314" --version
 "$PYTHON314" -m venv --without-pip .venv
 .venv/bin/python --version
@@ -60,7 +60,7 @@ Check for Python 3.14 at the library and CLI entry points before processing spec
 
 Record `sys.implementation.name`, the full `sys.version` string, and `unicodedata.unidata_version` in output metadata. Python 3.14 uses Unicode 16.0.0; use the runtime's reported value rather than hard-coding metadata. Include the executable path and build configuration with benchmark results so measurements from different source builds can be compared. See the [Python 3.14 Unicode documentation](https://docs.python.org/3.14/library/unicodedata.html).
 
-Runtime acceptance tests and performance measurements must run on the completed 3.14 build. Documentation checks performed before it is available do not establish runtime compatibility.
+Runtime acceptance tests and performance measurements must run on the selected 3.14 build. Targeted probes of the documented regex behavior and specification fingerprint passed on the installed 3.14.10 interpreter. These verify the plan's examples; the lexer acceptance suite remains a deliverable of implementation.
 
 ## Architecture and ownership
 
@@ -148,7 +148,7 @@ Memory use includes the complete text, compiled rules, the current match, and se
 
 ### Initial schema
 
-Require a top-level `version` of `1` and a nonempty ordered `rules` array. Each rule has:
+Require a top-level `version` whose decoded value has exact Python type `int` and equals `1`, and a nonempty ordered `rules` array. Reject Boolean values, floating-point spellings such as `1.0` and `1e0`, and the string `"1"`. Numeric equality to `1` alone is insufficient validation. Each rule has:
 
 | Field | Meaning |
 | --- | --- |
@@ -163,7 +163,7 @@ Use short identifiers so the same terminal names can be used directly in MM2: ru
 
 Reject unknown fields, duplicate JSON object keys, unsupported versions, invalid field types, conflicting actions, empty literals, invalid regex syntax, and unsupported flags. Report the rule name and field involved. Compile all rules before reading the input.
 
-Use `json.load` with an `object_pairs_hook` that checks each object's key/value pairs for repeated keys before constructing its dictionary. A normal dictionary has already lost the evidence needed to reject duplicates. Apply this at every nesting level, and reject non-JSON constants such as `NaN` and `Infinity` through `parse_constant`. Validate exact field types, including rejecting a Boolean where the integer version is required. These hooks are described in the [Python 3.14 JSON documentation](https://docs.python.org/3.14/library/json.html#json.load).
+Use `json.load` with an `object_pairs_hook` that checks each object's key/value pairs for repeated keys before constructing its dictionary. A normal dictionary has already lost the evidence needed to reject duplicates. Apply this at every nesting level, and reject non-JSON constants such as `NaN` and `Infinity` through `parse_constant`. Validate exact field types before checking their allowed values. These hooks are described in the [Python 3.14 JSON documentation](https://docs.python.org/3.14/library/json.html#json.load).
 
 ### Synthetic example
 
@@ -339,6 +339,8 @@ For the exact input `x + 12`, using the synthetic specification, namespace `demo
 
 Here `demo` names the dataset, `s0` names the input occurrence, and the last fact records three tokens from six source characters. The `lex-spec` halves reproduce the exact synthetic specification's digest using the recipe above. The catalog includes `ASSIGN` and `EQ` even though this input emits neither. Spaces are represented by skipped-span records in JSON Lines. Source offset four and parser position two refer to different coordinates.
 
+Keep this worked example synchronized with the synthetic specification through a regression check that recomputes its fingerprint and compares both documented digest atoms. Any change to the example specification must update its expected facts and the documentation together.
+
 ## Library, CLI, and failure behavior
 
 Expose a small public API: load and compile a specification, tokenize a string, and serialize records. Keep file handling out of the lexer. Do not require MORK to run the Python-only lexer or inspect its JSON output.
@@ -373,7 +375,7 @@ Each milestone below has a concrete result. Do not start application-specific sp
 - Implement the data records and versioned JSON validation, including duplicate-key detection before dictionary construction.
 - Compile regex rules once and preserve declaration order.
 - Derive the declared-kind catalog and compute the specification fingerprint using the pinned recipe.
-- Add tests for malformed rules, unknown fields, duplicate keys/names, conflicting actions, empty literals, invalid flags, and obvious empty matches.
+- Add tests for malformed rules, unknown fields, duplicate keys/names, conflicting actions, empty literals, invalid flags, and obvious empty matches. Explicitly test rejection of `version: true`, `version: 1.0`, `version: 1e0`, and `version: "1"`, while accepting the JSON integer `version: 1`.
 - Add two synthetic specifications showing different treatment of the same input.
 
 **Done when:** under CPython 3.14, valid specifications compile deterministically and invalid specifications fail before input reading begins, including standalone `\B` and `\z` rules. Other Python minor versions receive a clear version error.
@@ -401,7 +403,7 @@ Each milestone below has a concrete result. Do not start application-specific sp
 - Implement and test the lexeme chunk codec independently of the matcher, with atom-length checks active in optimized Python as well as normal execution.
 - Load generated facts into the actual MORK runtime with a minimal MM2 fixture that joins adjacent token edges and checks stream boundaries and kinds.
 - Include two long distinct lexemes sharing at least their first 70 ASCII bytes. Reassemble each from the loaded/exported chunks in Python and require exact equality to its original value. Checking only token or expression counts would miss aliased payloads.
-- Check declared kinds absent from the input, including empty input, and verify both fingerprint halves survive loading unchanged.
+- Check declared kinds absent from the input, including empty input, and verify both fingerprint halves survive loading unchanged. Recompute the worked example's fingerprint from its documented specification and compare its expected atoms before loading the example into MORK.
 - Follow the neighboring MM2 projects' `MORK` environment-variable override and repository-relative binary discovery. Keep the probe inside this project.
 - Verify the loaded/exported payload facts as well as the token facts; a Python S-expression reader alone cannot establish MORK compatibility.
 
@@ -419,7 +421,7 @@ Each milestone below has a concrete result. Do not start application-specific sp
 | Preservation | Reconstruct input from JSON token/skipped records; round-trip each lexeme through the MM2 chunk codec; preserve distinct numeric spellings. |
 | MM2 syntax boundaries | Lexemes containing parentheses, quotes, backslashes, semicolons, dollar signs, newlines, NUL, and apparent executable forms remain payload data. |
 | MM2 size boundaries | Payloads of 23, 24, 25, and many more bytes; Unicode split across chunks; distinct long values sharing a 70-byte prefix remain distinct after loading; atom guard accepts 63 ASCII bytes and rejects 64, including under `.venv/bin/python -O`. |
-| Specification identity | Duplicate keys at multiple nesting levels fail; JSON formatting and object-key order leave the fingerprint unchanged; changing rule order changes it; both MM2 digest halves reproduce the full JSON fingerprint. |
+| Specification identity | Duplicate keys at multiple nesting levels fail; Boolean, float, exponent-form float, and string versions fail before hashing; JSON formatting and object-key order leave the fingerprint unchanged; changing rule order changes it; both MM2 digest halves reproduce the full JSON fingerprint; the documented worked example stays synchronized with its specification. |
 | Declared kinds | Catalog contains all distinct emitting-rule kinds, including absent kinds and empty inputs; skip rules contribute none; observed token kinds are a subset of the catalog. |
 | Identity and completion | Repeated identical tokens at different positions; two streams containing the same text; empty completed stream; interrupted or failed serialization has no final bundle. |
 | Runtime handoff | Real MORK load and fixture execution; exact edge and chunk counts; expected adjacency results; no accidental variables or additional facts from payload text. |
@@ -451,3 +453,7 @@ The next plan can then define the MM2 Earley grammar representation and parser r
 The [review](review_detailed_plan_python_tokenization.md) was incorporated on 2026-11-08 after checking the relevant local sources and probing the runtime. Accepted changes strengthen payload-preservation checks, add terminal and specification metadata, pin JSON validation and hashing, and clarify regex anchors and reconstruction boundaries.
 
 Two schema recommendations were refined: `lex-kind` describes declared terminal kinds, because a kind absent from one input is not a configuration error; `lex-spec` preserves the full digest in two short atoms instead of using a truncated digest prefix. The plan also distinguishes external-symbol truncation from the checked size error in `collapse_symbol`. Parser-side mismatch diagnostics remain part of the future parser design.
+
+The [second review](review2_detailed_plan_python_tokenization.md) endorsed the revised design and requested no structural changes. Its useful clarifications are incorporated: exact integer validation now explicitly excludes floating-point versions; the worked example's specification and fingerprint become a synchronized regression fixture; and the environment instructions use the verified installed interpreter path. Targeted checks on CPython 3.14.10 reproduced the documented fingerprint, regex behaviors, and Unicode database version.
+
+No substantive design recommendation from the second review was rejected. Its observation about a debug print in MORK's `collapse_symbol` remains a separate runtime-maintenance issue: the planned lexer, transport, and handoff probe do not invoke that function, so changing it would not validate or improve this first-step implementation.

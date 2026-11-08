@@ -1,0 +1,17 @@
+; Handoff probe: bind the successor already stored on each input edge.
+(exec (probe 0)
+      (, (lex-token $ns $stream $p $q $kind)
+         (lex-token $ns $stream $q $r $next))
+      (, (adjacent $ns $stream $p $kind $q $next)))
+
+; Successful empty input also has an explicit boundary at position zero.
+(exec (probe 1)
+      (, (lex-stream $ns $stream 1)
+         (lex-end $ns $stream $n $chars))
+      (, (completed $ns $stream $n $chars)))
+
+; Exercise joins against the declared terminal catalog.
+(exec (probe 2)
+      (, (lex-token $ns $stream $p $q $kind)
+         (lex-kind $ns $stream $kind))
+      (, (catalogued $ns $stream $p $kind)))

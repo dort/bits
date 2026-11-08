@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "rules": [
+    {"name": "spacing", "pattern": "[ \\t\\r\\n]+", "skip": true},
+    {"name": "equals", "literal": "==", "kind": "EQ"},
+    {"name": "assign", "literal": "=", "kind": "ASSIGN"},
+    {"name": "plus", "literal": "+", "kind": "PLUS"},
+    {"name": "integer", "pattern": "[0-9]+", "kind": "INT"},
+    {"name": "identifier", "pattern": "[A-Za-z_][A-Za-z0-9_]*", "kind": "IDENT"}
+  ]
+}
