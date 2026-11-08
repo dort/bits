@@ -39,7 +39,7 @@ These are proposed implementation decisions, with their limits stated explicitly
 | Selection between rules | Choose the longest candidate returned by each rule, then declaration order on ties. Longer operators and identifiers do not lose to shorter prefixes. | First matching rule is simpler and can stop earlier, but rule order can accidentally split longer tokens. |
 | Input buffering | Buffer one finite logical input; preserve exact Python regex behavior, including lookaround and end-of-input assertions. | Online input consumption reduces initial latency but cannot safely emit arbitrary regex matches just because the current read buffer ends. It needs a separately specified matching model. |
 | Output interface | One neutral record model, with JSON Lines and MM2 serializers. Python consumers and MORK share the same tokenization semantics. | Writing MM2 strings directly from matching code saves an abstraction initially but couples recognition, diagnostics, and transport. |
-| Lexeme storage in MM2 | Separate short token facts from reversibly encoded lexeme chunks. Parser scanning avoids traversing payloads. | Inline raw text is readable, but can become MM2 syntax and can exceed symbol limits in some MORK builds. Sidecar-only values prevent MM2 from accessing lexemes. |
+| Lexeme storage in MM2 | Separate short token facts from reversibly encoded lexeme chunks. Parser scanning avoids traversing payloads. | Inline raw text is readable, but can become MM2 syntax; the inspected local runtime silently truncates input atoms beyond 63 bytes. Sidecar-only values prevent MM2 from accessing lexemes. |
 
 Do not introduce multiple recognition backends, a plugin registry, or compatibility modes in this first implementation. If profiling or later requirements justify replacing the matcher, preserve or explicitly revise the documented lexical semantics and migrate its callers together.
 
@@ -114,6 +114,8 @@ No file extension, content prefix, or source name selects a specification. The c
 - Retain skipped spans in JSON Lines. Combining emitted and skipped lexemes in source order must reconstruct the accepted input exactly.
 - Numbers remain text. For example, `001`, `1`, and `1.0` retain their distinct spellings. Numeric interpretation belongs to a later specification or semantic layer.
 
+Track locations in one forward pass. Advance the line after consuming LF, or after consuming CR whose following character is not LF. Inspect the complete source when deciding whether CR begins a pair, even if two different lexical matches consume the CR and LF. Test locations before CR, between CR and LF, and after LF explicitly.
+
 ### Finite-input and resource contract
 
 Reading chunks from a file must not create lexical boundaries. The first implementation assembles the complete decoded text before matching; a rule can span any number of physical lines.
@@ -140,6 +142,8 @@ Reject flags on literal rules; literals mean exact character equality. Multiple 
 Use short identifiers so the same terminal names can be used directly in MM2: rule names match `[A-Za-z][A-Za-z0-9_]{0,31}`, and terminal kinds match `[A-Z][A-Z0-9_]{0,31}`. These restrictions apply to labels, never to the source text or lexemes.
 
 Reject unknown fields, duplicate JSON object keys, unsupported versions, invalid field types, conflicting actions, empty literals, invalid regex syntax, and unsupported flags. Report the rule name and field involved. Compile all rules before reading the input.
+
+Use `json.load` with an `object_pairs_hook` that checks each object's key/value pairs for repeated keys before constructing its dictionary. A normal dictionary has already lost the evidence needed to reject duplicates. Apply this at every nesting level, and reject non-JSON constants such as `NaN` and `Infinity` through `parse_constant`. Validate exact field types, including rejecting a Boolean where the integer version is required. These hooks are described in the [Python JSON documentation](https://docs.python.org/3.12/library/json.html#json.load).
 
 ### Synthetic example
 
@@ -171,9 +175,11 @@ At each current source offset:
 
 This is **longest candidate across rules**, with Python regex semantics inside each rule. Python alternation tries branches in order: a pattern `a|ab` can return `a` when the input begins with `ab`. The lexer does not search for a longer alternative inside that pattern. Use separate rules, or write the pattern accordingly, when that distinction matters. Non-greedy quantifiers also retain their Python meaning. Document these semantics with examples rather than calling the algorithm unrestricted maximal munch. See the [Python regular-expression documentation](https://docs.python.org/3.12/library/re.html).
 
+Keeping the complete string also preserves lookbehind and word-boundary context. The `^` anchor still denotes the start of the string, or a position after LF with `MULTILINE`; it does not denote the current lexer offset. Diagnostic handling of lone CR does not change Python's regex anchor behavior. Include these distinctions in rule-author examples and tests.
+
 For example, separate `=` and `==` rules choose `==` regardless of declaration order. A literal keyword rule placed before an identifier rule wins when both match the same complete word; a longer identifier wins over its keyword prefix.
 
-Reject patterns that match empty input during validation. This check is not a complete proof against context-dependent empty matches. At runtime, any zero-length match encountered at a source position is a specification error, including a skipped match; do not allow it to cause a loop. Stop matching at the end of the source. No lexer rule emits an empty token or an end marker.
+Reject patterns for which `compiled_pattern.match("")` returns a match during validation. This check is not a complete proof against context-dependent empty matches. At runtime, any zero-length match encountered at a source position is a specification error, including a skipped match; fail the input with the rule name and source location. Do not allow it to cause a loop. Stop matching at the end of the source. No lexer rule emits an empty token or an end marker. A fixed collection of validation probes cannot replace the runtime guard.
 
 Treat specifications as trusted local configuration initially. Python regex matching does not provide a general linear-time guarantee; input-size limits do not guarantee a bound on pathological matching time. Keep performance fixtures bounded by a process timeout. Do not add an undocumented regex rewrite that changes rule meaning.
 
@@ -183,12 +189,30 @@ Use explicit record types, serialized as one JSON object per line:
 
 | Record | Required information |
 | --- | --- |
-| Stream start | Contract version, namespace, stream ID, source label, encoding if applicable, Python version, specification fingerprint. |
+| Stream start | Contract version, namespace, stream ID, source label, encoding if applicable, Python version, specification fingerprint, sorted distinct terminal kinds declared by emitting rules. |
 | Token | Namespace, stream ID, zero-based token index, terminal kind, matching rule name, exact lexeme, source start/end offsets, start/end line and column. |
 | Skipped span | Namespace, stream ID, matching rule name, exact lexeme, and the same source-location fields; no token index. |
 | Stream end | Namespace, stream ID, emitted token count, decoded source length, successful completion. |
 
-Compute the specification fingerprint from a documented canonical JSON representation that preserves rule order. Keep source labels and arbitrary diagnostic text in JSON rather than interpolating them into MM2 atoms.
+Pin the specification fingerprint to the following recipe. Here `spec` is the validated JSON object before inserting defaults, `canonical_bytes` is its canonical ASCII serialization, and `fingerprint` is the full lowercase SHA-256 hexadecimal digest:
+
+```python
+import hashlib
+import json
+
+canonical_bytes = json.dumps(
+    spec,
+    ensure_ascii=True,
+    sort_keys=True,
+    separators=(",", ":"),
+    allow_nan=False,
+).encode("ascii")
+fingerprint = hashlib.sha256(canonical_bytes).hexdigest()
+```
+
+Object-key order and JSON formatting do not affect this digest; array order, including rule order, is preserved. Explicitly supplying an optional field versus omitting it may produce a different digest even when behavior is equivalent. This identifies the validated specification representation, not an equivalence class of regex behavior. Store the algorithm name `sha256` and all 64 digest characters in JSON records and the manifest. Document the same recipe in the README. See the [Python hashing documentation](https://docs.python.org/3.12/library/hashlib.html).
+
+Keep source labels and arbitrary diagnostic text in JSON rather than interpolating them into MM2 atoms.
 
 Token indices count emitted tokens only. If the lexer skips spaces between two tokens, their source offsets have a gap but their token indices remain consecutive. Never use token text as token identity: repeated identical tokens remain separate occurrences.
 
@@ -213,9 +237,12 @@ The following placeholders describe the proposed fact schema; generated files su
 | `N`, `C` | Final emitted token count and decoded source character count. |
 | `J`, `H` | Zero-based lexeme chunk index and encoded chunk atom. |
 | `U`, `V` | Lexeme UTF-8 byte count and total chunk count. |
+| `D0`, `D1` | First and second halves of the specification digest, each encoded as `h` followed by 32 lowercase hexadecimal characters. |
 
 ```scheme
 (lex-stream NS S 1)
+(lex-spec NS S sha256 D0 D1)
+(lex-kind NS S K)
 (lex-token NS S P Q K)
 (lex-span NS S P A B)
 (lex-value-size NS S P U V)
@@ -225,25 +252,35 @@ The following placeholders describe the proposed fact schema; generated files su
 
 The `1` in `lex-stream` is the transport contract version. Put namespace, stream, and position before the less selective payload fields so a future scanner with a known input position can bind that prefix. The future grammar will use exactly the emitted terminal names.
 
+Emit one `lex-spec` fact per stream. Split the full SHA-256 digest into two 33-byte atoms, retaining all digest bits within the atom limit. A shortened digest prefix would be smaller but could conflate distinct specification identifiers unnecessarily.
+
+Emit one `lex-kind` fact per distinct terminal kind **declared by an emitting rule in the specification**, including kinds absent from this particular input. Derive this catalog from compiled rules and include it for empty and all-skipped streams too. Skip rules contribute no kind. Emit catalog facts in sorted order for deterministic files.
+
+The catalog lets future grammar validation distinguish an undeclared terminal name from a declared terminal that simply does not occur in an input. For example, an input containing only `IDENT` tokens need not contain `INT` or `PLUS` to be valid. An observed-kind catalog would misdiagnose those absences as specification mismatches. Observed kinds remain derivable from `lex-token` without another stored relation. Grammar compatibility checks belong to the later parser step; catalog availability alone is not a missing-terminal detector.
+
 `lex-end` appears only after complete successful processing. It supplies the accepting input boundary and distinguishes successful empty input from an incomplete stream. Empty input has token count zero and no token edges. All-skipped input also has zero token edges, but its source character count is nonzero. Do not create an `EOF` token or an epsilon token; any empty grammar production is the parser's responsibility.
 
 The future Earley scanner needs to join its expected terminal with `lex-token`, then use the recorded next position. It need not calculate successors or inspect lexeme payloads to advance. This plan does not implement that scanner.
 
 ### Safe, reversible values
 
-The local [MORK data description](../../../MORK.wiki/Data-in-MORK.md) and [frontend parser](../../../MORK/frontend/src/bytestring_parser.rs) show that parentheses, dollar-prefixed variables, comments, and quoted atoms have syntax-level meaning. The [kernel tokenizer](../../../MORK/kernel/src/space.rs) also distinguishes interning and non-interning builds; the latter currently truncates external symbols beyond 63 bytes. Do not assume JSON string escaping is an MM2 string codec or rely on interning to preserve arbitrarily long atoms.
+The local [MORK data description](../../../MORK.wiki/Data-in-MORK.md) and [frontend parser](../../../MORK/frontend/src/bytestring_parser.rs) show that parentheses, dollar-prefixed variables, comments, and quoted atoms have syntax-level meaning. The [kernel tokenizer](../../../MORK/kernel/src/space.rs) distinguishes interning and non-interning builds; the latter silently truncates external symbols beyond 63 bytes. A local runtime probe on 2026-11-08 confirmed that `MORK/target/release/mork` aliases distinct long bare symbols and distinct long quoted symbols when their retained prefixes match. A second probe preserved the distinct values exactly using the proposed 24-byte chunk encoding.
+
+Truncation can make distinct values compare equal and can collapse otherwise identical facts under set semantics. Counting loaded expressions is insufficient to verify payload preservation. Bounded chunk transport and checked atom lengths are requirements for this runtime. Do not assume JSON string escaping is an MM2 string codec or rely on interning to preserve arbitrarily long atoms.
 
 Use this transport rule:
 
 1. Validate namespace and stream identifiers against `[A-Za-z][A-Za-z0-9_]{0,31}`. The caller must avoid reusing their pair for different inputs loaded into the same space.
-2. Use the validated terminal names from the specification and decimal nonnegative positions. Check that every generated atom fits the transport's maximum of 63 ASCII bytes.
+2. Use the validated terminal names from the specification and decimal nonnegative positions. Enforce the maximum of 63 ASCII bytes for every generated atom, including metadata and integers, in a shared serializer check. Raise an output error before publication if the check fails. Use an explicit condition that remains active under `python -O`; a removable Python `assert` is insufficient.
 3. Encode each token's exact lexeme as UTF-8 bytes, split into fixed chunks of 24 bytes, with only the last chunk possibly shorter.
 4. Encode each chunk as `h` followed by lowercase hexadecimal. Each chunk atom is at most 49 ASCII bytes, has no MM2 structural characters, and can be decoded without ambiguity.
-5. Emit a `lex-value-size` fact and one `lex-value-part` fact per chunk. Chunk indices preserve ordering in the fact set. Reassemble all bytes before UTF-8 decoding because a chunk boundary may split a multibyte character.
+5. Emit a `lex-value-size` fact and one `lex-value-part` fact per chunk. Chunk indices preserve ordering in the fact set. The Python consumer validates chunk indices and declared sizes, then reassembles all bytes before UTF-8 decoding because a chunk boundary may split a multibyte character.
 
 Every fact has fixed, small arity. No giant atom, arbitrary-width expression, or deeply nested list is required for long lexemes. Do not intern a growing global lexeme dictionary in Python in this version. The cost is extra payload facts and approximately doubled payload character size from hexadecimal encoding; measure that cost separately from scanning.
 
-MM2 facts contain emitted tokens and their source spans. JSON Lines additionally retains skipped text and detailed diagnostics. Exact input reconstruction uses the JSON records; MM2 token-value reconstruction uses the payload facts. A future specification needing literal-sensitive terminals can give those literals distinct kinds. More elaborate semantic use of lexeme values is later parser work.
+MM2 facts contain emitted tokens and their source spans. JSON Lines additionally retains skipped text and detailed diagnostics. Exact input reconstruction uses the JSON records; full token-value reconstruction from exported payload facts occurs in Python. Inside MM2, rules can compare encoded chunks while retaining the chunked representation. This contract does not promise to reconstruct an arbitrarily long lexeme as one MM2 symbol.
+
+The inspected [pure-function implementation](../../../MORK/kernel/src/pure.rs) rejects results longer than 63 bytes in `collapse_symbol`; that is distinct from silent truncation during text ingestion. Its `decode_hex` also expects bare hexadecimal, so the transport's leading `h` must be removed before any future chunk-decoding call. Decoding and arbitrary-byte export inside MM2 are outside this initial transport contract. A future specification needing literal-sensitive terminals can give those literals distinct kinds. More elaborate semantic use of lexeme values is later parser work.
 
 ### Worked example
 
@@ -251,6 +288,12 @@ For the exact input `x + 12`, using the synthetic specification, namespace `demo
 
 ```scheme
 (lex-stream demo s0 1)
+(lex-spec demo s0 sha256 habcfb5fed40800240f2db2a33558d2a4 he0c7010c6b165172b8554beda8ddcbc3)
+(lex-kind demo s0 ASSIGN)
+(lex-kind demo s0 EQ)
+(lex-kind demo s0 IDENT)
+(lex-kind demo s0 INT)
+(lex-kind demo s0 PLUS)
 (lex-token demo s0 0 1 IDENT)
 (lex-span demo s0 0 0 1)
 (lex-value-size demo s0 0 1 1)
@@ -266,7 +309,7 @@ For the exact input `x + 12`, using the synthetic specification, namespace `demo
 (lex-end demo s0 3 6)
 ```
 
-Here `demo` names the dataset, `s0` names the input occurrence, and the last fact records three tokens from six source characters. Spaces are represented by skipped-span records in JSON Lines. Source offset four and parser position two refer to different coordinates.
+Here `demo` names the dataset, `s0` names the input occurrence, and the last fact records three tokens from six source characters. The `lex-spec` halves reproduce the exact synthetic specification's digest using the recipe above. The catalog includes `ASSIGN` and `EQ` even though this input emits neither. Spaces are represented by skipped-span records in JSON Lines. Source offset four and parser position two refer to different coordinates.
 
 ## Library, CLI, and failure behavior
 
@@ -298,8 +341,9 @@ Each milestone below has a concrete result. Do not start application-specific sp
 
 ### 1. Establish the contracts and rule loader
 
-- Implement the data records and versioned JSON validation.
+- Implement the data records and versioned JSON validation, including duplicate-key detection before dictionary construction.
 - Compile regex rules once and preserve declaration order.
+- Derive the declared-kind catalog and compute the specification fingerprint using the pinned recipe.
 - Add tests for malformed rules, unknown fields, duplicate keys/names, conflicting actions, empty literals, invalid flags, and obvious empty matches.
 - Add two synthetic specifications showing different treatment of the same input.
 
@@ -325,24 +369,28 @@ Each milestone below has a concrete result. Do not start application-specific sp
 ### 4. Implement MM2 serialization and the MORK probe
 
 - Generate only the ground facts specified above.
-- Implement and test the lexeme chunk codec independently of the matcher.
+- Implement and test the lexeme chunk codec independently of the matcher, with atom-length checks active in optimized Python as well as normal execution.
 - Load generated facts into the actual MORK runtime with a minimal MM2 fixture that joins adjacent token edges and checks stream boundaries and kinds.
+- Include two long distinct lexemes sharing at least their first 70 ASCII bytes. Reassemble each from the loaded/exported chunks in Python and require exact equality to its original value. Checking only token or expression counts would miss aliased payloads.
+- Check declared kinds absent from the input, including empty input, and verify both fingerprint halves survive loading unchanged.
 - Follow the neighboring MM2 projects' `MORK` environment-variable override and repository-relative binary discovery. Keep the probe inside this project.
 - Verify the loaded/exported payload facts as well as the token facts; a Python S-expression reader alone cannot establish MORK compatibility.
 
-**Done when:** MORK preserves repeated tokens, separate streams, terminal names, and payload chunks, and the fixture derives the expected adjacency facts. If the runtime is unavailable, report that integration check as blocked; do not substitute a Python parser and mark it passed.
+**Done when:** MORK preserves repeated tokens, separate streams, declared terminal names, full fingerprints, and distinct long payloads, and the fixture derives the expected adjacency facts. If the runtime is unavailable, report that integration check as blocked; do not substitute a Python parser and mark it passed.
 
 ### 5. Complete regression coverage, measurements, and usage documentation
 
 | Area | Required cases and evidence |
 | --- | --- |
-| Selection | `=` versus `==`; keyword versus identifier; equal-length ties; competing skip and emit rules; regex alternation and non-greedy behavior. |
+| Selection | `=` versus `==`; keyword versus identifier; equal-length ties; competing skip and emit rules; regex alternation and non-greedy behavior; lookbehind and word boundaries at nonzero offsets; `^` with and without `MULTILINE`. |
 | Coverage and progress | Empty input; all-skipped input; no matching rule in the middle; context-dependent zero-length match; multiline tokens; no implicit whitespace treatment. |
-| Locations | LF, CRLF, lone CR, tabs, combining characters, non-ASCII text, and non-BMP characters; spans index the original string exactly. |
+| Locations | LF, CRLF, lone CR, tabs, combining characters, non-ASCII text, and non-BMP characters; locations before, inside, and after CRLF, including when separate rules consume CR and LF; spans index the original string exactly. |
 | Source handling | Explicit non-UTF-8 encoding; invalid bytes; split multibyte sequences across reader chunks; different reader chunk sizes; byte and character limit failures. |
 | Preservation | Reconstruct input from JSON token/skipped records; round-trip each lexeme through the MM2 chunk codec; preserve distinct numeric spellings. |
 | MM2 syntax boundaries | Lexemes containing parentheses, quotes, backslashes, semicolons, dollar signs, newlines, NUL, and apparent executable forms remain payload data. |
-| MM2 size boundaries | Payloads of 23, 24, 25, and many more bytes; Unicode split across chunks; generated atoms stay below the symbol-size limit. |
+| MM2 size boundaries | Payloads of 23, 24, 25, and many more bytes; Unicode split across chunks; distinct long values sharing a 70-byte prefix remain distinct after loading; atom guard accepts 63 ASCII bytes and rejects 64, including under `python -O`. |
+| Specification identity | Duplicate keys at multiple nesting levels fail; JSON formatting and object-key order leave the fingerprint unchanged; changing rule order changes it; both MM2 digest halves reproduce the full JSON fingerprint. |
+| Declared kinds | Catalog contains all distinct emitting-rule kinds, including absent kinds and empty inputs; skip rules contribute none; observed token kinds are a subset of the catalog. |
 | Identity and completion | Repeated identical tokens at different positions; two streams containing the same text; empty completed stream; interrupted or failed serialization has no final bundle. |
 | Runtime handoff | Real MORK load and fixture execution; exact edge and chunk counts; expected adjacency results; no accidental variables or additional facts from payload text. |
 
@@ -359,3 +407,9 @@ Profile before optimizing. Possible later improvements include literal-prefix in
 The first step is complete when a caller can supply arbitrary supported text plus a lexical specification, inspect exact tokens and locations, and load an explicitly ordered, complete token sequence into MORK.
 
 The next plan can then define the MM2 Earley grammar representation and parser rules against this token contract. Decisions about online input, lexical state machines, ambiguous token graphs, binary input, and application-specific specifications remain explicit future requirements. None should be inferred from a file type or embedded in the generic lexer now.
+
+## Review decisions
+
+The [review](review_detailed_plan_python_tokenization.md) was incorporated on 2026-11-08 after checking the relevant local sources and probing the runtime. Accepted changes strengthen payload-preservation checks, add terminal and specification metadata, pin JSON validation and hashing, and clarify regex anchors and reconstruction boundaries.
+
+Two schema recommendations were refined: `lex-kind` describes declared terminal kinds, because a kind absent from one input is not a configuration error; `lex-spec` preserves the full digest in two short atoms instead of using a truncated digest prefix. The plan also distinguishes external-symbol truncation from the checked size error in `collapse_symbol`. Parser-side mismatch diagnostics remain part of the future parser design.
