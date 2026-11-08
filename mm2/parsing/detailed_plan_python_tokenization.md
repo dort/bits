@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Build a reusable Python lexer that accepts input text and a separate lexical specification, produces a deterministic sequence of tokens, and exports those tokens as facts for a future Earley parser written in MM2.
+Build a reusable Python 3.14 lexer that accepts input text and a separate lexical specification, produces a deterministic sequence of tokens, and exports those tokens as facts for a future Earley parser written in MM2.
 
 This document plans the first step only. It does not implement the lexer or the Earley parser. All implementation, examples, tests, documentation, and generated development artifacts will initially live under `/home/ni/repos/m/bits/mm2/parsing/`.
 
@@ -27,7 +27,7 @@ These are proposed implementation decisions, with their limits stated explicitly
 2. **A specification determines what counts as a token.** There is no built-in treatment of words, numbers, comments, punctuation, or whitespace.
 3. **Tokenization is deterministic.** Each successful input produces one token sequence. Lexical ambiguity represented as a graph of alternatives is deferred; the future Earley parser can still handle grammatical ambiguity over the selected sequence.
 4. **The first version processes finite inputs.** It reads one complete logical input into memory and yields token records incrementally. It does not promise bounded-memory tokenization of an indefinitely growing input.
-5. **Python 3.12 and its standard library are the initial baseline.** This matches the inspected local interpreter. Record the actual Python version with output because regular-expression and Unicode behavior are part of reproducibility.
+5. **Python 3.14 and its standard library are the implementation and test baseline.** Use the user's source-built CPython 3.14 executable as the reference runtime. Record the full interpreter version and Unicode database version with output because regular-expression and Unicode behavior are part of reproducibility. Do not infer the target interpreter from the system's `python3` command.
 6. **Input stays unchanged.** Do not normalize Unicode, case, whitespace, line endings, or numeric spelling implicitly. Matching flags may affect recognition but never rewrite a token's lexeme.
 
 ### Alternatives considered
@@ -42,6 +42,25 @@ These are proposed implementation decisions, with their limits stated explicitly
 | Lexeme storage in MM2 | Separate short token facts from reversibly encoded lexeme chunks. Parser scanning avoids traversing payloads. | Inline raw text is readable, but can become MM2 syntax; the inspected local runtime silently truncates input atoms beyond 63 bytes. Sidecar-only values prevent MM2 from accessing lexemes. |
 
 Do not introduce multiple recognition backends, a plugin registry, or compatibility modes in this first implementation. If profiling or later requirements justify replacing the matcher, preserve or explicitly revise the documented lexical semantics and migrate its callers together.
+
+### Python 3.14 environment
+
+After the source build is ready, create a project-local environment from that exact executable. In the following planned commands, `PYTHON314` is the absolute path to the user's built or installed CPython 3.14 executable; replace the example path before running them from `parsing/`:
+
+```bash
+PYTHON314=/absolute/path/to/python3.14
+"$PYTHON314" --version
+"$PYTHON314" -m venv --without-pip .venv
+.venv/bin/python --version
+```
+
+The first implementation needs only the standard library, so environment creation does not require installing packages. Keep `.venv/` inside this project and ignore it in version control. A virtual environment uses the interpreter that created it; subsequent run, test, and measurement commands will use `.venv/bin/python` explicitly. See the [Python 3.14 virtual-environment documentation](https://docs.python.org/3.14/library/venv.html).
+
+Check for Python 3.14 at the library and CLI entry points before processing specifications or input. Report a clear version error under another minor version; do not add compatibility branches for older regex behavior. Use `sys.executable` when tests launch Python subprocesses so those checks exercise the same build.
+
+Record `sys.implementation.name`, the full `sys.version` string, and `unicodedata.unidata_version` in output metadata. Python 3.14 uses Unicode 16.0.0; use the runtime's reported value rather than hard-coding metadata. Include the executable path and build configuration with benchmark results so measurements from different source builds can be compared. See the [Python 3.14 Unicode documentation](https://docs.python.org/3.14/library/unicodedata.html).
+
+Runtime acceptance tests and performance measurements must run on the completed 3.14 build. Documentation checks performed before it is available do not establish runtime compatibility.
 
 ## Architecture and ownership
 
@@ -66,6 +85,7 @@ parsing/
   plan                                      # Existing project note, retained
   detailed_plan_python_tokenization.md       # This document
   README.md                                 # Usage and supported semantics
+  .venv/                                    # Ignored environment from CPython 3.14
   tokenizer/
     __init__.py                             # Public library functions
     __main__.py                             # Command-line entry point
@@ -101,7 +121,7 @@ The library's primary operation will have the conceptual shape `tokenize(text, c
 
 The command-line wrapper will read bytes from a file or standard input, then decode them with a named encoding. Use UTF-8 by default and strict decoding errors. A caller with a different encoding supplies it explicitly. Do not guess an encoding, replace undecodable bytes, or retry with a second encoding.
 
-Read without automatic newline conversion. Python text I/O can translate newlines, so preserve the original decoded characters by reading binary input and decoding explicitly. A Python string supplied by a caller is already decoded; its offsets refer to exactly that string. See the [Python I/O documentation](https://docs.python.org/3.12/library/io.html).
+Read without automatic newline conversion. Python text I/O can translate newlines, so preserve the original decoded characters by reading binary input and decoding explicitly. A Python string supplied by a caller is already decoded; its offsets refer to exactly that string. See the [Python 3.14 I/O documentation](https://docs.python.org/3.14/library/io.html).
 
 No file extension, content prefix, or source name selects a specification. The caller supplies the specification. File boundaries are input boundaries unless a future caller deliberately provides a different logical input.
 
@@ -143,7 +163,7 @@ Use short identifiers so the same terminal names can be used directly in MM2: ru
 
 Reject unknown fields, duplicate JSON object keys, unsupported versions, invalid field types, conflicting actions, empty literals, invalid regex syntax, and unsupported flags. Report the rule name and field involved. Compile all rules before reading the input.
 
-Use `json.load` with an `object_pairs_hook` that checks each object's key/value pairs for repeated keys before constructing its dictionary. A normal dictionary has already lost the evidence needed to reject duplicates. Apply this at every nesting level, and reject non-JSON constants such as `NaN` and `Infinity` through `parse_constant`. Validate exact field types, including rejecting a Boolean where the integer version is required. These hooks are described in the [Python JSON documentation](https://docs.python.org/3.12/library/json.html#json.load).
+Use `json.load` with an `object_pairs_hook` that checks each object's key/value pairs for repeated keys before constructing its dictionary. A normal dictionary has already lost the evidence needed to reject duplicates. Apply this at every nesting level, and reject non-JSON constants such as `NaN` and `Infinity` through `parse_constant`. Validate exact field types, including rejecting a Boolean where the integer version is required. These hooks are described in the [Python 3.14 JSON documentation](https://docs.python.org/3.14/library/json.html#json.load).
 
 ### Synthetic example
 
@@ -173,13 +193,21 @@ At each current source offset:
 4. Emit a token or skipped-span record, then advance the source offset to the match end.
 5. If no rule matches, report a lexical error at that offset and fail the input.
 
-This is **longest candidate across rules**, with Python regex semantics inside each rule. Python alternation tries branches in order: a pattern `a|ab` can return `a` when the input begins with `ab`. The lexer does not search for a longer alternative inside that pattern. Use separate rules, or write the pattern accordingly, when that distinction matters. Non-greedy quantifiers also retain their Python meaning. Document these semantics with examples rather than calling the algorithm unrestricted maximal munch. See the [Python regular-expression documentation](https://docs.python.org/3.12/library/re.html).
+This is **longest candidate across rules**, with Python 3.14 regex semantics inside each rule. Python alternation tries branches in order: a pattern `a|ab` can return `a` when the input begins with `ab`. The lexer does not search for a longer alternative inside that pattern. Use separate rules, or write the pattern accordingly, when that distinction matters. Non-greedy quantifiers also retain their Python meaning. Document these semantics with examples rather than calling the algorithm unrestricted maximal munch. See the [Python 3.14 regular-expression documentation](https://docs.python.org/3.14/library/re.html).
 
 Keeping the complete string also preserves lookbehind and word-boundary context. The `^` anchor still denotes the start of the string, or a position after LF with `MULTILINE`; it does not denote the current lexer offset. Diagnostic handling of lone CR does not change Python's regex anchor behavior. Include these distinctions in rule-author examples and tests.
 
 For example, separate `=` and `==` rules choose `==` regardless of declaration order. A literal keyword rule placed before an identifier rule wins when both match the same complete word; a longer identifier wins over its keyword prefix.
 
 Reject patterns for which `compiled_pattern.match("")` returns a match during validation. This check is not a complete proof against context-dependent empty matches. At runtime, any zero-length match encountered at a source position is a specification error, including a skipped match; fail the input with the rule name and source location. Do not allow it to cause a loop. Stop matching at the end of the source. No lexer rule emits an empty token or an end marker. A fixed collection of validation probes cannot replace the runtime guard.
+
+Pin these Python 3.14 behaviors in the rule documentation and regression cases:
+
+- `\B` now matches empty input. A standalone `\B` rule must therefore fail the validation-time empty-match check.
+- `\z` matches only at the end of the string. A consuming pattern such as `[0-9]+\z` is allowed; a standalone `\z` rule is rejected for matching empty input. Test that `[0-9]+\z` fails on `12\n` while `[0-9]+$` can match its numeric prefix. JSON specifications escape each regex backslash, for example `"[0-9]+\\z"`.
+- Catch `re.PatternError` for invalid patterns and attach its pattern location to the rule diagnostic. Test Unicode-sensitive matching against the 3.14 runtime rather than importing expectations from an older interpreter.
+
+These are the native semantics of the [Python 3.14 regex engine](https://docs.python.org/3.14/library/re.html); the lexer must not rewrite patterns to emulate earlier versions.
 
 Treat specifications as trusted local configuration initially. Python regex matching does not provide a general linear-time guarantee; input-size limits do not guarantee a bound on pathological matching time. Keep performance fixtures bounded by a process timeout. Do not add an undocumented regex rewrite that changes rule meaning.
 
@@ -189,7 +217,7 @@ Use explicit record types, serialized as one JSON object per line:
 
 | Record | Required information |
 | --- | --- |
-| Stream start | Contract version, namespace, stream ID, source label, encoding if applicable, Python version, specification fingerprint, sorted distinct terminal kinds declared by emitting rules. |
+| Stream start | Contract version, namespace, stream ID, source label, encoding if applicable, Python implementation and full version, Unicode database version, specification fingerprint, sorted distinct terminal kinds declared by emitting rules. |
 | Token | Namespace, stream ID, zero-based token index, terminal kind, matching rule name, exact lexeme, source start/end offsets, start/end line and column. |
 | Skipped span | Namespace, stream ID, matching rule name, exact lexeme, and the same source-location fields; no token index. |
 | Stream end | Namespace, stream ID, emitted token count, decoded source length, successful completion. |
@@ -210,7 +238,7 @@ canonical_bytes = json.dumps(
 fingerprint = hashlib.sha256(canonical_bytes).hexdigest()
 ```
 
-Object-key order and JSON formatting do not affect this digest; array order, including rule order, is preserved. Explicitly supplying an optional field versus omitting it may produce a different digest even when behavior is equivalent. This identifies the validated specification representation, not an equivalence class of regex behavior. Store the algorithm name `sha256` and all 64 digest characters in JSON records and the manifest. Document the same recipe in the README. See the [Python hashing documentation](https://docs.python.org/3.12/library/hashlib.html).
+Object-key order and JSON formatting do not affect this digest; array order, including rule order, is preserved. Explicitly supplying an optional field versus omitting it may produce a different digest even when behavior is equivalent. This identifies the validated specification representation, not an equivalence class of regex behavior. Interpreter and Unicode versions remain separate metadata; the same specification fingerprint alone does not establish identical behavior across runtimes. Store the algorithm name `sha256` and all 64 digest characters in JSON records and the manifest. Document the same recipe in the README. See the [Python 3.14 hashing documentation](https://docs.python.org/3.14/library/hashlib.html).
 
 Keep source labels and arbitrary diagnostic text in JSON rather than interpolating them into MM2 atoms.
 
@@ -271,7 +299,7 @@ Truncation can make distinct values compare equal and can collapse otherwise ide
 Use this transport rule:
 
 1. Validate namespace and stream identifiers against `[A-Za-z][A-Za-z0-9_]{0,31}`. The caller must avoid reusing their pair for different inputs loaded into the same space.
-2. Use the validated terminal names from the specification and decimal nonnegative positions. Enforce the maximum of 63 ASCII bytes for every generated atom, including metadata and integers, in a shared serializer check. Raise an output error before publication if the check fails. Use an explicit condition that remains active under `python -O`; a removable Python `assert` is insufficient.
+2. Use the validated terminal names from the specification and decimal nonnegative positions. Enforce the maximum of 63 ASCII bytes for every generated atom, including metadata and integers, in a shared serializer check. Raise an output error before publication if the check fails. Use an explicit condition that remains active under `.venv/bin/python -O`; a removable Python `assert` is insufficient.
 3. Encode each token's exact lexeme as UTF-8 bytes, split into fixed chunks of 24 bytes, with only the last chunk possibly shorter.
 4. Encode each chunk as `h` followed by lowercase hexadecimal. Each chunk atom is at most 49 ASCII bytes, has no MM2 structural characters, and can be decoded without ambiguity.
 5. Emit a `lex-value-size` fact and one `lex-value-part` fact per chunk. Chunk indices preserve ordering in the fact set. The Python consumer validates chunk indices and declared sizes, then reassembles all bytes before UTF-8 decoding because a chunk boundary may split a multibyte character.
@@ -318,7 +346,7 @@ Expose a small public API: load and compile a specification, tokenize a string, 
 The proposed command below will run from the `parsing/` directory once implementation exists:
 
 ```bash
-python3 -m tokenizer \
+.venv/bin/python -m tokenizer \
   --spec specs/expression_demo.json \
   --input examples/expression.txt \
   --encoding utf-8 \
@@ -329,7 +357,7 @@ python3 -m tokenizer \
 
 Use `--input -` for standard input. Require explicit namespace and stream identifiers when exporting MM2. The caller, not a content hash, defines input identity so two identical inputs can remain distinct occurrences.
 
-Produce `tokens.jsonl`, `tokens.mm2`, and a small `manifest.json` containing versions, counts, identifiers, and the specification fingerprint. Build them in a temporary sibling directory and rename that directory into place only after every output closes successfully. Initially refuse to overwrite an existing output directory. Keep all development outputs under `parsing/`.
+Produce `tokens.jsonl`, `tokens.mm2`, and a small `manifest.json` containing the contract version, Python implementation and full version, Unicode database version, counts, identifiers, and the specification fingerprint. Build them in a temporary sibling directory and rename that directory into place only after every output closes successfully. Initially refuse to overwrite an existing output directory. Keep all development outputs under `parsing/`.
 
 Diagnostics go to standard error and Python callers receive structured exceptions. Distinguish configuration, source/decode, lexical, resource-limit, and output errors. Include the source label and source location where available, and the rule name for a rule failure. Escape and bound any source excerpt so control characters or very long lines do not corrupt diagnostics.
 
@@ -341,13 +369,14 @@ Each milestone below has a concrete result. Do not start application-specific sp
 
 ### 1. Establish the contracts and rule loader
 
+- Create the local environment from the completed CPython 3.14 build, verify its version, and implement the runtime version check.
 - Implement the data records and versioned JSON validation, including duplicate-key detection before dictionary construction.
 - Compile regex rules once and preserve declaration order.
 - Derive the declared-kind catalog and compute the specification fingerprint using the pinned recipe.
 - Add tests for malformed rules, unknown fields, duplicate keys/names, conflicting actions, empty literals, invalid flags, and obvious empty matches.
 - Add two synthetic specifications showing different treatment of the same input.
 
-**Done when:** valid specifications compile deterministically and invalid specifications fail before input reading begins.
+**Done when:** under CPython 3.14, valid specifications compile deterministically and invalid specifications fail before input reading begins, including standalone `\B` and `\z` rules. Other Python minor versions receive a clear version error.
 
 ### 2. Implement the generic lexer
 
@@ -362,7 +391,7 @@ Each milestone below has a concrete result. Do not start application-specific sp
 
 - Implement file and standard-input reading, strict decoding, input limits, and newline preservation.
 - Implement stream-start and stream-end records and staged output publication.
-- Record versions and specification identity.
+- Record the actual Python and Unicode versions and specification identity.
 
 **Done when:** a string, file, and standard input containing the same decoded text produce the same token kinds, values, and positions, apart from source metadata. Failure cases publish no completed bundle.
 
@@ -383,12 +412,13 @@ Each milestone below has a concrete result. Do not start application-specific sp
 | Area | Required cases and evidence |
 | --- | --- |
 | Selection | `=` versus `==`; keyword versus identifier; equal-length ties; competing skip and emit rules; regex alternation and non-greedy behavior; lookbehind and word boundaries at nonzero offsets; `^` with and without `MULTILINE`. |
+| Python 3.14 semantics | Standalone `\B` and `\z` fail empty-match validation; consuming patterns with `\z` work and differ from `$` before a final newline; invalid patterns report `re.PatternError` details; Unicode-sensitive cases run under the selected 3.14 build. |
 | Coverage and progress | Empty input; all-skipped input; no matching rule in the middle; context-dependent zero-length match; multiline tokens; no implicit whitespace treatment. |
 | Locations | LF, CRLF, lone CR, tabs, combining characters, non-ASCII text, and non-BMP characters; locations before, inside, and after CRLF, including when separate rules consume CR and LF; spans index the original string exactly. |
 | Source handling | Explicit non-UTF-8 encoding; invalid bytes; split multibyte sequences across reader chunks; different reader chunk sizes; byte and character limit failures. |
 | Preservation | Reconstruct input from JSON token/skipped records; round-trip each lexeme through the MM2 chunk codec; preserve distinct numeric spellings. |
 | MM2 syntax boundaries | Lexemes containing parentheses, quotes, backslashes, semicolons, dollar signs, newlines, NUL, and apparent executable forms remain payload data. |
-| MM2 size boundaries | Payloads of 23, 24, 25, and many more bytes; Unicode split across chunks; distinct long values sharing a 70-byte prefix remain distinct after loading; atom guard accepts 63 ASCII bytes and rejects 64, including under `python -O`. |
+| MM2 size boundaries | Payloads of 23, 24, 25, and many more bytes; Unicode split across chunks; distinct long values sharing a 70-byte prefix remain distinct after loading; atom guard accepts 63 ASCII bytes and rejects 64, including under `.venv/bin/python -O`. |
 | Specification identity | Duplicate keys at multiple nesting levels fail; JSON formatting and object-key order leave the fingerprint unchanged; changing rule order changes it; both MM2 digest halves reproduce the full JSON fingerprint. |
 | Declared kinds | Catalog contains all distinct emitting-rule kinds, including absent kinds and empty inputs; skip rules contribute none; observed token kinds are a subset of the catalog. |
 | Identity and completion | Repeated identical tokens at different positions; two streams containing the same text; empty completed stream; interrupted or failed serialization has no final bundle. |
@@ -396,11 +426,19 @@ Each milestone below has a concrete result. Do not start application-specific sp
 
 Use `unittest` with fixed fixtures and a deterministic randomized round-trip test using a fixed seed. Test observable behavior, not private method calls. Keep a small manually calculated token oracle separate from the selection implementation.
 
+Run the complete suite with the project interpreter once implementation exists:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+Tests that check optimized execution must launch `sys.executable` with `-O`. Report the exact 3.14 patch/build and Unicode database version alongside results. A run under the system interpreter is not acceptance evidence for this target unless it is the selected 3.14 build.
+
 Measure representative synthetic inputs of increasing size, varying rule count, average token length, skipped-text fraction, and Unicode content. Record lexer-only time, serialization time, MORK load time, output size, and peak memory separately. The initial algorithm attempts each rule at each consumed segment; regex cost itself depends on the pattern. Do not claim linear performance for arbitrary rules.
 
 Profile before optimizing. Possible later improvements include literal-prefix indexing or batching output, provided the same regression cases preserve selection semantics. Do not combine patterns into one alternation merely for speed: that can change rule selection and regex group behavior.
 
-**Done when:** the Python suite and actual MORK handoff check pass, both demonstrations run from documented commands, resource defaults are justified by measurements, and the limitations are written in the README.
+**Done when:** the Python suite and actual MORK handoff check pass using the selected CPython 3.14 build, both demonstrations run from documented commands, resource defaults are justified by measurements from that build, and the limitations are written in the README.
 
 ## Boundary for the next project step
 
