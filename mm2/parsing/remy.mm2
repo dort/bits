@@ -1,0 +1,63 @@
+; "4 + 57 * 6 + 7"
+; "(+ (+ (num 4) (* (num 57)  (num 6))) (num 7))"
+;
+; 
+;   0  1 2       3  4         5         6
+; "(+ (+ (num 4) (* (num 57)  (num 6))) (num 7))"
+;
+; (expr 0 (+ 1 6)) 
+; (expr 1 (+ 2 3))
+; (expr 2 (num 4))
+; (expr 3 (* 4 5))
+; (expr 4 (num 57))
+; (expr 5 (num 6))
+; (expr 6 (num 7))
+
+
+; "4 + 57 * 6 + 7"
+; 
+(tok (num 4)  0  1)
+(tok (ws)     1  2)
+(tok (op +)   2  3)
+(tok (ws)     3  4)
+(tok (num 57) 4  6)
+(tok (ws)     6  7)
+(tok (op *)   7  8)
+(tok (ws)     8  9)
+(tok (num 6)  9  10)
+(tok (ws)     10 11)
+(tok (op +)   11 12)
+(tok (ws)     12 13)
+(tok (num 7)  13 14)
+
+(exec (0 0) (, (tok (ws) $mid $end)  (tok $tok $start  $mid)   )
+            (O (- (tok (ws) $mid    $end))
+               (- (tok $tok $start  $mid))
+               (+ (tok $tok $start  $end))
+            )
+)
+
+(exec (0 1) (, 
+        (tok (num $n) $s $e)
+    )
+    (, (expr ($s $e) (num $n))
+    )
+)
+
+(exec (0 2) (, (tok  (op *)  $left $right)
+               (expr ($eleft $left)  $el)
+               (expr ($right $eright) $er)
+            )
+            (,
+                (expr ($eleft $eright) (* ($eleft $left) ($right $eright)) )
+            )
+)
+
+(exec (0 3) (, (tok  (op +)  $left $right)
+               (expr ($eleft $left)  $el)
+               (expr ($right $eright) $er)
+            )
+            (,
+                (expr ($eleft $eright) (* ($eleft $left) ($right $eright)) )
+            )
+)
