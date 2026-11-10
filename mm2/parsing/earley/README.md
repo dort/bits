@@ -92,18 +92,41 @@ run's three-digit round-symbol table bounds a single schedule) until the
 canonical projection is identical across consecutive budgets. Per unit it
 records `recognition` (`accepted` on a sound acceptance fact; `rejected` only
 with established closure; otherwise `incomplete` with the exhausted limit
-named), `closure_complete`, `forest_complete` (`null` unless `--engine
-forest` was requested), `enumeration_complete` (always `null`: tree
-enumeration is not implemented), the budgets that ran to their marker, and
-fact counts. Wall time (default 30 s per unit, covering all reruns),
-dump-size, and optional process-memory (`--max-process-bytes`, RLIMIT_AS)
-ceilings all turn into `incomplete`, never into a claimed rejection; engine
-process failures without a memory cap are runtime diagnostics (exit 2).
-Results go to `results.jsonl` plus a `summary.json` naming the engine file
-and its SHA-256. Exit status: 0 all units completed, 1 some rejected and none
-incomplete, 3 any incomplete, 2 configuration/runtime failure, 130
-interrupted. A requested forest or enumeration cut short by a limit counts as
-incomplete for the exit status even when recognition accepted.
+named), `closure_complete`, `forest_complete` and `enumeration_complete`
+(`null` when not requested, `false` when attempted and cut short), the
+budgets that ran to their marker, fact counts, and the enumerated `trees`
+when requested. A `MORK` environment variable overrides the default engine
+binary path for the runner and the command alike.
+
+Resource limits are enforced while the work runs, not inspected afterwards.
+One absolute deadline per unit (`--timeout-seconds`, default 30 s) covers
+every engine rerun and all Python processing after it — dump parsing,
+projection, forest construction, tree enumeration; expiry preserves sound
+acceptance and any previously established closure but marks the unfinished
+output incomplete with the deadline named. The engine process runs under
+RLIMIT_FSIZE at `--max-dump-bytes`, so the OS stops an oversized dump while
+it is being written, and under RLIMIT_AS at `--max-process-bytes` (default
+16 GiB: the release binary reserves just under 10 GiB of virtual address
+space at startup, so the ceiling bounds growth beyond that fixed
+reservation; it is address space, not resident memory). A limit outcome is
+reported only on evidence of that particular exhaustion — the runner's own
+timeout, the file-size signal or a dump at the ceiling, or an
+allocation-failure abort under the memory cap — and every other nonzero
+engine exit is a runtime diagnostic (exit 2) with a bounded stderr prefix,
+whether or not limits were installed.
+
+Results are staged in a sibling temporary directory and published to
+`--output-dir` in one no-replace rename (the lexer bundle writer's
+`publish_directory`) only after every unit is written, so a failed or
+interrupted run leaves no partial output and never blocks a retry at the
+same path. The published set is fixed: `results.jsonl` (one row per unit,
+without graphs), `forests.jsonl` in forest mode (one row per unit with the
+lossless packed graph and its `graph_complete` flag), and `summary.json`
+naming the engine file, its SHA-256, and every limit including
+`max_trees`/`max_depth`. Exit status: 0 all units completed, 1 some rejected
+and none incomplete, 3 any incomplete, 2 configuration/runtime failure, 130
+interrupted. A requested forest or enumeration cut short by a limit counts
+as incomplete for the exit status even when recognition accepted.
 
 ## The forest consumer
 
@@ -115,8 +138,13 @@ emit duplicate trees, because the parent already holds one edge per child
 production. `Forest.graph()` is the lossless JSON form of the complete
 alternative set; `Forest.enumerate(max_trees, max_depth)` returns Remy's
 full-child-list tree shape as a bounded output view and reports whether it
-exhausted every alternative (a unit cycle or a count/depth cut makes it
-incomplete). The runner wires this behind `--max-trees`/`--max-depth`, which
+exhausted every alternative (a unit cycle, a count/depth cut, or deadline
+expiry makes it incomplete). Traversal keeps its state on explicit stacks, so
+the supported limits govern termination and a deep unit cycle cannot exhaust
+the Python call stack before the requested depth applies. The constructor
+takes the runner's per-unit deadline; construction and `graph()` raise
+through it, while `enumerate` stops and keeps the trees found before expiry.
+The runner wires enumeration behind `--max-trees`/`--max-depth`, which
 require `--engine forest`; per unit it records the trees,
 `enumeration_complete` (true only when the graph is also closed), and keeps
 "not requested" (`null`) distinct from "attempted but incomplete" (`false`).
@@ -128,14 +156,23 @@ cd mm2/parsing/earley
 /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python -m unittest discover -s tests -v
 ```
 
-Thirty-six tests: eleven engine tests against the real binary (a `MORK`
-environment variable overrides the binary path), eight compiler tests, seven
-runner tests that build real version-2 bundles through the lexer pipeline
-and drive them through the runner and the command, and ten forest tests
-(the `x + 12` and Remy-oracle trees, the two- and four-tree sibling
-fixtures with no duplicate emissions, the merged start root, explicit cycle
-truncation, count-limited partial enumeration, the graph JSON round trip,
-and runner-level enumeration). The engine tests cover: the `x + 12` worked example with its
+Fifty-three tests: eleven engine tests against the real binary (a `MORK`
+environment variable overrides the binary path), eight compiler tests,
+eighteen runner tests that build real version-2 bundles through the lexer
+pipeline and drive them through the runner and the command (including the
+deadline carried through every Python stage with sound acceptance preserved,
+the oversized-dump writer stopped at the bound by the OS, real memory-limit
+exhaustion as a verified incomplete outcome, ordinary engine failures staying
+diagnostics with and without a memory cap, staged publication that survives
+missing bundles, interruption, and midway failures without blocking a retry,
+and the fixed forest-mode file set), and sixteen forest tests (the `x + 12`
+and Remy-oracle trees, the two- and four-tree sibling fixtures with no
+duplicate emissions, the merged start root, explicit cycle truncation,
+count-limited partial enumeration, the graph JSON round trip, runner-level
+enumeration and graph publication including cyclic graphs, a
+recursion-first unit cycle under a 10,000 depth limit, and deadline cuts
+during construction, graph rendering, and enumeration). The engine tests
+cover: the `x + 12` worked example with its
 pinned grammar fingerprint and 13-item chart; wrong, truncated, and empty
 streams rejecting only after projection convergence; genuinely unproductive
 recursion as stable non-acceptance; the 31-production unit chain, where an

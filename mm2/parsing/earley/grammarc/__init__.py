@@ -14,9 +14,10 @@ from .serialize import (MAX_ROUNDS, demand_fact, grammar_facts,
 from .facts import (FOREST_HEADS, RECOGNITION_HEADS, parse_facts, projection,
                     render, select)
 from .forest import Forest
-from .runner import Runner, UnitResult
+from .runner import Deadline, DeadlineExceeded, Runner, UnitResult
 
 __all__ = ["CompiledGrammar", "Production", "compile_grammar", "load_grammar",
            "MAX_ROUNDS", "demand_fact", "grammar_facts", "round_table_facts",
            "FOREST_HEADS", "RECOGNITION_HEADS", "parse_facts", "projection",
-           "render", "select", "Forest", "Runner", "UnitResult"]
+           "render", "select", "Forest", "Deadline", "DeadlineExceeded",
+           "Runner", "UnitResult"]

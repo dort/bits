@@ -15,19 +15,23 @@ RECOGNITION_HEADS = ("item", "accepted")
 FOREST_HEADS = ("item", "accepted", "node", "part")
 
 
-def parse_facts(text):
+def parse_facts(text, deadline=None):
     """Parse a dump or fixture into nested tuples; atoms stay strings.
 
     Each fact is one parenthesized expression; the dump writes one per line,
     but the parser only relies on balanced parentheses. Lines whose first
     nonblank character is ';' are comments (fixtures carry them, dumps do
-    not) and are skipped.
+    not) and are skipped. `deadline` is an object whose `check()` raises when
+    the caller's wall-time budget is exhausted; it is consulted periodically
+    because a dump can be tens of megabytes.
     """
     text = "\n".join(line for line in text.splitlines()
                      if not line.lstrip().startswith(";"))
     facts = []
     stack = []
-    for match in _TOKEN.finditer(text):
+    for count, match in enumerate(_TOKEN.finditer(text)):
+        if deadline is not None and not count % 4096:
+            deadline.check()
         token = match.group()
         if token == "(":
             stack.append([])
@@ -60,10 +64,12 @@ def select(facts, head, *prefix):
             if fact and fact[0] == head and fact[1:1 + len(prefix)] == prefix}
 
 
-def projection(facts, namespace, stream, grammar, heads):
+def projection(facts, namespace, stream, grammar, heads, deadline=None):
     """The canonical semantic projection for one (namespace, stream, grammar)."""
     chosen = set()
     for head in heads:
-        for fact in select(facts, head, namespace, stream, grammar):
+        for count, fact in enumerate(select(facts, head, namespace, stream, grammar)):
+            if deadline is not None and not count % 1024:
+                deadline.check()
             chosen.add(render(fact))
     return frozenset(chosen)

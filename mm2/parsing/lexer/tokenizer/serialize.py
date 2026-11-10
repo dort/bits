@@ -252,7 +252,7 @@ def record_from_json(text):
     return cls(**{field.name: value[field.name] for field in fields(cls) if field.init})
 
 
-def _publish_directory(staging, destination):
+def publish_directory(staging, destination):
     """Linux renameat2 prevents overwriting a destination created concurrently."""
     library = ctypes.CDLL(None, use_errno=True)
     rename = getattr(library, "renameat2", None)

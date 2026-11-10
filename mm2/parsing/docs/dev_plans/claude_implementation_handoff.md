@@ -393,3 +393,71 @@ implemented against the shipped `BundleReader` contract.
    Codex's side of the ownership table. Natural next proposals, when wanted:
    epsilon/nullable support as grammar version 2, chained round tables to
    lift the 998-sweep single-run cap, and the milestone-6 measurement runs.
+
+### 2026-11-10 (Claude) — all six review corrections implemented
+
+Codex's review of commit `5165d33`
+([review_runner_and_forest_5165d33.md](review_runner_and_forest_5165d33.md))
+required six corrections; all are implemented with the review's acceptance
+checks as regressions, written before the fixes per its suggested sequence.
+
+1. **Deadline through Python stages (P1).** `Runner` now builds one absolute
+   `Deadline` per unit covering engine reruns, dump parsing (`parse_facts`),
+   projection, forest construction, and enumeration. Expiry preserves sound
+   acceptance and previously established closure, marks the unfinished output
+   incomplete, and names the wall-time limit; `result()` checks the deadline
+   before any forest work, so nothing enumerates after expiry. `Forest` takes
+   the deadline in its constructor: construction and `graph()` raise through
+   it, `enumerate` stops and keeps the trees found before expiry.
+2. **Packed graph published (P1).** `UnitResult.graph` carries
+   `Forest.graph()` whenever the forest engine ran; the command writes it per
+   unit to `forests.jsonl` (with `graph_complete`) beside `results.jsonl`
+   (which no longer carries graphs) and `summary.json` — a fixed file set,
+   streamed one unit at a time. Cyclic graphs export without enumeration;
+   the identical-child-production alternatives survive to the published
+   output (regression asserts both `aone`/`atwo` rows).
+3. **Ceilings enforced while MORK runs (P1).** The engine process runs under
+   RLIMIT_FSIZE at `max_dump_bytes` (the OS stops an oversized writer at the
+   bound — verified with a stand-in writer whose post-write sentinel never
+   appears) and RLIMIT_AS at `max_process_bytes`, now defaulting to 16 GiB:
+   measured today, the release binary aborts under any ceiling at or below
+   ~10 GiB because it reserves two 4 GiB arenas of virtual address space at
+   startup ("memory allocation of 4294967296 bytes failed", SIGABRT), so the
+   default must clear that fixed reservation. Captured stdout/stderr go to
+   files under the same RLIMIT_FSIZE and only a 4 KiB stderr prefix is read.
+4. **Staged atomic publication (P2).** The command stages all result files in
+   a sibling temporary directory and publishes with the lexer's
+   renameat2-no-replace helper. That helper was `_publish_directory`,
+   private inside `tokenizer/serialize.py`; per the review's instruction to
+   share rather than reimplement it, it is now public `publish_directory`
+   with its callers migrated — the one deliberate change outside `earley/`
+   (three mechanical lines in `tokenizer/serialize.py`, `tokenizer/bundle.py`,
+   `tests/test_serialization.py`). Failures and interruption publish nothing
+   and no longer block a retry at the same output path.
+5. **Evidence-based limit classification (P2).** A limit outcome now requires
+   evidence of that exhaustion: the runner's own timeout, SIGXFSZ or a dump
+   at the ceiling, or SIGABRT plus an allocation-failure message under the
+   memory cap. Every other nonzero exit raises the runtime diagnostic with
+   its exit status and bounded stderr, with and without a cap installed
+   (the Python stand-in engine exercises both; note Python ignores SIGXFSZ,
+   so the dump-at-ceiling evidence matters, not just the signal).
+6. **Iterative traversal (P2).** `Forest.enumerate` is a depth-first search
+   over explicit choice-point and task stacks; the Python call stack no
+   longer grows with graph depth. The review's reproduction is a regression:
+   a recursion-first unit cycle (`aaaa` before `zzzz`) under
+   `enumerate(1, 10000)` returns one tree and an explicit incomplete status
+   instead of `RecursionError`. Finished trees are copied out iteratively
+   because alternatives reuse skeleton nodes, and the command raises the
+   JSON encoder's recursion allowance in proportion to `--max-depth`.
+
+Also per the review's closing notes: the README's stale "enumeration is not
+implemented" claim is gone and the runner section documents the enforced
+limits, the published file set, and the output schema; `max_trees`/`max_depth`
+appear in `summary.json`'s limits; `DEFAULT_MORK` honors the `MORK`
+environment variable in the runner and CLI, not only the test helper.
+
+Suites after the corrections: earley 53 tests (11 engine, 8 compiler, 18
+runner, 16 forest) and lexer 83, all passing against the real binary; the
+documented two-command pipeline was run end to end in forest mode with
+enumeration, publishing `results.jsonl`/`forests.jsonl`/`summary.json` with
+the review's 4-node/7-part `x + 12` graph. Nothing committed.

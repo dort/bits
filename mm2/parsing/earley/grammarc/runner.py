@@ -12,11 +12,25 @@ fact; `rejected` additionally requires established closure; everything cut
 short by a round, wall-time, dump-size, memory, or token limit is
 `incomplete` with the exhausted limit named. Runtime failures and malformed
 bundles raise; they are diagnostics, not grammatical rejections.
+
+Resource limits are enforced, not inspected after the fact. One absolute
+deadline per unit covers every engine run and all Python processing after it
+(dump parsing, projection, forest construction, tree enumeration); expiry
+preserves sound acceptance and any previously established closure but marks
+the unfinished output incomplete. The engine process runs under RLIMIT_FSIZE
+at `max_dump_bytes`, so the OS stops an oversized dump (and the captured
+diagnostic streams) while it is being written, and under RLIMIT_AS at
+`max_process_bytes`. A limit outcome is reported only on evidence of that
+particular exhaustion — the runner's own timeout, the file-size signal, or an
+allocation-failure abort — and every other nonzero exit is a runtime
+diagnostic whether or not limits were installed.
 """
 
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
 import resource
+import signal
 import subprocess
 import tempfile
 import time
@@ -32,13 +46,41 @@ from .serialize import MAX_ROUNDS, demand_fact, grammar_facts, round_table_facts
 PROJECT = Path(__file__).resolve().parents[1]
 ENGINES = {"recognition": PROJECT / "earley.mm2",
            "forest": PROJECT / "earley_forest.mm2"}
-DEFAULT_MORK = "/home/ni/repos/m/MORK/target/release/mork"
+DEFAULT_MORK = os.environ.get("MORK", "/home/ni/repos/m/MORK/target/release/mork")
 DEFAULT_MAX_TOKENS = 512          # parser token limit, below the reader default
 DEFAULT_MAX_PAYLOAD_BYTES = 64 * 1024 * 1024
 DEFAULT_MAX_DUMP_BYTES = 64 * 1024 * 1024
+# RLIMIT_AS bounds virtual address space. The release MORK binary reserves
+# just under 10 GiB of it at startup (a 4 GiB arena allocation fails under
+# any smaller ceiling), measured 2026-11-10 on this machine; 16 GiB leaves
+# that fixed reservation room while still bounding runaway growth.
+DEFAULT_MAX_PROCESS_BYTES = 16 * 1024 ** 3
 DEFAULT_INITIAL_ROUNDS = 16
 DEFAULT_MAX_SWEEPS = 512          # one run's round table is capped at MAX_ROUNDS
 DEFAULT_TIMEOUT_SECONDS = 30.0
+STDERR_DIAGNOSTIC_BYTES = 4096    # bounded prefix of the captured stream
+
+
+class DeadlineExceeded(Exception):
+    """The per-unit wall-time budget ran out during a Python stage."""
+
+
+class Deadline:
+    """One absolute per-unit deadline shared by engine runs and Python stages."""
+
+    def __init__(self, seconds, start=None):
+        self.seconds = seconds
+        self._at = (time.monotonic() if start is None else start) + seconds
+
+    def remaining(self):
+        return self._at - time.monotonic()
+
+    def expired(self):
+        return time.monotonic() >= self._at
+
+    def check(self):
+        if self.expired():
+            raise DeadlineExceeded(f"wall-time limit timeout_seconds={self.seconds}")
 
 
 @dataclass(frozen=True)
@@ -51,13 +93,14 @@ class UnitResult:
     closure_complete: bool
     forest_complete: bool | None      # None: no forest was requested
     enumeration_complete: bool | None = None  # None: no enumeration requested
-    reason: str | None = None          # the exhausted limit, for incomplete units
+    reason: str | None = None          # the exhausted limit, when any output is incomplete
     budgets: tuple = field(default=())  # sweep budgets that ran to their marker
     item_count: int = 0
     node_count: int = 0
     part_count: int = 0
     elapsed_seconds: float = 0.0
     trees: tuple = ()                  # bounded enumeration output, when requested
+    graph: dict | None = None          # the packed alternative set, in forest mode
 
 
 class Runner:
@@ -68,8 +111,8 @@ class Runner:
                  max_tokens=DEFAULT_MAX_TOKENS, max_chars=DEFAULT_MAX_CHARS,
                  max_payload_bytes=DEFAULT_MAX_PAYLOAD_BYTES,
                  max_dump_bytes=DEFAULT_MAX_DUMP_BYTES,
-                 max_process_bytes=None, max_trees=None, max_depth=None,
-                 work_dir=None):
+                 max_process_bytes=DEFAULT_MAX_PROCESS_BYTES,
+                 max_trees=None, max_depth=None, work_dir=None):
         require_python314()
         if engine not in ENGINES:
             raise ConfigurationError(f"unknown engine {engine!r}; expected one of "
@@ -132,31 +175,48 @@ class Runner:
 
     def run_unit(self, reader, entry):
         started = time.monotonic()
+        deadline = Deadline(self.timeout_seconds, start=started)
+        wall_reason = f"wall-time limit timeout_seconds={self.timeout_seconds}"
+        key = (entry["namespace"], entry["stream_id"], self.grammar_id)
 
         def result(recognition, closure, *, reason=None, budgets=(), facts=None):
-            key = (entry["namespace"], entry["stream_id"], self.grammar_id)
+            graph = None
+            forest_done = None
             enumeration = None
             trees = ()
-            if self.max_trees is not None:
-                # Enumeration is complete only when the graph itself is: an
-                # unconverged forest could be missing alternatives.
-                enumeration = False
+            if self.engine == "forest":
+                forest_done = False
+                if self.max_trees is not None:
+                    # Enumeration is complete only when the graph itself is:
+                    # an unconverged forest could be missing alternatives.
+                    enumeration = False
                 if facts is not None:
-                    forest = Forest(self.grammar, facts, *key)
-                    listed, exhausted = forest.enumerate(self.max_trees, self.max_depth)
-                    trees = tuple(listed)
-                    enumeration = closure and exhausted
+                    try:
+                        deadline.check()  # no forest work on an exhausted deadline
+                        forest = Forest(self.grammar, facts, *key, deadline=deadline)
+                        graph = forest.graph()
+                        forest_done = closure
+                        if self.max_trees is not None:
+                            listed, exhausted = forest.enumerate(self.max_trees,
+                                                                 self.max_depth)
+                            trees = tuple(listed)
+                            enumeration = closure and exhausted
+                            if not exhausted and deadline.expired():
+                                reason = reason or wall_reason
+                    except DeadlineExceeded:
+                        graph = None
+                        forest_done = False
+                        reason = reason or wall_reason
             return UnitResult(
                 entry["namespace"], entry["source_id"], entry["stream_id"],
-                entry["unit_index"], recognition, closure,
-                closure if self.engine == "forest" else None,
+                entry["unit_index"], recognition, closure, forest_done,
                 enumeration_complete=enumeration,
                 reason=reason, budgets=tuple(budgets),
                 item_count=len(select(facts or [], "item", *key)),
                 node_count=len(select(facts or [], "node", *key)),
                 part_count=len(select(facts or [], "part", *key)),
                 elapsed_seconds=time.monotonic() - started,
-                trees=trees)
+                trees=trees, graph=graph)
 
         try:
             stream = reader.read_stream(entry, **self.read_limits)
@@ -164,8 +224,6 @@ class Runner:
             return result("incomplete", False, reason=str(error))
         self.grammar.check_terminals(stream.start.kinds)
         demand = demand_fact(entry["namespace"], entry["stream_id"], self.grammar_id)
-        deadline = started + self.timeout_seconds
-        key = (entry["namespace"], entry["stream_id"], self.grammar_id)
         budgets = []
         previous = facts = None
         budget = self.initial_rounds
@@ -175,17 +233,20 @@ class Runner:
             if budget > self.max_sweeps:
                 reason = f"sweep budget limit max_sweeps={self.max_sweeps}"
                 break
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                reason = f"wall-time limit timeout_seconds={self.timeout_seconds}"
+            if deadline.expired():
+                reason = wall_reason
                 break
-            run, failure = self._execute(stream, demand, budget, remaining)
-            if failure is not None:
-                reason = failure
+            try:
+                run, failure = self._execute(stream, demand, budget, deadline)
+                if failure is not None:
+                    reason = failure
+                    break
+                facts = run
+                budgets.append(budget)
+                current = projection(facts, *key, self.heads, deadline=deadline)
+            except DeadlineExceeded:
+                reason = wall_reason
                 break
-            facts = run
-            budgets.append(budget)
-            current = projection(facts, *key, self.heads)
             if previous is not None and current == previous:
                 closure = True
                 break
@@ -203,39 +264,60 @@ class Runner:
                       reason=None if closure else reason,
                       budgets=budgets, facts=facts)
 
-    def _execute(self, stream, demand, budget, remaining_seconds):
+    def _execute(self, stream, demand, budget, deadline):
         """One fresh-space MORK run; returns (facts, None) or (None, reason)."""
         self.work_dir.mkdir(parents=True, exist_ok=True)
-        preexec = None
-        if self.max_process_bytes is not None:
-            ceiling = self.max_process_bytes
+        dump_ceiling = self.max_dump_bytes
+        memory_ceiling = self.max_process_bytes
 
-            def preexec():
-                resource.setrlimit(resource.RLIMIT_AS, (ceiling, ceiling))
+        def preexec():
+            # The OS stops the engine at the ceilings while it runs:
+            # RLIMIT_FSIZE bounds every file it writes (the dump and the
+            # captured streams), RLIMIT_AS bounds its address space.
+            resource.setrlimit(resource.RLIMIT_FSIZE, (dump_ceiling, dump_ceiling))
+            if memory_ceiling is not None:
+                resource.setrlimit(resource.RLIMIT_AS, (memory_ceiling, memory_ceiling))
+
         with tempfile.TemporaryDirectory(dir=self.work_dir) as directory:
             input_path = Path(directory) / "input.mm2"
             dump_path = Path(directory) / "dump.mm2"
+            stderr_path = Path(directory) / "stderr"
+            stdout_path = Path(directory) / "stdout"
             text = self.grammar_source + demand + round_table_facts(budget)
             input_path.write_bytes(text.encode("ascii") + stream.mm2)
             command = [self.mork, "run", str(input_path), str(dump_path)]
             command += ["--aux-path", str(self.engine_path)]
             try:
-                completed = subprocess.run(command, capture_output=True, text=True,
-                                           timeout=remaining_seconds,
-                                           preexec_fn=preexec)
+                with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
+                    completed = subprocess.run(command, stdout=out, stderr=err,
+                                               timeout=deadline.remaining(),
+                                               preexec_fn=preexec)
             except subprocess.TimeoutExpired:
                 return None, (f"wall-time limit timeout_seconds="
                               f"{self.timeout_seconds} during {budget} sweeps")
+            stderr_head = stderr_path.read_bytes()[:STDERR_DIAGNOSTIC_BYTES]
+            stderr_head = stderr_head.decode("utf-8", "replace").strip()
             if completed.returncode != 0:
-                if self.max_process_bytes is not None:
-                    return None, (f"engine process failed under max_process_bytes="
-                                  f"{self.max_process_bytes} (exit {completed.returncode})")
+                # RLIMIT_FSIZE stopped the engine at the output ceiling: it
+                # dies by SIGXFSZ, or it handles the signal and fails on the
+                # truncated write, leaving the dump at the ceiling. Either
+                # way the truncated dump can still contain the budget marker,
+                # so it is never parsed.
+                dump_size = dump_path.stat().st_size if dump_path.exists() else 0
+                if completed.returncode == -signal.SIGXFSZ or dump_size >= dump_ceiling:
+                    return None, (f"dump-size limit max_dump_bytes={self.max_dump_bytes} "
+                                  f"enforced during {budget} sweeps")
+                if (memory_ceiling is not None
+                        and completed.returncode == -signal.SIGABRT
+                        and "memory allocation" in stderr_head):
+                    return None, (f"memory limit max_process_bytes={memory_ceiling} "
+                                  f"(allocation failed during {budget} sweeps)")
                 raise RuntimeError(f"mork failed (exit {completed.returncode}): "
-                                   f"{completed.stderr.strip()}")
+                                   f"{stderr_head}")
             if dump_path.stat().st_size > self.max_dump_bytes:
                 return None, (f"dump-size limit max_dump_bytes={self.max_dump_bytes} "
                               f"at {budget} sweeps")
-            facts = parse_facts(dump_path.read_text())
+            facts = parse_facts(dump_path.read_text(), deadline=deadline)
         if ("swept", f"b{budget:03d}") not in facts:
             return None, f"scheduled sweeps did not finish at budget {budget}"
         if select(facts, "exec"):

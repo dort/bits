@@ -128,7 +128,7 @@ class SerializationTests(TempCase):
         with self.assertRaises(LexicalError):
             write_bundle(broken, output)
         self.assertEqual(list(self.directory.iterdir()), [])
-        with patch("tokenizer.bundle._publish_directory", side_effect=OSError("disk full")):
+        with patch("tokenizer.bundle.publish_directory", side_effect=OSError("disk full")):
             with self.assertRaises(OutputError):
                 write_bundle(self.records(), output)
         self.assertEqual(list(self.directory.iterdir()), [])

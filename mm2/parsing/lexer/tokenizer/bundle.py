@@ -15,7 +15,7 @@ from .model import (BUNDLE_VERSION, DEFAULT_MAX_CHARS, ConfigurationError,
                     StreamEnd, StreamStart, UnitStart, require_python314,
                     validate_limit)
 from .serialize import (DIGEST, _count, _fact, _json_line, _mm2_lines,
-                        _publish_directory, record_from_json)
+                        publish_directory, record_from_json)
 
 
 MAX_METADATA_BYTES = 65536
@@ -136,7 +136,7 @@ def write_bundle(records, output_dir):
                 manifest["files"] = {name: output.metadata() for name, output in
                                      zip(PAYLOAD_FILES, (jsonl, mm2, index))}
             staging.joinpath("manifest.json").write_bytes(_metadata_bytes(manifest))
-            _publish_directory(staging, destination)
+            publish_directory(staging, destination)
         return manifest
     except OSError as error:
         raise OutputError(str(error), source=str(destination)) from error
