@@ -1,0 +1,37 @@
+; MM2 Earley forest engine (six rules). Load either this file or earley.mm2,
+; never both: each carries its own cscn/dcmp/eacc variants, and loading both
+; would run both variants against the same items.
+;
+; Input contract (grammar, tokens, demand, round table, budget marker) is
+; identical to earley.mm2; see the contract comment there. This engine
+; additionally records the span-keyed forest while recognizing:
+;   (node NS S G A O P)        nonterminal A derives tokens O..P
+;   (part NS S G R D O M P C)  the prefix of production R up to dot D spans
+;                              O..P; its last child spans M..P and is
+;                              C = (t K) for the token at M..P of kind K, or
+;                              C = (nt A R2) for node (A, M, P) derived via
+;                              production R2
+; A packed alternative is the whole part fact including C; the five
+; positional coordinates alone do not identify it. Acceptance is a node of
+; the start symbol spanning 0..N.
+
+((prule ased) (, (parse $ns $s $g) (grm-start $g $a) (grm-prod $g $r $a $l))
+              (, (item $ns $s $g 0 $r 0 0)))
+((prule bprd) (, (item $ns $s $g $p $r $d $o) (grm-rhs $g $r $d (nt $a)) (grm-prod $g $r2 $a $l))
+              (, (item $ns $s $g $p $r2 0 $p)))
+((prule cscn) (, (item $ns $s $g $p $r $d $o) (grm-rhs $g $r $d (t $k)) (lex-token $ns $s $p $q $k) (grm-dot $g $d $d2))
+              (, (item $ns $s $g $q $r $d2 $o) (part $ns $s $g $r $d2 $o $p $q (t $k))))
+((prule dcmp) (, (item $ns $s $g $p $r $l $o) (grm-prod $g $r $a $l) (item $ns $s $g $o $r2 $d2 $o2) (grm-rhs $g $r2 $d2 (nt $a)) (grm-dot $g $d2 $d3))
+              (, (item $ns $s $g $p $r2 $d3 $o2) (part $ns $s $g $r2 $d3 $o2 $o $p (nt $a $r))))
+((prule dnod) (, (item $ns $s $g $p $r $l $o) (grm-prod $g $r $a $l))
+              (, (node $ns $s $g $a $o $p)))
+((prule eacc) (, (parse $ns $s $g) (grm-start $g $a) (node $ns $s $g $a 0 $n) (lex-end $ns $s $n $c))
+              (, (accepted $ns $s $g)))
+
+; Sweep driver and completion marker, identical to earley.mm2. Rule-name
+; instance order within a sweep is ased < bprd < cscn < dcmp < dnod < eacc
+; (uniform four-character names, length-first symbol comparison).
+(exec (dz r001)
+  (, (exec (dz $r) $p $t) (nextround $r $r2) ((prule $k) $sp $st))
+  (, (exec (d0 ($r $k)) $sp $st) (exec (dz $r2) $p $t)))
+(exec (zz fin) (, (budget $b)) (, (swept $b)))

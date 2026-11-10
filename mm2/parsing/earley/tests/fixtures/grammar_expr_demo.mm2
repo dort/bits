@@ -1,0 +1,18 @@
+; Grammar gexp: expr -> expr PLUS term | term ; term -> INT | IDENT
+; The worked example from the plans; accepts the lexer's "x + 12" stream.
+; The grm-spec halves are the pinned fingerprint of this grammar's JSON form.
+(grm-start gexp expr)
+(grm-spec gexp sha256 h8711aca694c020c03214bd2105a00212 h1864f95c644556d81121422f9281851d)
+(grm-prod gexp sum expr 3)
+(grm-rhs gexp sum 0 (nt expr))
+(grm-rhs gexp sum 1 (t PLUS))
+(grm-rhs gexp sum 2 (nt term))
+(grm-prod gexp lift expr 1)
+(grm-rhs gexp lift 0 (nt term))
+(grm-prod gexp num term 1)
+(grm-rhs gexp num 0 (t INT))
+(grm-prod gexp ref term 1)
+(grm-rhs gexp ref 0 (t IDENT))
+(grm-dot gexp 0 1)
+(grm-dot gexp 1 2)
+(grm-dot gexp 2 3)

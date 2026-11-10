@@ -1,0 +1,38 @@
+; Grammar gsib: start -> atom ; atom -> INT | INT (identically shaped siblings).
+; The parent's two part facts differ only in the child descriptor, so they
+; share all five positional coordinates.
+(grm-start gsib sss)
+(grm-prod gsib root sss 1)
+(grm-rhs gsib root 0 (nt atom))
+(grm-prod gsib aone atom 1)
+(grm-rhs gsib aone 0 (t INT))
+(grm-prod gsib atwo atom 1)
+(grm-rhs gsib atwo 0 (t INT))
+(grm-dot gsib 0 1)
+; Grammar gpar: start -> atom atom with the same two atom productions:
+; two independently ambiguous child positions.
+(grm-start gpar ppp)
+(grm-prod gpar pair ppp 2)
+(grm-rhs gpar pair 0 (nt atom))
+(grm-rhs gpar pair 1 (nt atom))
+(grm-prod gpar pone atom 1)
+(grm-rhs gpar pone 0 (t INT))
+(grm-prod gpar ptwo atom 1)
+(grm-rhs gpar ptwo 0 (t INT))
+(grm-dot gpar 0 1)
+(grm-dot gpar 1 2)
+; Grammar gsta: start -> INT | INT (two accepting start productions).
+; One start-symbol node retains both accepting production alternatives.
+(grm-start gsta tts)
+(grm-prod gsta frst tts 1)
+(grm-rhs gsta frst 0 (t INT))
+(grm-prod gsta scnd tts 1)
+(grm-rhs gsta scnd 0 (t INT))
+(grm-dot gsta 0 1)
+; Grammar gbad: start -> start (genuinely unproductive recursion).
+; No derivation reaches a terminal, so stable non-acceptance must be
+; distinguishable from an exhausted budget.
+(grm-start gbad uuu)
+(grm-prod gbad self uuu 1)
+(grm-rhs gbad self 0 (nt uuu))
+(grm-dot gbad 0 1)

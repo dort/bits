@@ -1,0 +1,41 @@
+; MM2 Earley recognition engine (five rules). Load either this file or
+; earley_forest.mm2, never both: each carries its own cscn/dcmp/eacc variants,
+; and loading both would run both variants against the same items.
+;
+; The caller supplies everything else as data:
+;   grammar     (grm-start G A) (grm-prod G R A L) (grm-rhs G R D (t K)|(nt A))
+;               (grm-dot G D D2) for every dot successor the grammar needs
+;   tokens      (lex-token NS S P Q K) and (lex-end NS S N C)
+;   demand      (parse NS S G), one per requested stream/grammar pair
+;   budget      (nextround r001 r002) ... a chained round table starting at
+;               r001 with three-digit zero-padded round symbols (shortlex
+;               ordering compares symbol length first), plus one (budget B)
+;   marker      after the round table is consumed the engine writes (swept B);
+;               a dump without (swept B) means the scheduled sweeps did not
+;               all run. (swept B) certifies the schedule finished, not that
+;               the closure is complete: the runner compares canonical
+;               item/accepted projections across increasing budgets for that.
+;
+; Symbols: NS namespace, S stream ID, G grammar ID, A nonterminal, R production
+; name, L production length, D dot position (consumed right-hand-side symbols),
+; O origin token index, P/Q token positions, K terminal kind, C character count.
+
+((prule ased) (, (parse $ns $s $g) (grm-start $g $a) (grm-prod $g $r $a $l))
+              (, (item $ns $s $g 0 $r 0 0)))
+((prule bprd) (, (item $ns $s $g $p $r $d $o) (grm-rhs $g $r $d (nt $a)) (grm-prod $g $r2 $a $l))
+              (, (item $ns $s $g $p $r2 0 $p)))
+((prule cscn) (, (item $ns $s $g $p $r $d $o) (grm-rhs $g $r $d (t $k)) (lex-token $ns $s $p $q $k) (grm-dot $g $d $d2))
+              (, (item $ns $s $g $q $r $d2 $o)))
+((prule dcmp) (, (item $ns $s $g $p $r $l $o) (grm-prod $g $r $a $l) (item $ns $s $g $o $r2 $d2 $o2) (grm-rhs $g $r2 $d2 (nt $a)) (grm-dot $g $d2 $d3))
+              (, (item $ns $s $g $p $r2 $d3 $o2)))
+((prule eacc) (, (parse $ns $s $g) (grm-start $g $a) (grm-prod $g $r $a $l) (item $ns $s $g $n $r $l 0) (lex-end $ns $s $n $c))
+              (, (accepted $ns $s $g)))
+
+; Sweep driver: one sweep instantiates every stored rule against the whole
+; space. Spawned instance tags (d0 (ROUND NAME)) sort before the driver tag
+; (dz ROUND), so a round's rules run before the driver advances; the marker
+; tag (zz fin) sorts after both, so it runs only when the table is consumed.
+(exec (dz r001)
+  (, (exec (dz $r) $p $t) (nextround $r $r2) ((prule $k) $sp $st))
+  (, (exec (d0 ($r $k)) $sp $st) (exec (dz $r2) $p $t)))
+(exec (zz fin) (, (budget $b)) (, (swept $b)))

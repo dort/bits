@@ -1,0 +1,11 @@
+; Streams for negative recognition tests against grammar gexp.
+; w0: wrong tokens (IDENT PLUS PLUS); tr: truncated (IDENT PLUS);
+; e0: empty stream under a non-nullable grammar.
+(lex-token bad w0 0 1 IDENT)
+(lex-token bad w0 1 2 PLUS)
+(lex-token bad w0 2 3 PLUS)
+(lex-end bad w0 3 c5)
+(lex-token bad tr 0 1 IDENT)
+(lex-token bad tr 1 2 PLUS)
+(lex-end bad tr 2 c3)
+(lex-end bad e0 0 c0)

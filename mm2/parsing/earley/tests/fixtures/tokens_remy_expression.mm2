@@ -1,0 +1,9 @@
+; Ground tokens for "4 + 57 * 6 + 7": INT PLUS INT STAR INT PLUS INT.
+(lex-token remy e0 0 1 INT)
+(lex-token remy e0 1 2 PLUS)
+(lex-token remy e0 2 3 INT)
+(lex-token remy e0 3 4 STAR)
+(lex-token remy e0 4 5 INT)
+(lex-token remy e0 5 6 PLUS)
+(lex-token remy e0 6 7 INT)
+(lex-end remy e0 7 c14)

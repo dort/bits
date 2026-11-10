@@ -1,0 +1,24 @@
+; Grammar gpre: multiplication binds tighter than addition, both left-associated.
+;   expr -> expr PLUS term | term
+;   term -> term STAR atom | atom
+;   atom -> INT
+; On "4 + 57 * 6 + 7" the unique derivation groups as
+; (+ (+ 4 (* 57 6)) 7); the grammar, not rule scheduling, enforces that.
+(grm-start gpre expr)
+(grm-prod gpre sum expr 3)
+(grm-rhs gpre sum 0 (nt expr))
+(grm-rhs gpre sum 1 (t PLUS))
+(grm-rhs gpre sum 2 (nt term))
+(grm-prod gpre lift expr 1)
+(grm-rhs gpre lift 0 (nt term))
+(grm-prod gpre mul term 3)
+(grm-rhs gpre mul 0 (nt term))
+(grm-rhs gpre mul 1 (t STAR))
+(grm-rhs gpre mul 2 (nt atom))
+(grm-prod gpre lifa term 1)
+(grm-rhs gpre lifa 0 (nt atom))
+(grm-prod gpre int atom 1)
+(grm-rhs gpre int 0 (t INT))
+(grm-dot gpre 0 1)
+(grm-dot gpre 1 2)
+(grm-dot gpre 2 3)

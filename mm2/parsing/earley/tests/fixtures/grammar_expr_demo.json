@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "start": "expr",
+  "productions": [
+    {"name": "sum",  "lhs": "expr", "rhs": [{"nt": "expr"}, {"t": "PLUS"}, {"nt": "term"}]},
+    {"name": "lift", "lhs": "expr", "rhs": [{"nt": "term"}]},
+    {"name": "num",  "lhs": "term", "rhs": [{"t": "INT"}]},
+    {"name": "ref",  "lhs": "term", "rhs": [{"t": "IDENT"}]}
+  ]
+}

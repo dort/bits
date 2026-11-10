@@ -1,0 +1,16 @@
+; Grammar gcyd: direct unit cycle. expr -> expr | INT
+(grm-start gcyd expr)
+(grm-prod gcyd loop expr 1)
+(grm-rhs gcyd loop 0 (nt expr))
+(grm-prod gcyd inte expr 1)
+(grm-rhs gcyd inte 0 (t INT))
+(grm-dot gcyd 0 1)
+; Grammar gcyi: indirect unit cycle. aaa -> bbb | INT ; bbb -> aaa
+(grm-start gcyi aaa)
+(grm-prod gcyi fwd aaa 1)
+(grm-rhs gcyi fwd 0 (nt bbb))
+(grm-prod gcyi base aaa 1)
+(grm-rhs gcyi base 0 (t INT))
+(grm-prod gcyi bwd bbb 1)
+(grm-rhs gcyi bwd 0 (nt aaa))
+(grm-dot gcyi 0 1)

@@ -1,0 +1,9 @@
+; Grammar gterm: expr -> term ; term -> INT
+; Accepts a single INT; rejects the "x + 12" stream. Production names are
+; disjoint from grammar_expr_demo.mm2 so cross-grammar leakage is visible.
+(grm-start gterm expr)
+(grm-prod gterm lifb expr 1)
+(grm-rhs gterm lifb 0 (nt term))
+(grm-prod gterm numb term 1)
+(grm-rhs gterm numb 0 (t INT))
+(grm-dot gterm 0 1)
