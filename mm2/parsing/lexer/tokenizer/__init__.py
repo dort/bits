@@ -4,12 +4,12 @@ from .lexer import tokenize
 from .model import (ConfigurationError, LexerError, LexicalError, LimitError,
                     OutputError, RuntimeVersionError, Skipped, SourceError, Span,
                     StreamEnd, StreamStart, Token)
-from .source import read_source, read_stream
+from .source import DecodedStream, read_source, read_stream
 from .spec import compile_spec, load_spec, loads_spec
 from .serialize import decode_lexeme, encode_lexeme, iter_jsonl, iter_mm2, write_bundle
 
 __all__ = [
-    "tokenize", "compile_spec", "load_spec", "loads_spec", "read_source", "read_stream",
+    "tokenize", "compile_spec", "load_spec", "loads_spec", "read_source", "read_stream", "DecodedStream",
     "ConfigurationError", "LexerError", "LexicalError", "LimitError", "OutputError",
     "RuntimeVersionError", "SourceError", "Span", "StreamStart", "Token", "Skipped",
     "StreamEnd",

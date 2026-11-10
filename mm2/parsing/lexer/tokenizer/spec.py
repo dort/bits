@@ -1,16 +1,10 @@
 """Strict declarative specification loading; no executable configuration."""
 
 from dataclasses import dataclass
-import hashlib
-import json
-from pathlib import Path
 import re
 
+from .config import compile_flags, fingerprint, load_json, loads_json
 from .model import ConfigurationError, require_python314, validate_identifier
-
-
-FLAGS = {name: getattr(re, name) for name in
-         ("ASCII", "IGNORECASE", "MULTILINE", "DOTALL", "VERBOSE")}
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,39 +22,20 @@ class CompiledSpec:
     fingerprint: str
 
 
-def _object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ConfigurationError("duplicate JSON key", field=key)
-        result[key] = value
-    return result
-
-
-def _constant(value):
-    raise ConfigurationError(f"non-JSON constant {value}")
-
-
 def loads_spec(text, *, source="<specification>"):
-    require_python314()
     try:
-        raw = json.loads(text, object_pairs_hook=_object, parse_constant=_constant)
-        return compile_spec(raw)
-    except json.JSONDecodeError as error:
-        raise ConfigurationError(error.msg, source=source, offset=error.pos,
-                                 line=error.lineno, column=error.colno) from error
+        return compile_spec(loads_json(text, source=source))
     except ConfigurationError as error:
         error.source = source
         raise
 
 
 def load_spec(path):
-    require_python314()
     try:
-        text = Path(path).read_text(encoding="utf-8", errors="strict")
-    except (OSError, UnicodeError) as error:
-        raise ConfigurationError(str(error), source=str(path)) from error
-    return loads_spec(text, source=str(path))
+        return compile_spec(load_json(path))
+    except ConfigurationError as error:
+        error.source = str(path)
+        raise
 
 
 def compile_spec(raw):
@@ -86,10 +61,8 @@ def compile_spec(raw):
             raise
         names.add(rule.name)
         rules.append(rule)
-    canonical = json.dumps(raw, ensure_ascii=True, sort_keys=True,
-                           separators=(",", ":"), allow_nan=False).encode("ascii")
     return CompiledSpec(tuple(rules), tuple(sorted({r.kind for r in rules if r.kind})),
-                        hashlib.sha256(canonical).hexdigest())
+                        fingerprint(raw))
 
 
 def _compile_rule(entry):
@@ -117,16 +90,7 @@ def _compile_rule(entry):
         if "flags" in entry:
             raise ConfigurationError("literal rules do not accept flags", field="flags")
         return Rule(name, kind, value, None)
-    flags = entry.get("flags", [])
-    if not isinstance(flags, list):
-        raise ConfigurationError("must be an array of flag names", field="flags")
-    seen = set()
-    mask = re.NOFLAG
-    for flag in flags:
-        if not isinstance(flag, str) or flag not in FLAGS or flag in seen:
-            raise ConfigurationError("unknown or duplicate regex flag", field="flags")
-        seen.add(flag)
-        mask |= FLAGS[flag]
+    mask = compile_flags(entry.get("flags", []))
     try:
         pattern = re.compile(value, flags=mask)
     except (re.PatternError, ValueError, OverflowError) as error:

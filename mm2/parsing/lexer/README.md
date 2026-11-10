@@ -80,7 +80,11 @@ write_bundle(
 - `loads_spec(json_text)` and `load_spec(path)` reject duplicate keys before
   dictionary construction, including nested duplicates.
 - `read_stream(binary_reader, ...)` and `read_source(path, ...)` return a
-  `TextSource` with `.text`, `.label`, and canonical `.encoding`.
+  `TextSource` with `.text`, `.label`, and canonical `.encoding`. They assemble
+  the complete text using the shared incremental decoder.
+- `DecodedStream(binary_reader, ...)` yields decoded text chunks without
+  retaining the whole input. It exposes `.label`, canonical `.encoding`,
+  `.byte_count`, `.char_count`, and `.complete`.
 - `tokenize(text, compiled_spec, *, namespace, stream_id, ...)` returns a
   single-pass iterator of immutable `StreamStart`, `Token`, `Skipped`, and
   `StreamEnd` records.
@@ -98,6 +102,32 @@ through `StreamEnd` to establish completion. Serializers reject incomplete
 record streams and inconsistent counts; bundle publication discards staging
 output on a processing error. Caller-owned streams used with the line iterators
 can contain a prefix after failure, so their callers own publication policy.
+
+For incremental decoding without tokenization:
+
+```python
+from tokenizer import DecodedStream
+
+with open("examples/characters.txt", "rb") as reader:
+    decoded = DecodedStream(reader, max_bytes=None, max_chars=None)
+    for chunk in decoded:
+        print(chunk, end="")
+    assert decoded.complete
+```
+
+Construction validates options without reading input. Iteration is single-use;
+the caller owns and closes the binary reader. Chunks preserve decoded text and
+newlines; their boundaries have no lexical meaning. Counters cover successfully
+validated reads. `.complete` becomes true only after EOF decoding succeeds,
+including the decoder's final flush. A read, decode, or limit failure can follow
+an already yielded prefix and leaves `.complete` false. It says nothing about
+publication of a token bundle.
+
+`tokenizer.config` supplies the shared `load_json`, `loads_json`,
+`canonical_json_bytes`, `fingerprint`, and `compile_flags` helpers. The lexical
+compiler already uses them; split and grammar compilers should reuse them and
+validate their own schemas. Canonicalization preserves the existing digest
+recipe documented below.
 
 ## Specifications and recognition
 
@@ -146,13 +176,22 @@ conversion, or encoding guessing occurs. Byte sources default to strict UTF-8;
 an explicitly selected codec determines decoding. Isolated surrogate code points
 in text are rejected because the payload transport requires strict UTF-8.
 
-The first implementation buffers the complete logical input and yields records
-incrementally. Reader chunk boundaries do not create token boundaries.
+Tokenization still buffers the complete logical input and yields records
+incrementally. `DecodedStream` is the shared foundation for the planned splitter;
+feeding its arbitrary chunks separately to `tokenize()` would change matching.
+Reader chunk boundaries do not create token boundaries.
 The defaults are **16 MiB of input bytes** and **4,194,304 decoded characters**.
 Change them with `--max-bytes` and `--max-chars`, or the corresponding library
 arguments. Zero is permitted for empty-only input; negatives and Boolean limits
 are rejected. Limits are checked while reading and decoding, before excess
 decoded text is appended. The direct-string API checks the character limit.
+
+The decoding APIs accept `None` for either total limit. This does not remove
+the decoder's **64 KiB pending-byte limit**: codecs that retain a longer unfinished
+sequence fail with `LimitError`. Reads default to 64 KiB, and limits are checked
+before a decoded chunk is yielded. The finite-source CLI keeps its numeric
+limits. Passing `None` to `read_stream()` still assembles the complete input in
+memory; consume `DecodedStream` incrementally to avoid that allocation.
 
 These are source limits, not output-size or constant-memory guarantees. The
 benchmark below includes the default boundary with four-byte Unicode characters.
@@ -236,8 +275,8 @@ To run the probe directly after creating `output/expression`:
 To run only the Python tests when MORK is unavailable:
 
 ```bash
-.venv/bin/python -m unittest tests.test_spec tests.test_lexer tests.test_sources \
-  tests.test_serialization tests.test_cli -v
+.venv/bin/python -m unittest tests.test_config tests.test_spec tests.test_lexer \
+  tests.test_sources tests.test_locations tests.test_serialization tests.test_cli -v
 ```
 
 ## Measurements
@@ -281,6 +320,7 @@ Python-version errors, `1` for source/lexical/limit/output failures, and `130` f
 an interrupted run. Encoding errors identify byte positions in their message;
 lexical offsets identify decoded code points.
 
-This release implements the lexer and its MM2 handoff. Earley parsing, application
-specifications, online unbounded input, and ambiguous token graphs are subsequent
-work.
+This release implements the lexer, its MM2 handoff, and shared decoding and
+configuration foundations. The version-2 multi-stream bundle, configurable
+splitter, and Earley parser remain subsequent work described in the
+[pipeline plan](../docs/dev_plans/stream_splitter_and_earley_pipeline.md).

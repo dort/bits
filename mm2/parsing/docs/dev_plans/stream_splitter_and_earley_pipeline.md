@@ -3,6 +3,13 @@
 Written on 2026-11-09. This is the integrated next-step plan; it is not an
 implementation report.
 
+Updated 2026-11-10 to incorporate the
+[revised span-forest plan](earley_span_forest_parser.md). That document supplies
+the exact engine rules, forest identities/traversal, and regression requirements
+for the Earley milestones here. The initial shared-helper implementation and
+independent Claude assignments are recorded in the
+[implementation handoff](claude_implementation_handoff.md).
+
 ## Objective and inputs
 
 Process large text sources through configurable, bounded logical units, preserve
@@ -39,7 +46,7 @@ headers, and expression units.
 | Keep splitting before the existing bounded lexer. | Adopt. One unit is assembled at a time, then passed through the existing matching algorithm. |
 | Literal and regex separator/boundary specifications. | Adopt literals and a statically checked, bounded regex subset. Declaring a maximum consumed length alone does not bound regex context or prove streaming correctness. |
 | Concatenation followed by re-encoding reproduces source bytes. | Guarantee exact decoded-text reconstruction. Generic decoding does not preserve the original byte spelling, BOM, or encoder state. |
-| One bundle containing many streams. | Adopt, with a small summary manifest and a streamed index. Do not collect a per-stream table or all seen IDs in RAM. |
+| One bundle containing many streams. | Adopt, with a small summary manifest and a streamed index. Generated identities need no growing set; caller-owned identities have a fixed 100,000-pair cap. |
 | Preserve single-stream output byte for byte while changing the manifest. | Preserve lexical decisions and `lex-*` version-1 facts. Introduce one version-2 bundle format for every writer and migrate its consumers together. The bundle envelope and manifest intentionally change. |
 | Character-sized units automatically fit the parser. | Add a separate parser token limit and execution limits. Small character counts do not establish grammar-independent parse cost. |
 | Load the resulting archive into MORK and parse its units. | Extract and parse one unit at a time in a fresh space. Retaining all units' token, item, or witness facts would defeat the memory bound. |
@@ -78,7 +85,7 @@ with the source; working memory must not grow with the number of units.
 | Boundary matching | Literal matching and validated finite-width regexes using Python's existing regex engine. | Arbitrary regexes need a substantially stronger context model. Literal-only support is smaller but cannot express the proposed variable headers. |
 | Shared code | Add source and bundle capabilities to `tokenizer`; expose small shared helpers for `grammarc`. | A separate splitter package can import those helpers, but adds packaging work without a present independent consumer. |
 | Metadata storage | Append `streams.jsonl`; use byte ranges to locate one stream in the two payload files. | One large JSON array requires careful streaming on every reader; one directory per unit creates excessive filesystem overhead. |
-| Duplicate identity checks | Bounded external sorting of IDs in staging before publication. | A Python set grows with stream count. SQLite could provide a disk index, but this Python build currently lacks `_sqlite3`; neither a rebuild nor a database dependency is needed for this sequential workload. |
+| Duplicate identity checks | Validate generated IDs from their namespace/base and consecutive index; cap the caller-owned identity set at 100,000 namespace/stream pairs. Fix one policy per source. | External sorting supports unbounded arbitrary IDs but adds staging and merge machinery without a current producer needing it. Defer it until that use case exists. |
 | Parser execution | One fresh space per unit, initially rerun with increasing sweep budgets. | A persistent space could reduce startup costs but needs proven removal of every prior unit's derived facts. Defer until measurements justify it. |
 | Parser completion | Compare complete semantic projections after additional complete sweeps. | A proved grammar-dependent bound is valid but not currently available; a measured constant is only an initial budget heuristic. |
 | Forest output | Shared graph plus optional bounded enumeration. | Eager enumeration of all trees fails for unit cycles and grows exponentially for some acyclic grammars. |
@@ -338,17 +345,22 @@ identity, counts, catalog, fingerprints, and the stream's completion before
 parsing it. The archive index is consumed row by row, never with `read_text()`
 or `list()` over the whole file.
 
-Maintain duplicate-ID checking on disk: append namespace/stream-ID keys into
-fixed-size sorted runs in staging, then merge them with a fixed fan-in and
-reject adjacent duplicates. For example, use an 8 MiB run buffer and at most
-32 open merge inputs, with additional passes for more runs. Write run filenames
-to a disk manifest rather than accumulating all run names in RAM. Generated
-IDs are unique by construction, but the shared writer also checks caller-owned
-identities without an unbounded set.
+Choose the identity policy once at the source-envelope boundary. For generated
+IDs, verify the namespace/base, exact `<base>_u<index>` spelling, consecutive
+emitted-unit indices, unit-count ceiling, and upfront identifier-length bound.
+These checks require no growing set. A field claiming an ID is generated cannot
+exempt an arbitrary spelling from validation.
+
+For caller-owned IDs, track namespace/stream pairs in a set capped at 100,000
+entries. Reject duplicates and raise a named limit error before adding a pair
+beyond that cap. One source cannot mix generated and caller-owned IDs, which
+could collide even if each policy passed separately. Measure the capped set's
+actual memory. External sorting is deferred until an unbounded arbitrary-ID
+producer requires it.
 
 After EOF, finish identity validation, close every payload and index, write the
-summary manifest, remove staging-only validation files, and publish with the
-existing `renameat2(RENAME_NOREPLACE)` helper. Any late lexical, decoding,
+summary manifest, and publish with the existing `renameat2(RENAME_NOREPLACE)`
+helper. Any late lexical, decoding,
 identity, validation, or I/O failure publishes no bundle. Atomic publication
 still means visibility at the final path, not an `fsync` durability guarantee.
 
@@ -417,8 +429,8 @@ unit's facts, canonical result set, and optional forest need to remain resident.
 
 Start with a modest sweep budget and increase it, initially by doubling. The
 initial choice affects performance only. A comparison includes canonical sets
-of that unit's `item` and `accepted` facts, plus `why` when enabled. It excludes
-round tables, execution instructions, and instrumentation. Check the projected
+of that unit's `item` and `accepted` facts, plus `node` and `part` in forest mode.
+It excludes round tables, execution instructions, and instrumentation. Check the projected
 sets for equality and the expected monotonic inclusion across runs.
 
 Add an execution-completed marker scheduled after the requested final sweep.
@@ -430,9 +442,9 @@ Do not report rejection until closure is established. Record separately:
 
 - `recognition`: accepted, rejected, or incomplete;
 - `closure_complete`: whether all inference for this unit has stabilized;
-- `forest_complete`: whether the requested graph is complete;
+- `forest_complete`: whether the requested graph is complete, or `not_requested`;
 - `enumeration_complete`: whether requested concrete-tree enumeration exhausted
-  all alternatives rather than hitting a limit.
+  all alternatives rather than hitting a limit, or `not_requested`.
 
 A sound acceptance fact can establish acceptance before closure. If a later
 limit stops the run, preserve that fact while marking closure/forest incomplete.
@@ -453,19 +465,23 @@ one result directory or retain one Python object per source unit. A rejected or
 incomplete unit can be recorded and processing can continue to the next unit.
 A source-level format/I/O failure prevents publishing a completed result batch.
 
-### Witness graph and trees
+### Span forest and trees
 
-Add the proposed scan/completion witnesses and retain a finite shared graph,
-including cycles. Dot-zero items are empty-prefix bases. A scan points to its
-predecessor prefix and token occurrence; a completion points to its predecessor
-prefix and completed child. Gather every completed start production covering
-the whole unit as a root and retain production labels.
+Implement the `node`/`part` schema and full alternative identity from the revised
+span-forest plan. Keep symbol nodes, production-prefix nodes, and alternatives
+distinct, including cycles. Dot-zero prefixes are empty only when origin equals
+end. A scan points to its predecessor prefix and token occurrence; a completion
+points to its predecessor prefix and a production-specific child. Traversal of
+that child expands only the named production. One start-symbol root for the
+whole unit retains every accepting production alternative.
 
-Concrete-tree enumeration is optional and bounded by count and depth. Mark
-truncation explicitly; never suppress a cycle and claim the forest is complete.
+Concrete-tree enumeration is optional and bounded by count, depth, and the
+shared per-unit deadline. Mark truncation explicitly; never suppress a cycle
+and claim the forest is complete.
 Recognition and graph output must support direct and indirect unit recursion.
 
-Measure item counts separately from completion joins and witness counts. The
+Measure retained items, nodes, and parts separately from cumulative runtime
+unification/write counters and any instrumented completion-join count. The
 quadratic item bound does not establish quadratic sweep cost; ambiguous
 completion can involve three input boundaries. Do not claim the conventional
 Earley runtime bound for this repeated whole-space join implementation.
@@ -504,6 +520,10 @@ run from `parsing/`. Do not scatter `sys.path` edits through modules. Keep the
 current `MORK` executable override. No command examples should depend on a
 particular working directory without naming it.
 
+Recognition-only loads `earley.mm2`; `--forest` loads `earley_forest.mm2`.
+Never load both into one space. `--max-trees` and `--max-depth` bound requested
+enumeration. Record the selected engine's digest in the result manifest.
+
 The parser's primary input is a token bundle. A future raw-text convenience
 command can compose existing APIs after this path works. Do not duplicate
 tokenization inside `grammarc` now. Parser exit status is `0` when all requested
@@ -533,13 +553,14 @@ remain correctly positioned across every tested read size.
 ### Milestone 2 — multi-stream archive without unbounded metadata
 
 Implement the source envelope checker, multi-stream serialization, streamed
-byte-range index, external identity validation, and atomic publisher. Migrate
+byte-range index, bounded identity validation, and atomic publisher. Migrate
 single-stream CLI/API examples, benchmark readers, docs, and fixtures together.
 
 **Complete when:** multiple streams, repeated text, kept empty streams, gaps,
-and dropped-empty records reconstruct correctly; duplicate IDs fail even across
-separate sort runs; byte ranges retrieve exactly one stream; and late exceptions
-or interrupted publication leave no completed output directory. Verify real
+and dropped-empty records reconstruct correctly; generated IDs validate without
+set growth; caller-owned IDs reject duplicates and enforce the cap at and one
+past its boundary; mixed policies fail; byte ranges retrieve exactly one stream;
+and late exceptions or interrupted publication leave no completed output directory. Verify real
 MORK load/dump preservation on small fixtures.
 
 ### Milestone 3 — literal and bounded-regex splitting
@@ -583,15 +604,17 @@ must be reported without loading them into MORK.
 
 ### Milestone 5 — finite forests and bounded tree extraction
 
-Add witnesses, a graph serializer, and bounded enumeration. Stream forest
-records/results to fixed-count output files and release each unit before the
+Add the six-rule span-forest engine, a graph serializer, and bounded enumeration.
+Stream forest records/results to fixed-count output files and release each unit before the
 next. Keep status flags for recognition, closure, forest, and enumeration
 separate.
 
-**Complete when:** the two-tree expression yields exactly two trees; unit cycles
-produce finite cyclic graphs; several child alternatives combine correctly;
-multiple start roots survive; and depth/count limits produce explicit partial
-enumeration. Witness generation must not change recognition.
+**Complete when:** the revised plan's expression, identical-child-production,
+two-ambiguous-child, and multiple-start-production regressions produce exactly
+their expected alternatives and trees; unit cycles produce finite cyclic graphs;
+and depth/count/time limits produce explicit partial enumeration. Both engines
+must produce identical canonical item and acceptance sets. Include Remy's
+precedence/associativity example and two-size ambiguous-concatenation part counts.
 
 ### Milestone 6 — end-to-end scale evidence and documentation
 
@@ -635,7 +658,7 @@ parsing/
       split_regex.py            isolated bounded-regex validation
       splitter.py               incremental boundary and unit production
       serialize.py              common stream/fact/codec checks
-      bundle.py                 envelope, byte ranges, disk identity checks
+      bundle.py                 envelope, byte ranges, bounded identity checks
       __main__.py               common CLI pipeline
     tests/                      retain and extend existing suites
     specs/                      generic split demonstrations
@@ -644,6 +667,7 @@ parsing/
     docs/serialize_explainer.md  update for migrated archive behavior
   earley/
     earley.mm2
+    earley_forest.mm2
     grammarc/
       spec.py                   grammar schema/compiler
       serialize.py              grammar and execution-control facts

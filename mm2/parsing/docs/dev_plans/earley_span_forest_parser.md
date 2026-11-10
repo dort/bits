@@ -247,9 +247,10 @@ sweep count, elapsed time, and the runtime's unification and write counters.
 A completion-join count is reported only if that operation is itself
 instrumented or counted, never by renaming a retained-fact count.
 
-What forest mode adds is storage, not joins: the same joins run in
-recognition-only mode, but forest mode also keeps their witnesses in the
-space and the dump. `grammarc parse` therefore defaults to recognition-only
+Forest mode retains witnesses from the scan and completion joins shared with
+recognition-only mode. It also adds the `dnod` join and changes acceptance to
+use completed nodes, so its extra cost includes inference as well as storage.
+`grammarc parse` therefore defaults to recognition-only
 (five rules) and takes `--forest` to load the six-rule engine. The inherited
 per-process memory limit applies in both modes alongside the dump-size
 limit; the latter bounds output files and is not a substitute for bounding
@@ -287,9 +288,11 @@ both variants of `cscn`/`dcmp` against the same items.
    empty-production case, because a completed zero-length production has no
    final `part` to find; that case stays future work with the extension.
 5. **No conventional Earley runtime bound is claimed.** Milestone
-   measurements record items, `part` counts (equivalently completion joins),
-   witness growth, sweeps, and wall time separately, on unit chains, right
-   recursion, and the ambiguous concatenation grammar.
+   measurements record retained items, nodes, terminal/nonterminal parts,
+   sweeps, wall time, and runtime unification/write counters separately, on
+   unit chains, right recursion, and the ambiguous concatenation grammar.
+   Completion joins require their own instrumentation; retained parts do not
+   count cumulative join work.
 
 The review's clarifications are adopted as stated there: the shared
 strict-JSON/fingerprint helpers are extracted to `tokenizer/config.py` with

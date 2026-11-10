@@ -102,12 +102,17 @@ def validate_limit(value, label):
         raise ConfigurationError("must be a nonnegative integer", field=label)
 
 
-def advance_location(text, start, end, line, column):
-    """Count CRLF at LF, including when a token boundary splits the pair."""
+def advance_location(text, start, end, line, column, *, following=""):
+    """Count CRLF at LF, including across tokens or separately held pieces.
+
+    following is the character immediately beyond text, or an empty string at
+    source EOF. A streaming caller must resolve that lookahead before advancing
+    past a trailing CR. Characters within text supply their own right context.
+    """
     for offset in range(start, end):
         char = text[offset]
         if char == "\n" or (char == "\r" and
-                            (offset + 1 == len(text) or text[offset + 1] != "\n")):
+                            (text[offset + 1] if offset + 1 < len(text) else following) != "\n"):
             line += 1
             column = 1
         else:

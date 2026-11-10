@@ -40,27 +40,31 @@ functions each check and consume their own supplied record sequence.
 Compilation of user-supplied lexical rules happens in
 [spec.py](../tokenizer/spec.py), before serialization starts:
 
-1. `load_spec()` reads a UTF-8 JSON file. `loads_spec()` parses it while rejecting
-   duplicate object keys and non-JSON constants such as `NaN`.
+1. `load_spec()` calls the shared `config.load_json()` to read a UTF-8 JSON file;
+   `loads_spec()` uses `config.loads_json()` for supplied text. Both reject
+   duplicate object keys and non-JSON constants such as `NaN`, then pass the
+   decoded value to the lexical compiler.
 2. `compile_spec()` checks the specification's structure. The version must be
    the integer `1`; rule names must be unique; each rule must have one matching
    method and one action.
 3. `_compile_rule()` prepares each rule. A literal remains an exact string. A
    regex pattern becomes a reusable `re.Pattern` object through `re.compile()`.
-   Requested flags are combined before compilation.
+   `config.compile_flags()` checks and combines requested flags before compilation.
 4. Regexes are checked against empty input. A rule that immediately matches an
    empty string is rejected. The lexer later detects context-dependent empty
    matches that this preliminary check cannot discover.
 5. The compiler collects the sorted, distinct terminal kinds declared by emitting
    rules. Skipping a match is represented by a rule whose `kind` is `None`.
-6. The compiler computes a SHA-256 fingerprint of the validated specification.
-   It returns a `CompiledSpec` containing prepared rules, declared kinds, and
-   that fingerprint.
+6. The compiler calls `config.fingerprint()` to compute a SHA-256 fingerprint
+   of the validated specification. It returns a `CompiledSpec` containing
+   prepared rules, declared kinds, and that fingerprint.
 
 The fingerprint uses the validated JSON representation with object keys sorted,
 compact separators, and ASCII escaping. Array order is preserved, including the
 rule order that resolves equal-length matches. The serializer receives this
-fingerprint in `StreamStart`; it does not compile the rules again.
+fingerprint in `StreamStart`; it does not compile the rules again. The shared
+[config.py](../tokenizer/config.py) helpers keep this recipe consistent for
+future split and grammar specifications.
 
 Here, compiling a regular expression means preparing an object that Python's
 regex engine can use repeatedly. It does not generate an MM2 program. Ordinary
