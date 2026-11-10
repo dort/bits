@@ -306,3 +306,90 @@ because this handoff file exists.
    budget doubling over the canonical projection, the
    accepted/rejected/incomplete contract) while forest traversal
    (`grammarc/forest.py`) follows as its own step.
+
+### 2026-11-10 (Claude) — runner complete, on the bundle-v2 reader
+
+Codex's bundle-v2 document accepted the proposed runner assignment, so it is
+implemented against the shipped `BundleReader` contract.
+
+1. **Files created:** `earley/grammarc/{facts,runner,__main__}.py` and
+   `earley/tests/test_runner.py`. Migrations: the fact parser, renderer,
+   selection, and canonical projection moved from `earley/tests/support.py`
+   into `grammarc/facts.py`, and the tests now import the production copies;
+   `grammarc/__init__.py` re-exports `Runner`/`UnitResult` and the fact
+   helpers; the README documents the runner and command. Nothing outside
+   `earley/` changed except this entry. Nothing committed.
+2. **Commands and results:** earley suite now 26 tests (11 engine, 8
+   compiler, 7 runner), all passing in 1.1 s; the lexer suite passes its 83.
+   The documented end-to-end pipeline was run for real from `parsing/`:
+   `python -m tokenizer` wrote an 8-token version-2 bundle for
+   `total = alpha + 41 / count == total`, and `python -m grammarc parse`
+   rejected it with established closure at exit status 1, which is correct
+   (the stream's `ASSIGN`/`EQ` tokens have no gexp production).
+3. **Contract implemented:** whole-archive preflight by exhausting
+   `iter_records()` before any unit runs; per-unit `read_stream` under
+   explicit `max_tokens`/`max_chars`/`max_payload_bytes` (a `LimitError`
+   becomes an incomplete result without an engine run);
+   `check_terminals(stream.start.kinds)`; fresh MORK process per budget with
+   doubling from 16 up to `--max-sweeps` (default 512, hard cap 998 from the
+   three-digit round-symbol scheme — the plans' 4,096-round figure exceeds
+   one run's table and would need chained tables later); closure = equal
+   canonical projections across consecutive budgets; `accepted` on a sound
+   acceptance fact, `rejected` only with closure, every exhausted limit
+   (sweeps, per-unit wall time covering reruns, dump size, optional
+   RLIMIT_AS process memory) an explicit `incomplete` with the limit named;
+   the budget marker plus absence of leftover `exec` facts gate every dump.
+   `forest_complete` is `null` unless `--engine forest`; `enumeration_complete`
+   is always `null` (not requested — no enumerator exists). Exit statuses
+   0/1/3/2/130 per the integrated plan; `results.jsonl` + `summary.json`
+   with the engine file's SHA-256.
+4. **Interfaces used:** `tokenizer.BundleReader` (`iter_records`,
+   `iter_entries`, `read_stream`), `BundleStream.{start.kinds,mm2}`,
+   `SourcePiece`/`source_records`/`write_bundle`/`load_spec` in tests, and
+   the shared error classes. All sufficient as shipped; no changes needed.
+   One observation for the splitter work: index entries expose everything the
+   runner needed; `entry["unit_index"]`/`["stream_id"]` ordering matched the
+   generated-identity formula exactly.
+5. **Remaining in my lanes:** forest traversal and bounded tree enumeration
+   (`grammarc/forest.py`) per the revised plan's production-aware contract —
+   independent of the splitter, blocked on nothing; I can take it next unless
+   reassigned. The runner's `--engine forest` already produces and projects
+   `node`/`part` facts for it.
+
+### 2026-11-10 (Claude) — forest traversal and bounded enumeration complete
+
+1. **Files created:** `earley/grammarc/forest.py` and
+   `earley/tests/test_forest.py`; the runner gained `max_trees`/`max_depth`
+   (valid only with the forest engine, requested together), `UnitResult`
+   gained real `enumeration_complete` semantics plus a bounded `trees` field,
+   and the command gained `--max-trees`/`--max-depth` with the exit-status
+   rule that a limit-cut forest or enumeration makes the command incomplete
+   even when recognition accepted (`incomplete_results` in `summary.json`).
+   README updated. Nothing outside `earley/` changed except this entry.
+2. **Commands and results:** earley suite now 36 tests (11 engine, 8
+   compiler, 7 runner, 10 forest), all passing in 1.5 s against the real
+   binary. The review's required fixtures are regressions: the two- and
+   four-tree identically-shaped-sibling cases enumerate with no duplicate
+   emissions, the merged start root yields one root with both production
+   alternatives, direct and indirect unit cycles truncate explicitly, a count
+   limit reports partial enumeration, the graph JSON round-trips losslessly
+   with child descriptors, and the `x + 12` and Remy `4 + 57 * 6 + 7` trees
+   match their hand-written oracles exactly.
+3. **Contract implemented:** three identities (symbol node, intermediate
+   prefix, packed alternative = the whole `part` fact); production-aware
+   child expansion — `(nt A R2)` selects `R2` alone after an LHS check, and a
+   mismatched or unknown label raises; dot zero contributes an empty child
+   sequence only when origin equals end; `Forest.graph()` is the lossless
+   alternative set; `enumerate(max_trees, max_depth)` emits Remy's
+   full-child-list shape and is complete only when every alternative was
+   exhausted within both limits; the runner further gates
+   `enumeration_complete` on closure, since an unconverged graph may be
+   missing alternatives. One defect caught and fixed during the work: an
+   editing leftover set the truncation flag on every exhausted child
+   expansion, which the complete-enumeration fixtures exposed immediately.
+4. **My lanes are now empty.** Everything the handoff assigned or I proposed
+   (engines, compiler, runner, forest) is implemented and tested; remaining
+   pipeline work (boundary matching, splitter CLI, scale measurement) is on
+   Codex's side of the ownership table. Natural next proposals, when wanted:
+   epsilon/nullable support as grammar version 2, chained round tables to
+   lift the 998-sweep single-run cap, and the milestone-6 measurement runs.

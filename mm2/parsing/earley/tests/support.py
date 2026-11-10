@@ -7,7 +7,6 @@ never treated as a fact stream.
 """
 
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -25,6 +24,8 @@ for path in (PROJECT, PROJECT.parent / "lexer"):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
+from grammarc.facts import (FOREST_HEADS, RECOGNITION_HEADS,  # noqa: E402
+                            parse_facts, projection, render, select)
 from grammarc.serialize import round_table_facts  # noqa: E402
 
 RECOGNITION = PROJECT / "earley.mm2"
@@ -34,48 +35,6 @@ MORK = Path(os.environ.get("MORK", "/home/ni/repos/m/MORK/target/release/mork"))
 
 def fixture(name):
     return (FIXTURES / name).read_text()
-
-
-_TOKEN = re.compile(r'\(|\)|"(?:[^"\\]|\\.)*"|[^()\s]+')
-
-
-def parse_facts(text):
-    """Parse a dump or fixture into nested tuples; atoms stay strings.
-
-    Each fact is one parenthesized expression; the dump writes one per line,
-    but the parser only relies on balanced parentheses. Lines whose first
-    nonblank character is ';' are comments (fixtures carry them, dumps do
-    not) and are skipped.
-    """
-    text = "\n".join(line for line in text.splitlines()
-                     if not line.lstrip().startswith(";"))
-    facts = []
-    stack = []
-    for match in _TOKEN.finditer(text):
-        token = match.group()
-        if token == "(":
-            stack.append([])
-        elif token == ")":
-            if not stack:
-                raise ValueError(f"unbalanced ')' at offset {match.start()}")
-            done = tuple(stack.pop())
-            if stack:
-                stack[-1].append(done)
-            else:
-                facts.append(done)
-        else:
-            if not stack:
-                raise ValueError(f"atom {token!r} outside a fact at offset {match.start()}")
-            stack[-1].append(token)
-    if stack:
-        raise ValueError("unbalanced '(' at end of dump")
-    return facts
-
-
-def render(expr):
-    if isinstance(expr, tuple):
-        return "(" + " ".join(render(piece) for piece in expr) + ")"
-    return expr
 
 
 def run_engine(engine, pieces, rounds, *, steps=None, timeout=120):
@@ -97,26 +56,11 @@ def run_engine(engine, pieces, rounds, *, steps=None, timeout=120):
         return parse_facts(dump_path.read_text())
 
 
-def select(facts, head, *prefix):
-    """Facts whose first atom is `head` and whose next atoms match `prefix`."""
-    return {fact for fact in facts
-            if fact and fact[0] == head and fact[1:1 + len(prefix)] == prefix}
-
-
-def projection(facts, namespace, stream, grammar, heads):
-    """The canonical semantic projection for one (namespace, stream, grammar)."""
-    chosen = set()
-    for head in heads:
-        for fact in select(facts, head, namespace, stream, grammar):
-            chosen.add(render(fact))
-    return frozenset(chosen)
-
-
 class EngineCase(unittest.TestCase):
     """Base class: every run must reach the budget marker to count."""
 
-    RECOGNITION_HEADS = ("item", "accepted")
-    FOREST_HEADS = ("item", "accepted", "node", "part")
+    RECOGNITION_HEADS = RECOGNITION_HEADS
+    FOREST_HEADS = FOREST_HEADS
 
     def run_complete(self, engine, pieces, rounds, **kwargs):
         facts = run_engine(engine, pieces, rounds, **kwargs)

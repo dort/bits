@@ -1,10 +1,10 @@
 # MM2 Earley engines
 
 The two engine artifacts from the
-[span-forest Earley plan](../docs/dev_plans/earley_span_forest_parser.md),
-the `grammarc` grammar specification compiler, and tests that run everything
-under the real MORK binary. There is no production runner, bundle reader, or
-tree enumerator here yet; those are later assignments in the
+[span-forest Earley plan](../docs/dev_plans/earley_span_forest_parser.md) and
+the `grammarc` package: grammar compiler, bundle runner, and the
+production-aware forest traversal with bounded tree enumeration. Tests run
+everything under the real MORK binary. Assignment history lives in the
 [implementation handoff](../docs/dev_plans/claude_implementation_handoff.md).
 
 ## The two engines
@@ -70,6 +70,57 @@ pinned fixture, and the generated facts for it are tested equal to the
 hand-written `tests/fixtures/grammar_expr_demo.mm2` (plus the `grm-grammar`
 version fact) and to recognize the real lexer bundle under MORK.
 
+## The runner
+
+`grammarc parse` recognizes every unit of a completed version-2 token bundle:
+
+```bash
+cd mm2/parsing
+export PYTHONPATH="$PWD/lexer:$PWD/earley"
+lexer/.venv/bin/python -m grammarc parse \
+  --grammar earley/tests/fixtures/grammar_expr_demo.json --grammar-id gexp \
+  --tokens <bundle directory> --output-dir <results directory>
+```
+
+The runner first validates the whole archive by exhausting the reader's
+record stream (gaps and dropped empties included), then processes one unit at
+a time: it reads the unit's stream under explicit token/character/payload
+limits, checks the grammar's terminals against the stream's declared kind
+catalog, and runs the engine in a fresh MORK process per sweep budget,
+doubling the budget (16, 32, …, capped by `--max-sweeps`, at most 998 — one
+run's three-digit round-symbol table bounds a single schedule) until the
+canonical projection is identical across consecutive budgets. Per unit it
+records `recognition` (`accepted` on a sound acceptance fact; `rejected` only
+with established closure; otherwise `incomplete` with the exhausted limit
+named), `closure_complete`, `forest_complete` (`null` unless `--engine
+forest` was requested), `enumeration_complete` (always `null`: tree
+enumeration is not implemented), the budgets that ran to their marker, and
+fact counts. Wall time (default 30 s per unit, covering all reruns),
+dump-size, and optional process-memory (`--max-process-bytes`, RLIMIT_AS)
+ceilings all turn into `incomplete`, never into a claimed rejection; engine
+process failures without a memory cap are runtime diagnostics (exit 2).
+Results go to `results.jsonl` plus a `summary.json` naming the engine file
+and its SHA-256. Exit status: 0 all units completed, 1 some rejected and none
+incomplete, 3 any incomplete, 2 configuration/runtime failure, 130
+interrupted. A requested forest or enumeration cut short by a limit counts as
+incomplete for the exit status even when recognition accepted.
+
+## The forest consumer
+
+`grammarc.Forest` reads one unit's `node`/`part` facts under the revised
+plan's identity contract: a packed alternative is the whole `part` fact,
+child descriptor included, and a child `(nt A R2)` expands through production
+`R2` alone — expanding the child's symbol node through every production would
+emit duplicate trees, because the parent already holds one edge per child
+production. `Forest.graph()` is the lossless JSON form of the complete
+alternative set; `Forest.enumerate(max_trees, max_depth)` returns Remy's
+full-child-list tree shape as a bounded output view and reports whether it
+exhausted every alternative (a unit cycle or a count/depth cut makes it
+incomplete). The runner wires this behind `--max-trees`/`--max-depth`, which
+require `--engine forest`; per unit it records the trees,
+`enumeration_complete` (true only when the graph is also closed), and keeps
+"not requested" (`null`) distinct from "attempted but incomplete" (`false`).
+
 ## Tests
 
 ```bash
@@ -77,9 +128,14 @@ cd mm2/parsing/earley
 /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python -m unittest discover -s tests -v
 ```
 
-Nineteen tests: eleven engine tests against the real binary (a `MORK`
-environment variable overrides the binary path) and eight compiler tests, one
-of which also runs MORK on compiler-generated facts. The engine tests cover: the `x + 12` worked example with its
+Thirty-six tests: eleven engine tests against the real binary (a `MORK`
+environment variable overrides the binary path), eight compiler tests, seven
+runner tests that build real version-2 bundles through the lexer pipeline
+and drive them through the runner and the command, and ten forest tests
+(the `x + 12` and Remy-oracle trees, the two- and four-tree sibling
+fixtures with no duplicate emissions, the merged start root, explicit cycle
+truncation, count-limited partial enumeration, the graph JSON round trip,
+and runner-level enumeration). The engine tests cover: the `x + 12` worked example with its
 pinned grammar fingerprint and 13-item chart; wrong, truncated, and empty
 streams rejecting only after projection convergence; genuinely unproductive
 recursion as stable non-acceptance; the 31-production unit chain, where an
