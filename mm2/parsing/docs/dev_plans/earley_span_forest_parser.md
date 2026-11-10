@@ -1,7 +1,9 @@
 # Plan: MM2 Earley parser with a span-keyed forest in the space
 
-Written 2026-11-10 by Claude. This revises the Earley portion of the pipeline
-plan in the direction of `parsing/remy.mm2`, and every new engine claim below
+Written 2026-11-10 by Claude; revised the same day to fold in Codex's review
+of the first committed version (`2ea96e9`). This revises the Earley portion
+of the pipeline plan in the direction of `parsing/remy.mm2`, and every new
+engine claim below — including each runtime claim adopted from that review —
 was verified against the local release MORK binary before being written down.
 
 Relationship to the earlier documents:
@@ -20,6 +22,12 @@ Relationship to the earlier documents:
   and the sweep driver, all of which are kept.
 - [`parsing/remy.mm2`](../../remy.mm2) sets the direction for how parse
   results are represented, and this plan is organized around adopting it.
+- [Codex's review of this plan's first version](review_earley_span_forest_parser.md)
+  (2026-11-10) is incorporated throughout: the full packed-alternative
+  identity and the production-aware traversal contract, corrected packing and
+  cost claims, the merged start-root wording, the precedence-grammar
+  regression, and implementation conditions on both amendments. Its runtime
+  claims were independently reproduced before adoption.
 
 ## What remy.mm2 contributes
 
@@ -34,10 +42,11 @@ characters 0 to 1. Its load-bearing ideas, in order of importance:
    `(* ($eleft $left) ($right $eright))` names its operands by *their* spans.
    The parse "tree" is therefore a graph of small facts joined through span
    keys, not one nested term. Under MM2's set semantics this is decisive:
-   identical sub-derivations are stored once, and an ambiguous region is
-   simply several facts sharing one span key. Packing — the property that
-   makes a shared parse forest compact — costs nothing; it is what set
-   semantics already does.
+   once the representation gives shared sub-derivations identical spellings,
+   set semantics stores each exactly once, and an ambiguous region is simply
+   several facts sharing one span key. That is what makes the forest packed.
+   The joins, writes, storage, and traversal that produce and consume the
+   facts still have measurable costs; packing removes duplication, not work.
 3. **Adjacency is a shared endpoint.** Remy's combination rules join an
    expression ending at `$left` with an operator starting at `$left`. No
    successor list is needed; the span arithmetic is free unification. Our
@@ -98,10 +107,27 @@ list of a completed production is recovered by walking dots L, L−1, …, 1.
 This binarization is not a compromise; it is what makes the forest packed
 (a shared left prefix is stored once no matter how many right alternatives
 extend it). In SPPF terms (Scott and Johnstone's shared packed parse forest),
-`node` facts are the symbol nodes keyed `(A, O, P)` and `part` facts are the
-packed/intermediate nodes keyed `(R, D, O, M, P)`. The child reference
-`(nt A R2)` carries the child's production label `R2`, which the review
-required for representing alternative derivations faithfully.
+the two relations carry three entities with distinct identities, all scoped
+by `(NS, S, G)`:
+
+| Entity | Identity | Meaning |
+| --- | --- | --- |
+| Symbol node | `(A, O, P)` | nonterminal `A` spanning `O..P`; one `node` fact |
+| Intermediate prefix | `(R, D, O, P)` | the first `D` symbols of production `R` spanning `O..P` |
+| Packed alternative | `(R, D, O, M, P, C)` | one complete `part` fact, child descriptor included |
+
+The child descriptor `C` belongs to the alternative's identity, not to its
+payload. With the grammar `start → atom; atom → INT | INT` (productions
+`aone` and `atwo`) on one token, the engine retains both
+`(part … root 1 0 0 1 (nt atom aone))` and
+`(part … root 1 0 0 1 (nt atom atwo))` — identical in the five positional
+coordinates, two distinct derivations, kept apart because MM2's set key is
+the whole fact (probe-verified 2026-11-10). Any consumer map or graph keyed
+on fewer than all six components silently overwrites a valid derivation. The
+child reference `(nt A R2)` carries the child's production label `R2`, which
+the review of the original plan required for representing alternative
+derivations faithfully; the traversal contract below says what that label
+obliges the consumer to do.
 
 Acceptance unifies with the forest: the input is accepted exactly when a
 `node` fact for the start symbol spans `0..N`, with `N` taken from
@@ -155,38 +181,82 @@ the closure and convergence machinery below applies to them unchanged.
 
 ### Traversal and bounded enumeration (Python, `grammarc/forest.py`)
 
-The forest consumer reads the dumped facts; it performs no inference.
+The forest consumer reads the dumped facts; it performs no inference. The
+contract is production-aware: a child descriptor `(nt A R2)` commits to the
+child's production, and the traversal honors that commitment rather than
+re-deriving the choice.
 
-- **Roots:** every `(node NS S G A 0 N)` where `A` is the start symbol — all
-  accepting derivations, per the review's multiple-roots requirement.
-- **Expanding a node `(A, O, P)`:** for each production `R` of `A` with
-  length `L`, each `(part NS S G R L O M P C)` is one packed alternative; its
-  last child is `C` over `M..P`, and the remaining children come from
-  recursing on the prefix key `(R, L−1, O, M)`, down to dot 0 (the empty
-  prefix at `O`).
+- **Root:** the start-symbol node `(node NS S G A 0 N)`. There is exactly
+  one such node per accepted unit; distinct accepting start productions are
+  its packed alternatives, not separate roots (probe: `start → INT | INT`
+  yields one `node` fact and two `part` alternatives).
+- **Expanding a symbol node `(A, O, P)`:** for each production `R` of `A`
+  with right-hand-side length `L`, gather the packed alternatives of the
+  completed prefix `(R, L, O, P)`.
+- **Expanding a prefix `(R, D, O, P)`:** each fact
+  `(part NS S G R D O M P C)` is one packed alternative, child descriptor
+  included. Combine the predecessor prefix `(R, D−1, O, M)` with the last
+  child `C` over `M..P`.
+- **Expanding a child `(nt A R2)` over `M..P`:** select production `R2`
+  alone, verify its left-hand side is `A`, and expand its completed prefix
+  `(R2, |R2|, M, P)`. Expanding the child's symbol node through every
+  production of `A` instead double-counts, because the parent already holds
+  one edge per child production: the two-`atom`-production grammar then
+  emits 4 trees of which 2 are distinct, and `start → atom atom` emits 16 of
+  4 (review's measurement, interpretation confirmed by the retained facts).
+  Post-hoc deduplication is not a remedy — the duplicate emissions waste
+  work and can exhaust `--max-trees` before all distinct alternatives are
+  returned.
+- **Recursion base:** dot 0 is the empty prefix; it contributes an empty
+  child sequence exactly when its origin equals its end.
 - **Enumeration of concrete trees** is a separate, bounded operation with
-  explicit count and depth limits and an explicit truncation marker, exactly
-  as the review requires: the graph may contain cycles (probe row three) and
-  acyclic ambiguity can hold exponentially many trees. The shared graph —
-  optionally re-serialized to JSON with the same span keys — is the primary
-  forest output; enumerated trees are a convenience view.
+  explicit count and depth limits and an explicit truncation marker: the
+  graph may contain cycles (probe row three) and acyclic ambiguity can hold
+  exponentially many trees. The shared graph — re-serialized to JSON under
+  the identities in the table above, preserving the complete alternative set
+  — is the primary forest output; enumerated trees are a convenience view.
+
+A considered variant drops the production label from the child descriptor
+and points parent edges at the child's symbol node, keeping production labels
+only on that node's own alternatives. It shares more parent edges and is
+equally correct, but producer and traversal must adopt it together. Version 1
+keeps the production-labelled descriptor; what is ruled out is the mixture —
+production-specific edges expanded as unrestricted symbol edges.
 
 ### Cost, and why forest mode is a flag
 
 `node` facts are bounded by nonterminals times spans, `O(|A|·N²)`. `part`
-facts materialize completion *joins*, not just items: for the ambiguous
-concatenation grammar the probe shows the dot-2 `part` count equals the
-number of boundary triples (4 = C(4,3) at N=3, matching the review's measured
-84 = C(9,3) at N=8 and 680 = C(17,3) at N=16), so `part` storage is Θ(N³) for
-such grammars. The same joins run in recognition-only mode — the review's
-point that completion work is already cubic stands — but forest mode also
-*stores* their witnesses in the space and the dump. Therefore `grammarc
-parse` defaults to recognition-only (five rules) and takes `--forest` to load
-the six-rule engine, with the dump-size limit doing double duty as the forest
-budget. The two rule files are self-contained alternatives
-(`earley/earley.mm2`, `earley/earley_forest.mm2`); the runner loads exactly
-one, since rules are data facts and loading both would run both variants of
-`cscn`/`dcmp` against the same items.
+facts store one fact per distinct derivation step: for the ambiguous
+concatenation grammar `expr → expr expr | INT`, the `part` facts of
+production `cat` at dot 2 number exactly the boundary triples — 4 = C(4,3)
+at N=3 (probe), matching the review's measured 84 = C(9,3) at N=8 and
+680 = C(17,3) at N=16 — so `part` storage is Θ(N³) for such grammars. That
+exact grammar, production, and dot filter is the stated form of the
+regression check, kept at two input sizes.
+
+Retained facts measure stored alternatives, not cumulative completion work:
+scan emits `part` facts too, later sweeps revisit the same matches while
+their outputs remain single set members, and completed-production counts
+exclude prefix alternatives. Measured on the claim-verification probe (three
+grammars in one space): doubling the budget from 32 to 64 rounds left the
+item/node/part/accepted projection byte-identical while the runtime's
+whole-engine counters grew from 2,153 to 4,713 unifications and 3,083 to
+6,763 writes. Milestone measurements therefore record separately: retained
+items, nodes, and parts (terminal and nonterminal parts distinguished),
+sweep count, elapsed time, and the runtime's unification and write counters.
+A completion-join count is reported only if that operation is itself
+instrumented or counted, never by renaming a retained-fact count.
+
+What forest mode adds is storage, not joins: the same joins run in
+recognition-only mode, but forest mode also keeps their witnesses in the
+space and the dump. `grammarc parse` therefore defaults to recognition-only
+(five rules) and takes `--forest` to load the six-rule engine. The inherited
+per-process memory limit applies in both modes alongside the dump-size
+limit; the latter bounds output files and is not a substitute for bounding
+the in-memory forest before dumping. The two rule files are self-contained
+alternatives (`earley/earley.mm2`, `earley/earley_forest.mm2`); the runner
+loads exactly one, since rules are data facts and loading both would run
+both variants of `cscn`/`dcmp` against the same items.
 
 ## Adopted requirements from the review (unchanged in substance)
 
@@ -204,14 +274,18 @@ one, since rules are data facts and loading both would run both variants of
    once. The execution-completed marker (a fact scheduled after the final
    sweep) is still required before any comparison; a clean process exit alone
    proves nothing.
-3. **Finite shared graph first, bounded tree enumeration second** — satisfied
-   structurally by the schema above rather than by consumer discipline.
+3. **Finite shared graph first, bounded tree enumeration second.** The
+   schema makes the *stored* graph finite; cycle-aware traversal, depth and
+   count enforcement, and honest truncation remain consumer obligations,
+   tested in milestone 5.
 4. **Epsilon stays out of grammar version 1 as a scope choice, not a
    correctness need.** The review demonstrated the unchanged engine accepts
    empty derivations under repeated sweeps. When version 2 admits them, the
    schema extends without change: an epsilon completion is a `node` with
    `O = P` and a `part` at dot 0 is simply absent (the empty prefix is the
-   recursion base already).
+   recursion base already). The traversal contract will then need an explicit
+   empty-production case, because a completed zero-length production has no
+   final `part` to find; that case stays future work with the extension.
 5. **No conventional Earley runtime bound is claimed.** Milestone
    measurements record items, `part` counts (equivalently completion joins),
    witness growth, sweeps, and wall time separately, on unit chains, right
@@ -242,18 +316,24 @@ language is scoped to this engine, not MM2 as a whole.
   goal-directed, with the grammar as plain data.
 - **Keep the previous `why` witness design** (item-keyed witness facts,
   forest reconstructed only in Python). Pros: smallest diff from the original
-  plan. Cons: witnesses keyed by item coordinates rather than span keys make
-  the dump opaque to further MM2 queries, acceptance stays separate from the
-  forest, and the Python extractor must re-derive constituent structure that
-  `node`/`part` state directly. Rejected: same information, worse key.
+  plan. Cons: `why` facts are joinable in MM2 too — they carry production,
+  dot, origin, end, and split — so the difference is usability, not
+  possibility. `node` adds a materialized lookup by nonterminal and span,
+  `part` an explicit prefix/child relation, and acceptance unifies with the
+  forest instead of standing apart. Rejected: same information, better
+  indexed and named by `node`/`part`.
 - **Assemble n-ary derivation facts in MM2** — Remy's literal
   `(expr (S E) (op (c1) (c2)))` shape with the full child list per fact, via
   per-length assembly rules. Pros: human-readable complete derivations
-  queryable in one fact. Cons: it is the *unpacked* form — one fact per
-  combination of child alternatives, so a production with two ambiguous
-  children multiplies rather than shares, and fixed-arity rules cap
-  right-hand-side length. Rejected for the engine; the bounded Python
-  enumerator produces exactly this shape as its output view.
+  queryable in one fact. Cons: because the children are span references, a
+  child's internal ambiguity stays at the child's own facts — the shape is
+  compatible with packing, not inherently unpacked. What grows is the number
+  of split placements: an arity-k production over one span stores one fact
+  per placement of its k−1 internal boundaries, where dotted-prefix
+  binarization shares every partial child sequence. Fixed-arity rules also
+  cap right-hand-side length. Rejected for the engine on those two grounds;
+  the bounded Python enumerator produces exactly this shape as its output
+  view.
 - **Dedicated acceptance rule on items (previous `eacc`)** versus
   acceptance from `node`. Kept the node-based form in forest mode (one
   concept fewer, probe-verified) and the item-based form in the five-rule
@@ -276,12 +356,41 @@ Two points in the integrated plan change; everything else there is adopted.
    speculative machinery on a path no caller exercises. The memory bound is
    preserved either way — one is a cap, the other an algorithm, and the cap
    is honest about which inputs it serves.
+
+   Implementation conditions (from the review, adopted): a strictly
+   increasing integer alone does not validate a generated ID — the writer
+   verifies the namespace/base, the exact `<base>_u<index>` spelling,
+   consecutive indices, the configured unit-count ceiling, and the upfront
+   identifier-length bound, and no input field may label an arbitrary name
+   "generated" to bypass the duplicate set. The policy is fixed once at the
+   source-envelope boundary: one source uses generated IDs or caller-owned
+   IDs, never both, since mixing collides (arbitrary `batch_u0` against unit
+   zero derived from base `batch`); namespace/stream pairs remain the
+   uniqueness key. Required tests: a long generated sequence with no set
+   growth, the cap at and one past its boundary, duplicate arbitrary IDs,
+   and a mixed-policy attempt — with the capped set's actual memory measured,
+   not assumed. Adopting this amendment also updates the integrated plan's
+   external-sort test and ownership notes so that two contradictory
+   milestone definitions are never both active.
 2. **`grammarc parse` grows `--forest`, `--max-trees`, and `--max-depth`**,
    with recognition-only as the default for the cost reason above, and the
    result record gains the four completion flags already specified
    (`recognition`, `closure_complete`, `forest_complete`,
-   `enumeration_complete`) — unchanged — plus the engine-file identity
-   (which rule file ran) in the manifest, since two engines now exist.
+   `enumeration_complete`) — unchanged — plus the engine identity in the
+   manifest, since two engines now exist.
+
+   Implementation conditions (from the review, adopted): tree enumeration
+   requires `--forest` and always carries finite count and depth limits; a
+   result distinguishes "not requested" from "attempted but incomplete" for
+   both forest and enumeration; the per-unit deadline covers Python
+   traversal and enumeration, not only the MORK process; the manifest
+   identifies the engine by content digest as well as filename; and because
+   the two engine files duplicate the recognition rules, the suite checks
+   parity of their canonical item and acceptance sets on shared fixtures,
+   not final verdicts alone — a drifted prediction rule can leave small
+   examples accepted while deriving a different chart. Generating both files
+   from one maintained rule definition is an acceptable way to keep them
+   aligned.
 
 ## Milestones (replacing the integrated plan's 4 and 5)
 
@@ -308,18 +417,43 @@ behave as specified against the real binary, reading real version-2 bundles.
 ### Milestone 5 — span-keyed forest
 
 `earley/earley_forest.mm2` (the six rules above), `grammarc/forest.py`
-(traversal, graph serialization with span keys, bounded enumeration), and the
-`--forest` path in the runner with the projection extended to `node`/`part`.
+(the production-aware traversal contract above, graph serialization under
+the full identities, bounded enumeration), and the `--forest` path in the
+runner with the projection extended to `node`/`part`.
 
-**Complete when:** the probe fixtures are regressions — the `x + 12` tree
-reproduces exactly; the ambiguous concatenation input yields one root node
-with two packed alternatives and bounded enumeration emits exactly two trees;
-direct and indirect unit cycles yield finite graphs and explicitly truncated
-enumerations; multiple accepting start productions all appear as roots;
-ambiguity in more than one child position combines correctly; forest mode
-changes no recognition verdict on the milestone-4 suite; and `part` counts on
-the concatenation grammar match the boundary-triple formula at two sizes, so
-the cost documentation stays tied to measurement.
+**Complete when** the fixtures below are regressions on production-labelled
+trees, not merely on acceptance or symbol-node counts:
+
+- The `x + 12` tree reproduces exactly, and Remy's complete expression
+  `4 + 57 * 6 + 7` under the precedence grammar
+  `expr → expr PLUS term | term; term → term STAR atom | atom; atom → INT`
+  yields the hand-written oracle
+  `(+ (+ (num 4) (* (num 57) (num 6))) (num 7))`, with a unique packed
+  alternative at every completed span (probed 2026-11-10 on seven tokens:
+  35 items, 12 nodes, 23 parts, accepted). Companions: a repeated-addition
+  input checking left association, and a deliberately ambiguous expression
+  grammar for contrast.
+- The ambiguous concatenation input yields one root node with two packed
+  alternatives, and bounded enumeration emits exactly two trees.
+- Identically-shaped sibling productions expand production-specifically:
+  `start → atom` with `atom → INT | INT` enumerates exactly 2 distinct trees
+  and `start → atom atom` exactly 4, with no duplicate emissions.
+- The start-symbol root retains all accepting production alternatives: two
+  accepting start productions give one root node with two alternatives.
+- A graph JSON round trip preserves the complete alternative set, child
+  descriptors included.
+- Direct and indirect unit cycles yield finite graphs with explicitly
+  truncated enumerations, and ambiguity in more than one child position
+  combines correctly.
+- Forest mode changes no recognition verdict on the milestone-4 suite, and
+  the two engine files agree on canonical item and acceptance sets over the
+  shared fixtures.
+- `part` counts on the concatenation grammar match the boundary-triple
+  formula at two input sizes under the stated grammar/production/dot filter.
+
+Token spans remain the parser's identity; character spans and lexemes come
+from the existing lexer data, and no destructive whitespace fusion enters
+the parser.
 
 ## Follow-ups unchanged by this plan
 
