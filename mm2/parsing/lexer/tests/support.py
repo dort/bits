@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from tokenizer import compile_spec
+from tokenizer import SourcePiece, compile_spec, source_records
 
 
 HERE = Path(__file__).resolve().parents[1]
@@ -16,6 +16,12 @@ def spec(*rules):
 
 def chars_spec():
     return spec({"name": "char", "pattern": ".", "flags": ["DOTALL"], "kind": "CHAR"})
+
+
+def envelope(text, compiled, *, namespace="demo", stream_id="s0", **options):
+    return source_records([SourcePiece(text, stream_id=stream_id)], compiled,
+                          namespace=namespace, source_id=stream_id, identity_policy="caller",
+                          max_units=1, **options)
 
 
 class TempCase(unittest.TestCase):

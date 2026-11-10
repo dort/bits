@@ -3,10 +3,10 @@
 import argparse
 import sys
 
-from .lexer import tokenize
+from .envelope import SourcePiece, source_records
 from .model import (ConfigurationError, DEFAULT_MAX_BYTES, DEFAULT_MAX_CHARS,
                     LexerError, escaped, require_python314)
-from .serialize import write_bundle
+from .bundle import write_bundle
 from .source import read_source, read_stream
 from .spec import load_spec
 
@@ -30,8 +30,10 @@ def main(argv=None):
             source = read_stream(sys.stdin.buffer, label="<stdin>", **options)
         else:
             source = read_source(args.input, **options)
-        records = tokenize(source.text, compiled, namespace=args.namespace, stream_id=args.stream_id,
-                           source=source.label, encoding=source.encoding, max_chars=args.max_chars)
+        records = source_records([SourcePiece(source.text, stream_id=args.stream_id)], compiled,
+                                 namespace=args.namespace, source_id=args.stream_id,
+                                 source=source.label, encoding=source.encoding,
+                                 identity_policy="caller", max_units=1, max_unit_chars=args.max_chars)
         manifest = write_bundle(records, args.output_dir)
         print(f"Wrote {manifest['token_count']} tokens to {escaped(args.output_dir)}")
         return 0

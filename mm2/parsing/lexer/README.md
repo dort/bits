@@ -49,11 +49,12 @@ Each successful directory contains:
 
 | File | Contents |
 | --- | --- |
-| `tokens.jsonl` | Stream start, emitted tokens, skipped spans, and stream end. Exact lexemes and source locations are retained. |
-| `tokens.mm2` | Ground MM2 facts: token edges, spans, chunked values, specification identity, declared kinds, and completion boundary. |
-| `manifest.json` | Counts, stream identity, source label, Python and Unicode versions, specification fingerprint, and completion status. |
+| `tokens.jsonl` | Source envelope, unit provenance, ordinary stream records, exact gaps, and dropped-empty decisions. |
+| `tokens.mm2` | Ground `lex-*` facts plus source-unit order, absolute spans, and source completion facts. |
+| `streams.jsonl` | One index row per unit, with half-open byte ranges into both payload files, counts, identity, catalog, and provenance. |
+| `manifest.json` | Bundle version 2, source metadata, aggregate counts, payload sizes/digests, and completion status. No per-unit array. |
 
-The CLI stages all three files in a sibling directory, closes them, then
+The CLI stages all four files in a sibling directory, closes them, then
 publishes the directory with Linux `renameat2(RENAME_NOREPLACE)`. This prevents
 an existing destination from being overwritten even if another process creates
 it during tokenization. Bundle publication requires a Linux filesystem supporting
@@ -63,7 +64,7 @@ can also be consumed directly. See the [rename system-call documentation](https:
 ## Library API
 
 ```python
-from tokenizer import Token, load_spec, tokenize, write_bundle
+from tokenizer import SourcePiece, Token, load_spec, source_records, tokenize, write_bundle
 
 compiled = load_spec("specs/expression_demo.json")
 for record in tokenize("x + 12", compiled, namespace="demo", stream_id="inspect"):
@@ -71,7 +72,9 @@ for record in tokenize("x + 12", compiled, namespace="demo", stream_id="inspect"
         print(record.index, record.kind, record.lexeme, record.span)
 
 write_bundle(
-    tokenize("x + 12", compiled, namespace="demo", stream_id="saved"),
+    source_records([SourcePiece("x + 12", stream_id="saved")], compiled,
+                   namespace="demo", source_id="saved", identity_policy="caller",
+                   max_units=1),
     "output/from-library",
 )
 ```
@@ -88,18 +91,23 @@ write_bundle(
 - `tokenize(text, compiled_spec, *, namespace, stream_id, ...)` returns a
   single-pass iterator of immutable `StreamStart`, `Token`, `Skipped`, and
   `StreamEnd` records.
-- `iter_jsonl(records)` and `iter_mm2(records)` yield serialized lines for one
-  stream. Create a fresh token iterator for another pass, or explicitly retain
-  records if the caller needs multiple passes.
+- `source_records(pieces, compiled_spec, *, namespace, source_id, ...)` builds
+  a source envelope around one or more bounded pieces. See the example below.
+- `iter_jsonl(records)` and `iter_mm2(records)` serialize a checked source
+  envelope. Create a fresh source iterator for each pass, or explicitly retain
+  records if the caller needs multiple passes. Raw `tokenize()` records are
+  stream records and must be wrapped by the source builder before serialization.
 - `write_bundle(records, output_dir)` publishes a complete bundle and returns
   the manifest mapping.
 - `encode_lexeme(text)` returns a UTF-8 byte count and an iterator of
   `(chunk_index, encoded_atom)` pairs. `decode_lexeme(parts, *, byte_count,
   chunk_count)` validates and reassembles exported parts, accepting any order.
 
-A direct iterator can yield tokens before a later lexical error. Consume it
-through `StreamEnd` to establish completion. Serializers reject incomplete
-record streams and inconsistent counts; bundle publication discards staging
+A direct lexer iterator can yield tokens before a later lexical error. Its
+`StreamEnd` establishes completion of one unit. Source serializers withhold that
+marker until the next valid outer boundary and withhold `SourceEnd` until normal
+producer exhaustion. They reject incomplete sequences and inconsistent counts;
+bundle publication discards staging
 output on a processing error. Caller-owned streams used with the line iterators
 can contain a prefix after failure, so their callers own publication policy.
 
@@ -128,6 +136,70 @@ publication of a token bundle.
 compiler already uses them; split and grammar compilers should reuse them and
 validate their own schemas. Canonicalization preserves the existing digest
 recipe documented below.
+
+## Source pieces and indexed reading
+
+The library accepts already separated pieces. Boundary detection and a splitter
+CLI are the next implementation stage. This example preserves a separating
+newline as a gap and creates two independently named streams:
+
+```python
+from tokenizer import BundleReader, SourcePiece, source_records, write_bundle
+
+pieces = [SourcePiece("x + 12", following="\n"),
+          SourcePiece("\n", disposition="gap", following="y"),
+          SourcePiece("y + 3")]
+write_bundle(source_records(pieces, compiled, namespace="demo", source_id="batch",
+                            max_units=100), "output/batch")
+
+reader = BundleReader("output/batch")
+for entry in reader.iter_entries():
+    stream = reader.read_stream(entry, max_tokens=512)
+    print(stream.unit.stream_id, stream.end.token_count, stream.start.kinds)
+    # stream.mm2 contains only this stream's validated lex-* facts, as bytes.
+```
+
+`SourcePiece` has `text`, `disposition` (`unit`, `gap`, or `dropped-empty`),
+optional caller `stream_id`, and `following`: the original source character
+immediately after the piece, or `""` at EOF. Supply context even across empty
+pieces. The checker verifies it against subsequent text. This avoids retaining
+the next complete unit merely to resolve a trailing CR. Gaps must be nonempty;
+dropped-empty pieces contain no text and receive no stream ID.
+
+Generated IDs are exactly `<base>_u<index>`, with `source_id` as the default base.
+The source fixes one identity policy. Caller-owned IDs require an explicit name
+on every unit and are limited to 100,000 namespace/stream pairs. Generated IDs
+require consecutive indices and a finite `max_units` (default 1,000,000,000);
+the builder reserves enough of the 32-character identifier limit for its largest
+index before consuming pieces. One source shares a lexical specification, kind
+catalog, encoding, and runtime identity across all units.
+
+Unit/gap spans use absolute source coordinates. Token spans and indices stay
+local to their stream. `SourceEnd` records unit, piece, token, skip, gap, and
+dropped-empty counts plus the final source position. Concatenating token/skipped
+lexemes and gap text reconstructs decoded text exactly; re-encoding it need not
+reproduce the original source bytes or BOM.
+
+`BundleReader` rejects every version except 2. `iter_entries()` reads one small
+index row at a time; exhausting it verifies its digest and aggregate counts.
+`read_stream()` checks the selected entry's limits before reading payloads,
+validates its records and provenance, and compares its MM2 bytes with the exact
+facts generated from those records. It returns a `BundleStream` with `.unit`,
+`.start`, `.end`, `.records` (ordinary stream records), and `.mm2`.
+
+`iter_records()` incrementally validates the entire archive, including all gaps,
+cross-unit coordinates, index offsets, completion totals, and all three payload
+digests. Selected-unit reads do not validate unselected content or whole-file
+digests. Complete the index/record iteration when claiming whole-archive
+validation; close an iterator if you intentionally stop early.
+
+Additional transport limits are explicit: metadata rows are at most 64 KiB,
+ordinary JSON record lines at most 64 MiB, and gap pieces at most 65,536
+characters. `read_stream()` defaults to 1,000,000 tokens, 4,194,304 characters,
+and 64 MiB combined JSON/MM2 bytes for one unit. Its `max_tokens`, `max_chars`,
+and `max_payload_bytes` arguments accept finite nonnegative integers. A parser
+should pass its own smaller token budget before invoking MORK. Reading returns
+one bounded unit in memory; callers control whether returned units accumulate.
 
 ## Specifications and recognition
 
@@ -211,6 +283,8 @@ The following placeholders denote ground values in generated files:
 | `J`, `H` | Chunk index and its `h`-prefixed lowercase hexadecimal atom. |
 | `D0`, `D1` | First and second 32-character halves of the specification's SHA-256 digest, each prefixed with `h`. |
 | `N`, `C` | Final token count and source character count. |
+| `F`, `I`, `I2`, `T` | Whole-source ID, emitted unit index, its successor, and final unit count. |
+| `X`, `Y`, `H0`, `H1` | Absolute source character endpoints and the optional split-specification fingerprint halves. |
 
 ```scheme
 (lex-stream NS S 1)
@@ -222,6 +296,23 @@ The following placeholders denote ground values in generated files:
 (lex-value-part NS S P J H)
 (lex-end NS S N C)
 ```
+
+The source envelope adds these facts outside each indexed lexical slice:
+
+```scheme
+(split-stream NS F 1)
+(split-spec NS F sha256 H0 H1)
+(split-unit NS F I S)
+(split-next NS F I I2)
+(split-span NS F I X Y)
+(split-end NS F T)
+```
+
+`split-spec` is omitted without a split specification. The final successor
+points to the unit-count sentinel, which has no `split-unit` fact. An empty
+source with zero emitted units has only its source start/end facts. The unsplit
+CLI emits one unit, preserving the caller's stream ID. Gaps and skipped text
+remain JSON data; MM2 token facts alone do not reconstruct the whole source.
 
 `lex-kind` lists every kind declared by an emitting rule, including kinds absent
 from an input. Position-bearing edges preserve repeated tokens in MORK's fact
@@ -276,7 +367,7 @@ To run only the Python tests when MORK is unavailable:
 
 ```bash
 .venv/bin/python -m unittest tests.test_config tests.test_spec tests.test_lexer \
-  tests.test_sources tests.test_locations tests.test_serialization tests.test_cli -v
+  tests.test_sources tests.test_locations tests.test_serialization tests.test_bundles tests.test_cli -v
 ```
 
 ## Measurements
@@ -285,6 +376,7 @@ To run only the Python tests when MORK is unavailable:
 .venv/bin/python -m benchmarks.measure
 .venv/bin/python -m benchmarks.measure --cases unicode-token --sizes 4194304 \
   --stages source lexer bundle --report output/limit-benchmark.json
+.venv/bin/python -m benchmarks.bundles --units 100 10000
 ```
 
 Each measurement runs in a fresh process with a timeout. Reports include the
@@ -294,7 +386,8 @@ uses prebuilt records; its memory includes those records. Bundle measurements
 stream records. MORK timing includes process startup, loading, and dumping,
 with no parser rules.
 
-Observed locally on CPython 3.14.10, 2026-11-08, for 32,768 source characters:
+Historical version-1 bundle measurements on CPython 3.14.10, 2026-11-08, for
+32,768 source characters (the current version-2 implementation does more validation):
 
 | Case | Rules | Tokens | Lexer | Serialization | Complete bundle | MORK load/dump |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -311,6 +404,15 @@ support the initial finite source limits; they are synthetic observations,
 not throughput guarantees or bounds for arbitrary rules. Generated reports are
 under ignored `output/` directories.
 
+For version 2, the one-character-unit benchmark on 2026-11-10 measured 23,052 KiB
+peak RSS at 100 units and 22,952 KiB at 10,000 units, including writing and full
+archive verification. Output grew from 186,341 to 19,169,229 bytes while index
+rows were consumed without collection. Writing 10,000 units took 0.822 s and
+full verification 1.910 s. Tracking 100,000 caller-owned identities allocated
+about 15.1 MiB; generated-ID tracking allocated about 1.3 KiB. These synthetic
+measurements are recorded in the
+[bundle implementation report](../docs/dev_plans/bundle_v2_implementation.md).
+
 ## Diagnostics
 
 Errors expose their category and, where applicable, source label, rule, field,
@@ -320,7 +422,7 @@ Python-version errors, `1` for source/lexical/limit/output failures, and `130` f
 an interrupted run. Encoding errors identify byte positions in their message;
 lexical offsets identify decoded code points.
 
-This release implements the lexer, its MM2 handoff, and shared decoding and
-configuration foundations. The version-2 multi-stream bundle, configurable
-splitter, and Earley parser remain subsequent work described in the
+This release implements the lexer, its MM2 handoff, shared decoding and
+configuration helpers, and version-2 multi-stream bundles. Configurable boundary
+matching and splitter CLI integration remain subsequent work described in the
 [pipeline plan](../docs/dev_plans/stream_splitter_and_earley_pipeline.md).

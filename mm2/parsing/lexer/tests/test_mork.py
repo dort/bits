@@ -1,8 +1,9 @@
 import os
 import subprocess
 
-from tokenizer import decode_lexeme, iter_mm2, load_spec, tokenize
-from tests.support import HERE, MORK, TempCase, spec
+from tokenizer import (BundleReader, SourcePiece, decode_lexeme, iter_mm2, load_spec,
+                       source_records, write_bundle)
+from tests.support import HERE, MORK, TempCase, envelope, spec
 
 
 class MorkTests(TempCase):
@@ -23,7 +24,7 @@ class MorkTests(TempCase):
         return {line.strip() for line in destination.read_text().splitlines() if line.strip()}
 
     def test_expression_adjacency_catalog_and_fingerprint(self):
-        records = tokenize("x + 12", load_spec(HERE / "specs/expression_demo.json"),
+        records = envelope("x + 12", load_spec(HERE / "specs/expression_demo.json"),
                            namespace="demo", stream_id="s0")
         program = list(iter_mm2(records))
         loaded = self.load(program)
@@ -41,10 +42,10 @@ class MorkTests(TempCase):
         compiled = spec({"name": "all", "pattern": ".+", "flags": ["DOTALL"], "kind": "TEXT"})
         program = []
         for index, value in enumerate(values):
-            program.extend(iter_mm2(tokenize(value, compiled, namespace="demo", stream_id=f"s{index}")))
+            program.extend(iter_mm2(envelope(value, compiled, namespace="demo", stream_id=f"s{index}")))
         loaded = self.load(program)
         self.assertEqual({line for line in loaded if line.startswith("(lex-")},
-                         {line.strip() for line in program})
+                         {line.strip() for line in program if line.startswith("(lex-")})
         self.assertFalse(any("BAD" in line for line in loaded))
         for index, value in enumerate(values):
             prefix = f"lex-value-part demo s{index} 0 "
@@ -62,7 +63,7 @@ class MorkTests(TempCase):
                         {"name": "space", "literal": " ", "skip": True})
         program = []
         for stream_id, value in [("repeated", "xxx"), ("empty", ""), ("skipped", "   ")]:
-            program.extend(iter_mm2(tokenize(value, compiled, namespace="demo", stream_id=stream_id)))
+            program.extend(iter_mm2(envelope(value, compiled, namespace="demo", stream_id=stream_id)))
         loaded = self.load(program)
         self.assertIn("(adjacent demo repeated 0 X 1 X)", loaded)
         self.assertIn("(adjacent demo repeated 1 X 2 X)", loaded)
@@ -70,3 +71,27 @@ class MorkTests(TempCase):
         self.assertIn("(completed demo skipped 0 3)", loaded)
         self.assertIn("(lex-kind demo empty X)", loaded)
         self.assertEqual(sum(line.startswith("(lex-token demo repeated ") for line in loaded), 3)
+
+    def test_source_order_and_independent_indexed_unit_loading(self):
+        compiled = spec({"name": "x", "literal": "x", "kind": "X"})
+        records = source_records([SourcePiece("x", following="x"), SourcePiece("xx")],
+                                 compiled, namespace="demo", source_id="batch", max_units=2)
+        path = self.directory / "bundle"
+        write_bundle(records, path)
+        reader = BundleReader(path)
+        entries = list(reader.iter_entries())
+        program = (path / "tokens.mm2").read_text()
+        query = """(exec 0 (, (split-unit $ns $f $i $s) (split-next $ns $f $i $j)
+    (split-unit $ns $f $j $t) (lex-end $ns $s $n $c) (lex-end $ns $t $m $d))
+    (, (unit-pair $ns $f $s $t)))\n"""
+        loaded = self.load([program, query])
+        self.assertIn("(unit-pair demo batch batch_u0 batch_u1)", loaded)
+        self.assertIn("(split-next demo batch 1 2)", loaded)
+        self.assertIn("(split-end demo batch 2)", loaded)
+        self.assertFalse(any(line.startswith("(split-unit demo batch 2 ") for line in loaded))
+        for entry in entries:
+            stream = reader.read_stream(entry)
+            loaded = self.load([stream.mm2.decode("ascii")])
+            self.assertEqual({line for line in loaded if line.startswith("(lex-")},
+                             set(stream.mm2.decode("ascii").splitlines()))
+            self.assertFalse(any(line.startswith("(split-") for line in loaded))

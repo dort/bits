@@ -6,20 +6,23 @@ import subprocess
 import sys
 from unittest.mock import patch
 
-from tokenizer import (LexicalError, OutputError, Token, decode_lexeme,
-                       encode_lexeme, iter_jsonl, iter_mm2, load_spec, tokenize, write_bundle)
+from tokenizer import (LexicalError, OutputError, StreamEnd, Token, decode_lexeme,
+                       encode_lexeme, iter_jsonl, iter_mm2, load_spec, write_bundle)
 from tokenizer.serialize import checked_atom
-from tests.support import HERE, PLAN, TempCase, chars_spec, spec
+from tests.support import HERE, PLAN, TempCase, chars_spec, envelope, spec
 
 
 class SerializationTests(TempCase):
     def records(self, text="x + 12"):
-        return list(tokenize(text, load_spec(HERE / "specs/expression_demo.json"),
-                             namespace="demo", stream_id="s0"))
+        return list(envelope(text, load_spec(HERE / "specs/expression_demo.json")))
 
     def test_exact_plan_example(self):
         expected = re.findall(r'```scheme\n(.*?)\n```', PLAN.read_text(), re.S)[-1]
-        self.assertEqual("".join(iter_mm2(self.records())), expected + "\n")
+        lexical = "".join(line for line in iter_mm2(self.records()) if line.startswith("(lex-"))
+        self.assertEqual(lexical, expected + "\n")
+        explainer = (HERE / "docs/serialize_explainer.md").read_text()
+        full_example = re.findall(r'```scheme\n(.*?)\n```', explainer, re.S)[-1]
+        self.assertEqual("".join(iter_mm2(self.records())), full_example + "\n")
 
     def test_json_reconstructs_input_and_retains_metadata(self):
         text = "x + 12\r\n"
@@ -71,25 +74,27 @@ class SerializationTests(TempCase):
     def test_bad_record_streams_never_complete(self):
         original = self.records()
         token = next(record for record in original if isinstance(record, Token))
+        token_index = original.index(token)
+        end_index = next(i for i, record in enumerate(original) if isinstance(record, StreamEnd))
         cases = [original[:-1], [], original[1:], original + [original[-1]],
-                 [original[0], replace(token, index=7), original[-1]],
-                 [original[0], replace(token, kind="UNDECLARED"), original[-1]],
-                 [original[0], replace(token, stream_id="another"), original[-1]],
-                 original[:-1] + [replace(original[-1], token_count=99)]]
+                 original[:token_index] + [replace(token, index=7)] + original[token_index + 1:],
+                 original[:token_index] + [replace(token, kind="UNDECLARED")] + original[token_index + 1:],
+                 original[:token_index] + [replace(token, stream_id="another")] + original[token_index + 1:],
+                 original[:end_index] + [replace(original[end_index], token_count=99)] + original[end_index + 1:]]
         for records in cases:
             with self.subTest(records=records):
                 emitted = []
                 with self.assertRaises(OutputError):
                     for line in iter_mm2(records):
                         emitted.append(line)
-                self.assertFalse(any(line.startswith("(lex-end ") for line in emitted))
+                self.assertFalse(any(line.startswith("(split-end ") for line in emitted))
 
     def test_bundle_is_complete_and_refuses_existing_destinations(self):
         output = self.directory / "result"
         manifest = write_bundle(self.records(), output)
         self.assertEqual(manifest["token_count"], 3)
         self.assertEqual(set(path.name for path in output.iterdir()),
-                         {"tokens.jsonl", "tokens.mm2", "manifest.json"})
+                         {"tokens.jsonl", "tokens.mm2", "streams.jsonl", "manifest.json"})
         self.assertEqual(json.loads((output / "manifest.json").read_text()),
                          json.loads(json.dumps(manifest)))
         expected = (output / "tokens.mm2").read_bytes()
@@ -118,12 +123,12 @@ class SerializationTests(TempCase):
 
     def test_failures_clean_staging_directory(self):
         output = self.directory / "failed"
-        broken = tokenize("a@", spec({"name": "a", "literal": "a", "kind": "A"}),
+        broken = envelope("a@", spec({"name": "a", "literal": "a", "kind": "A"}),
                           namespace="demo", stream_id="s0")
         with self.assertRaises(LexicalError):
             write_bundle(broken, output)
         self.assertEqual(list(self.directory.iterdir()), [])
-        with patch("tokenizer.serialize._publish_directory", side_effect=OSError("disk full")):
+        with patch("tokenizer.bundle._publish_directory", side_effect=OSError("disk full")):
             with self.assertRaises(OutputError):
                 write_bundle(self.records(), output)
         self.assertEqual(list(self.directory.iterdir()), [])
@@ -136,7 +141,7 @@ class SerializationTests(TempCase):
 
     def test_payload_is_always_data(self):
         text = '$(exec 0 (,) (, BAD))\n;comment\x00"\\😀'
-        result = list(tokenize(text, chars_spec(), namespace="n", stream_id="s"))
+        result = list(envelope(text, chars_spec(), namespace="n", stream_id="s"))
         output = "".join(iter_mm2(result))
         self.assertNotIn("BAD", output)
         self.assertNotIn("$", output)

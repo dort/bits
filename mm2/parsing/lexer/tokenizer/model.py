@@ -7,6 +7,8 @@ import sys
 
 
 CONTRACT_VERSION = 1
+BUNDLE_VERSION = 2
+DEFAULT_MAX_UNITS = 1_000_000_000
 DEFAULT_MAX_BYTES = 16 * 1024 * 1024
 DEFAULT_MAX_CHARS = 4 * 1024 * 1024
 IDENTIFIER = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,31}")
@@ -176,3 +178,75 @@ class StreamEnd:
     source_length: int
     complete: bool = field(default=True, init=False)
     type: str = field(default="stream-end", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class SourceStart:
+    namespace: str
+    source_id: str
+    source: str
+    encoding: str | None
+    python_implementation: str
+    python_version: str
+    unicode_version: str
+    spec_fingerprint: str
+    kinds: tuple[str, ...]
+    identity_policy: str
+    stream_base: str | None
+    max_units: int
+    max_unit_chars: int
+    split_fingerprint: str | None = None
+    bundle_version: int = field(default=BUNDLE_VERSION, init=False)
+    contract_version: int = field(default=CONTRACT_VERSION, init=False)
+    fingerprint_algorithm: str = field(default="sha256", init=False)
+    type: str = field(default="source-start", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class UnitStart:
+    namespace: str
+    source_id: str
+    stream_id: str
+    unit_index: int
+    piece_index: int
+    span: Span
+    following: str
+    type: str = field(default="unit-start", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class Gap:
+    namespace: str
+    source_id: str
+    piece_index: int
+    text: str
+    span: Span
+    following: str
+    type: str = field(default="gap", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class DroppedEmpty:
+    namespace: str
+    source_id: str
+    piece_index: int
+    span: Span
+    following: str
+    type: str = field(default="dropped-empty", init=False)
+
+
+@dataclass(frozen=True, slots=True)
+class SourceEnd:
+    namespace: str
+    source_id: str
+    unit_count: int
+    piece_count: int
+    token_count: int
+    skipped_span_count: int
+    gap_count: int
+    dropped_empty_count: int
+    source_length: int
+    line_end: int
+    column_end: int
+    complete: bool = field(default=True, init=False)
+    type: str = field(default="source-end", init=False)

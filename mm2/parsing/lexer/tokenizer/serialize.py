@@ -1,15 +1,16 @@
-"""Lossless token transport and atomic publication of completed bundles."""
+"""Shared record checks and lossless token transport primitives."""
 
 import ctypes
-from dataclasses import asdict
+from dataclasses import asdict, fields
 import json
 import os
-from pathlib import Path
 import re
-import tempfile
 
-from .model import (ConfigurationError, OutputError, Skipped, StreamEnd, StreamStart,
-                    Token, require_python314, validate_identifier)
+from .config import loads_json
+from .model import (CONTRACT_VERSION, ConfigurationError, DroppedEmpty, Gap,
+                    OutputError, Skipped, SourceEnd, SourceStart, Span, StreamEnd,
+                    StreamStart, Token, UnitStart, advance_location,
+                    validate_identifier)
 
 
 CHUNK_BYTES = 24
@@ -66,54 +67,135 @@ def decode_lexeme(parts, *, byte_count, chunk_count):
         raise OutputError("lexeme chunks do not encode valid UTF-8") from error
 
 
-def _checked_records(records):
-    """Check one stream and hold its completion marker until iteration ends."""
-    start = end = None
-    token_count = char_count = 0
-    for record in records:
-        if end is not None:
+def _identifier(value, label, *, terminal=False):
+    try:
+        return validate_identifier(value, label, terminal=terminal)
+    except ConfigurationError as error:
+        raise OutputError(str(error)) from error
+
+
+def _count(value):
+    return type(value) is int and value >= 0
+
+
+def _check_span(span):
+    if (not isinstance(span, Span) or not _count(span.char_start) or
+            not _count(span.char_end) or span.char_end < span.char_start or
+            any(type(value) is not int or value < 1 for value in
+                (span.line_start, span.column_start, span.line_end, span.column_end))):
+        raise OutputError("invalid source span")
+
+
+def _check_text(text, *, empty=True):
+    if not isinstance(text, str) or (not empty and not text):
+        raise OutputError("expected text" + ("" if empty else " of nonzero length"))
+    if re.search("[\ud800-\udfff]", text):
+        raise OutputError("text contains an isolated surrogate code point")
+
+
+def _check_metadata(record):
+    for name in ("source", "python_implementation", "python_version", "unicode_version"):
+        _check_text(getattr(record, name))
+    if record.encoding is not None:
+        _check_text(record.encoding, empty=False)
+    if (type(record.contract_version) is not int or record.contract_version != CONTRACT_VERSION or
+            record.fingerprint_algorithm != "sha256"):
+        raise OutputError("unsupported lexical contract or fingerprint algorithm")
+    if not isinstance(record.kinds, tuple):
+        raise OutputError("declared kinds must be a tuple")
+    for kind in record.kinds:
+        _identifier(kind, "kind", terminal=True)
+    if record.kinds != tuple(sorted(set(record.kinds))):
+        raise OutputError("declared kinds must be sorted and distinct")
+    if not isinstance(record.spec_fingerprint, str) or DIGEST.fullmatch(record.spec_fingerprint) is None:
+        raise OutputError("specification fingerprint must be a full SHA-256 digest")
+
+
+class TextPosition:
+    """Track text pieces while deferring a trailing CR until right context exists."""
+
+    def __init__(self, line=1, column=1):
+        self.line, self.column = line, column
+        self.pending_cr = False
+
+    def resolve(self, following):
+        if self.pending_cr:
+            self.line, self.column = advance_location("\r", 0, 1, self.line, self.column,
+                                                     following=following)
+            self.pending_cr = False
+
+    def advance(self, text):
+        if not text:
+            return
+        self.resolve(text[0])
+        end = len(text) - int(text.endswith("\r"))
+        self.line, self.column = advance_location(text, 0, end, self.line, self.column)
+        self.pending_cr = end != len(text)
+
+    @property
+    def coordinates(self):
+        return self.line, self.column
+
+
+class StreamValidator:
+    """Validate one stream incrementally; envelope code decides when to emit ends."""
+
+    def __init__(self):
+        self.start = self.end = None
+        self.token_count = self.char_count = self.skipped_count = 0
+        self.position = TextPosition()
+        self.pending_end = None
+
+    def _resolve(self, following):
+        self.position.resolve(following)
+        if self.pending_end is not None and self.pending_end != self.position.coordinates:
+            raise OutputError("local source coordinates disagree with text")
+        self.pending_end = None
+
+    def push(self, record):
+        if self.end is not None:
             raise OutputError("records follow stream completion")
-        if start is None:
+        if self.start is None:
             if not isinstance(record, StreamStart):
                 raise OutputError("first record must start a stream")
-            try:
-                validate_identifier(record.namespace, "namespace")
-                validate_identifier(record.stream_id, "stream_id")
-                for kind in record.kinds:
-                    validate_identifier(kind, "kind", terminal=True)
-            except ConfigurationError as error:
-                raise OutputError(str(error)) from error
-            if record.kinds != tuple(sorted(set(record.kinds))):
-                raise OutputError("declared kinds must be sorted and distinct")
-            if DIGEST.fullmatch(record.spec_fingerprint) is None:
-                raise OutputError("specification fingerprint must be a full SHA-256 digest")
-            start = record
+            _identifier(record.namespace, "namespace")
+            _identifier(record.stream_id, "stream_id")
+            _check_metadata(record)
+            self.start = record
         elif not isinstance(record, (Token, Skipped, StreamEnd)):
             raise OutputError("unexpected record inside stream")
-        if (record.namespace, record.stream_id) != (start.namespace, start.stream_id):
+        if (record.namespace, record.stream_id) != (self.start.namespace, self.start.stream_id):
             raise OutputError("records mix stream identities")
         if isinstance(record, (Token, Skipped)):
-            if (not record.lexeme or record.span.char_start != char_count or
-                    type(record.span.char_end) is not int or
-                    record.span.char_end != char_count + len(record.lexeme)):
+            _check_text(record.lexeme, empty=False)
+            _check_span(record.span)
+            _identifier(record.rule, "rule")
+            if (record.span.char_start != self.char_count or
+                    record.span.char_end != self.char_count + len(record.lexeme)):
                 raise OutputError("source spans must cover the input consecutively")
-            char_count = record.span.char_end
+            self._resolve(record.lexeme[0])
+            if (record.span.line_start, record.span.column_start) != self.position.coordinates:
+                raise OutputError("local source start disagrees with text")
+            self.position.advance(record.lexeme)
+            self.pending_end = (record.span.line_end, record.span.column_end)
+            if not self.position.pending_cr:
+                self._resolve("")
+            self.char_count = record.span.char_end
             if isinstance(record, Token):
-                if type(record.index) is not int or record.index != token_count:
+                if type(record.index) is not int or record.index != self.token_count:
                     raise OutputError("token indices must be consecutive")
-                if record.kind not in start.kinds:
+                if record.kind not in self.start.kinds:
                     raise OutputError("token kind is absent from declared catalog")
-                token_count += 1
+                self.token_count += 1
+            else:
+                self.skipped_count += 1
         elif isinstance(record, StreamEnd):
             if (type(record.token_count) is not int or type(record.source_length) is not int or
-                    record.token_count != token_count or record.source_length != char_count):
+                    record.token_count != self.token_count or record.source_length != self.char_count or
+                    record.complete is not True):
                 raise OutputError("completion counts disagree with stream records")
-            end = record
-            continue
-        yield record
-    if end is None:
-        raise OutputError("incomplete stream: no successful stream-end record")
-    yield end
+            self._resolve("")
+            self.end = record
 
 
 def _mm2_lines(record):
@@ -137,20 +219,37 @@ def _mm2_lines(record):
         yield _fact("lex-end", namespace, stream, record.token_count, record.source_length)
 
 
-def iter_mm2(records):
-    require_python314()
-    for record in _checked_records(records):
-        yield from _mm2_lines(record)
-
-
 def _json_line(record):
     return json.dumps(asdict(record), ensure_ascii=True, separators=(",", ":"), allow_nan=False) + "\n"
 
 
-def iter_jsonl(records):
-    require_python314()
-    for record in _checked_records(records):
-        yield _json_line(record)
+def record_from_json(text):
+    """Read the exact dataclass schema, including fixed fields, without coercion."""
+    try:
+        value = loads_json(text, source="token bundle")
+    except (ConfigurationError, ValueError, RecursionError) as error:
+        raise OutputError(f"invalid bundle JSON: {error}") from error
+    classes = (SourceStart, UnitStart, Gap, DroppedEmpty, SourceEnd,
+               StreamStart, Token, Skipped, StreamEnd)
+    if not isinstance(value, dict):
+        raise OutputError("bundle record must be a JSON object")
+    cls = next((cls for cls in classes if value.get("type") == cls.__dataclass_fields__["type"].default), None)
+    if cls is None or set(value) != {field.name for field in fields(cls)}:
+        raise OutputError("unknown bundle record type or fields")
+    for field in fields(cls):
+        if not field.init and (type(value[field.name]) is not type(field.default) or
+                               value[field.name] != field.default):
+            raise OutputError(f"invalid fixed record field {field.name}")
+    if "span" in value:
+        span = value["span"]
+        if not isinstance(span, dict) or set(span) != {field.name for field in fields(Span)}:
+            raise OutputError("invalid span fields")
+        value["span"] = Span(**span)
+    if "kinds" in value:
+        if not isinstance(value["kinds"], list):
+            raise OutputError("declared kinds must be an array")
+        value["kinds"] = tuple(value["kinds"])
+    return cls(**{field.name: value[field.name] for field in fields(cls) if field.init})
 
 
 def _publish_directory(staging, destination):
@@ -165,38 +264,3 @@ def _publish_directory(staging, destination):
     if rename(-100, os.fsencode(staging), -100, os.fsencode(destination), 1) != 0:
         number = ctypes.get_errno()
         raise OSError(number, os.strerror(number), str(destination))
-
-
-def write_bundle(records, output_dir):
-    """Publish JSONL, MM2, and a manifest together after complete success."""
-    require_python314()
-    destination = Path(output_dir).absolute()
-    try:
-        if os.path.lexists(destination):
-            raise OutputError("output directory already exists", source=str(destination))
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix=f".{destination.name}.", dir=destination.parent) as temporary:
-            staging = Path(temporary)
-            manifest = None
-            skipped_count = 0
-            with (staging.joinpath("tokens.jsonl").open("w", encoding="utf-8", newline="\n") as jsonl,
-                  staging.joinpath("tokens.mm2").open("w", encoding="ascii", newline="\n") as mm2):
-                for record in _checked_records(records):
-                    jsonl.write(_json_line(record))
-                    mm2.writelines(_mm2_lines(record))
-                    if isinstance(record, StreamStart):
-                        manifest = asdict(record)
-                        del manifest["type"]
-                    elif isinstance(record, Skipped):
-                        skipped_count += 1
-                    elif isinstance(record, StreamEnd):
-                        manifest.update(token_count=record.token_count,
-                                        source_length=record.source_length,
-                                        skipped_span_count=skipped_count, complete=True)
-            with staging.joinpath("manifest.json").open("w", encoding="utf-8", newline="\n") as output:
-                json.dump(manifest, output, ensure_ascii=True, indent=2, allow_nan=False)
-                output.write("\n")
-            _publish_directory(staging, destination)
-        return manifest
-    except OSError as error:
-        raise OutputError(str(error), source=str(destination)) from error

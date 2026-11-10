@@ -13,8 +13,8 @@ import tempfile
 import time
 import unicodedata
 
-from tokenizer import (compile_spec, iter_jsonl, iter_mm2, load_spec, read_stream,
-                       tokenize, write_bundle)
+from tokenizer import (SourcePiece, compile_spec, iter_jsonl, iter_mm2, load_spec,
+                       read_stream, source_records, tokenize, write_bundle)
 from tokenizer.model import DEFAULT_MAX_BYTES, DEFAULT_MAX_CHARS
 
 
@@ -48,7 +48,9 @@ def fixture(case, size):
 def worker(case, size, stage):
     text, compiled = fixture(case, size)
     def records():
-        return tokenize(text, compiled, namespace="bench", stream_id="s0", max_chars=max(size, DEFAULT_MAX_CHARS))
+        return source_records([SourcePiece(text, stream_id="s0")], compiled,
+                              namespace="bench", source_id="s0", identity_policy="caller",
+                              max_units=1, max_unit_chars=max(size, DEFAULT_MAX_CHARS))
     prepared = list(records()) if stage == "serialize" else None
     root = HERE / "output/benchmark-tmp"
     root.mkdir(parents=True, exist_ok=True)
@@ -60,7 +62,8 @@ def worker(case, size, stage):
         output_size = 0
         token_count = None
         if stage == "lexer":
-            for record in records():
+            for record in tokenize(text, compiled, namespace="bench", stream_id="s0",
+                                   max_chars=max(size, DEFAULT_MAX_CHARS)):
                 if record.type == "stream-end":
                     token_count = record.token_count
         elif stage == "source":
