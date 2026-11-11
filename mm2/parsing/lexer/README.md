@@ -1,8 +1,8 @@
 # Python 3.14 lexer for MM2
 
-A reusable lexer driven by JSON lexical specifications. It accepts a complete
-Unicode string, file, or standard input and produces JSON Lines records and
-ordered token facts for a future MM2 Earley parser. Recognition has no built-in
+A reusable lexer and streaming splitter driven by JSON specifications. It accepts
+a Unicode string, file, or standard input and produces JSON Lines records and
+ordered token facts for the MM2 Earley parser. Recognition has no built-in
 document format, whitespace policy, or numeric interpretation.
 
 The implementation follows the [reviewed plan](../detailed_plan_python_tokenization.md).
@@ -61,6 +61,108 @@ it during tokenization. Bundle publication requires a Linux filesystem supportin
 that operation; failure is reported explicitly. The library's record iterators
 can also be consumed directly. See the [rename system-call documentation](https://man7.org/linux/man-pages/man2/rename.2.html).
 
+## Split large sources into logical units
+
+From `lexer/`, these generic examples create one stream per line or per header:
+
+```bash
+.venv/bin/python -m tokenizer \
+  --spec specs/expression_demo.json --split-spec specs/split_lines.json \
+  --input examples/expression_units.txt --namespace demo --stream-id expressions \
+  --output-dir output/expression_units
+
+.venv/bin/python -m tokenizer \
+  --spec specs/characters_demo.json --split-spec specs/split_headers.json \
+  --input examples/header_units.txt --namespace demo --stream-id headers \
+  --output-dir output/header_units
+```
+
+The first produces `expressions_u0`, `expressions_u1`, and `expressions_u2`.
+The second recognizes `UNIT 0001: ` style headers at real line starts and includes
+each header in the unit it begins. It rejects text preceding the first header.
+The specification files define these choices; the implementation has no special
+knowledge of lines, headers, or application formats.
+
+A version-1 split specification requires `max_unit_chars` (a positive integer)
+and exactly one of `separator` or `boundary`. Its matcher is either
+`{"literal": "..."}` or `{"pattern": "...", "max_length": N, "flags": [...]}`,
+where `N` is the declared maximum consumed character count. Unknown fields,
+duplicate keys, wrong types, and inapplicable policies are rejected.
+
+| Policy | Behavior |
+| --- | --- |
+| Separator `retain: "end"` (default) | Include the matched separator in the unit it closes. |
+| Separator `retain: "gap"` | Preserve the separator as a gap between units. |
+| Boundary `preamble: "unit"` (default) | Emit nonempty text before the first header as a unit. |
+| Boundary `preamble: "reject"` | Fail on nonempty text before the first header. |
+| `empty_units: "keep"` (default) | Emit an empty candidate as a zero-token stream. |
+| `empty_units: "drop"` | Preserve an explicit dropped-empty decision without allocating a stream ID. |
+
+Matches are earliest and nonoverlapping. A separator at EOF does not create an
+extra final empty candidate; empty input itself has one candidate. Nonempty
+residual text is a final unit. A source with no match is one candidate, subject
+to the unit limit and preamble policy. An oversized unit fails; size limits never
+create artificial boundaries.
+
+Regex matching preserves Python's ordered alternation and greedy/non-greedy
+choices. The supported subset includes character classes, groups, alternatives,
+optional pieces, and finite repeats. Zero-width patterns, unbounded repeats,
+lookaround, backreferences, conditionals, end/word assertions, atomic groups,
+and possessive repeats are rejected. Only a leading `^` in the normalized syntax
+tree is supported; `MULTILINE` makes it match after LF as well as at source start.
+Buffer compaction does not create new line starts. Normalization can combine
+equivalent anchors: `^a|^b` becomes a single leading anchor and a character class.
+
+Literal lengths and declared regex windows are capped at 65,536 code points.
+The validator walks CPython 3.14's private `re._parser` tree and rejects unknown
+operations. It proves a positive consumed width no larger than `max_length`;
+matching uses the computed width plus one character of provenance lookahead.
+The subset bounds required context, not regex backtracking time. Specifications
+remain trusted configuration; interpreter upgrades require qualification.
+
+In split mode, `--max-bytes` and `--max-chars` are optional **whole-source**
+ceilings and default to unlimited. The specification's `max_unit_chars` bounds
+each unit; `--max-units` bounds emitted streams (default 1,000,000,000). Kept
+empty units count toward that ceiling; dropped candidates do not. `--stream-id`
+is also the source ID and generated stream-ID base. The base must leave room
+under the 32-character identifier limit for `_u` and the largest allowed index.
+Without splitting, the CLI retains its finite total-input defaults and caller
+stream ID. `--max-units` requires split mode.
+
+For library use, keep the binary reader open until writing finishes:
+
+```python
+from tokenizer import (DecodedStream, load_spec, load_split_spec, source_records,
+                       split_chunks, write_bundle)
+
+lexical = load_spec("specs/expression_demo.json")
+splitting = load_split_spec("specs/split_lines.json")
+with open("examples/expression_units.txt", "rb") as stream:
+    decoded = DecodedStream(stream, label="expressions", max_bytes=None, max_chars=None)
+    pieces = split_chunks(decoded, splitting, source=decoded.label)
+    records = source_records(pieces, lexical, namespace="demo", source_id="expressions",
+                             source=decoded.label, encoding=decoded.encoding,
+                             max_unit_chars=splitting.max_unit_chars,
+                             split_fingerprint=splitting.fingerprint)
+    write_bundle(records, "output/library_split")
+```
+
+Working text storage is proportional to the maximum unit length, match width,
+and current decoded chunk size. The splitter releases decided search text and
+emitted units. The existing writer streams the index and records into a fixed
+set of files; a failure near EOF publishes no bundle. Concatenating unit text
+and gaps preserves the decoded source exactly, including CRLF and Unicode.
+
+To parse the generated expression bundle, run from `parsing/`:
+
+```bash
+export PYTHONPATH="$PWD/lexer:$PWD/earley"
+lexer/.venv/bin/python -m grammarc parse \
+  --grammar earley/tests/fixtures/grammar_expr_demo.json --grammar-id gexp \
+  --tokens lexer/output/expression_units --engine forest \
+  --max-trees 10 --max-depth 32 --output-dir lexer/output/parsed_expression_units
+```
+
 ## Library API
 
 ```python
@@ -93,6 +195,11 @@ write_bundle(
   `StreamEnd` records.
 - `source_records(pieces, compiled_spec, *, namespace, source_id, ...)` builds
   a source envelope around one or more bounded pieces. See the example below.
+- `compile_split_spec(mapping)`, `loads_split_spec(text)`, and `load_split_spec(path)`
+  validate split specifications and return an immutable compiled matcher.
+- `split_chunks(decoded_chunks, compiled_split, *, source="<stream>")` yields
+  `SourcePiece` objects lazily, with exact following-character context. Empty
+  decoded chunks are ignored; normal iterator exhaustion establishes EOF.
 - `iter_jsonl(records)` and `iter_mm2(records)` serialize a checked source
   envelope. Create a fresh source iterator for each pass, or explicitly retain
   records if the caller needs multiple passes. Raw `tokenize()` records are
@@ -133,14 +240,13 @@ publication of a token bundle.
 
 `tokenizer.config` supplies the shared `load_json`, `loads_json`,
 `canonical_json_bytes`, `fingerprint`, and `compile_flags` helpers. The lexical
-compiler already uses them; split and grammar compilers should reuse them and
-validate their own schemas. Canonicalization preserves the existing digest
+compiler, split compiler, and grammar compiler reuse them and validate their own
+schemas. Canonicalization preserves the existing digest
 recipe documented below.
 
 ## Source pieces and indexed reading
 
-The library accepts already separated pieces. Boundary detection and a splitter
-CLI are the next implementation stage. This example preserves a separating
+The library also accepts already separated pieces. This example preserves a separating
 newline as a gap and creates two independently named streams:
 
 ```python
@@ -248,11 +354,12 @@ conversion, or encoding guessing occurs. Byte sources default to strict UTF-8;
 an explicitly selected codec determines decoding. Isolated surrogate code points
 in text are rejected because the payload transport requires strict UTF-8.
 
-Tokenization still buffers the complete logical input and yields records
-incrementally. `DecodedStream` is the shared foundation for the planned splitter;
-feeding its arbitrary chunks separately to `tokenize()` would change matching.
+Tokenization buffers one complete bounded logical unit and yields records
+incrementally. The splitter uses `DecodedStream` to find those units;
+feeding arbitrary decoded chunks separately to `tokenize()` would change matching.
 Reader chunk boundaries do not create token boundaries.
-The defaults are **16 MiB of input bytes** and **4,194,304 decoded characters**.
+Without splitting, the defaults are **16 MiB of input bytes** and
+**4,194,304 decoded characters**.
 Change them with `--max-bytes` and `--max-chars`, or the corresponding library
 arguments. Zero is permitted for empty-only input; negatives and Boolean limits
 are rejected. Limits are checked while reading and decoding, before excess
@@ -422,7 +529,13 @@ Python-version errors, `1` for source/lexical/limit/output failures, and `130` f
 an interrupted run. Encoding errors identify byte positions in their message;
 lexical offsets identify decoded code points.
 
-This release implements the lexer, its MM2 handoff, shared decoding and
-configuration helpers, and version-2 multi-stream bundles. Configurable boundary
-matching and splitter CLI integration remain subsequent work described in the
+Positioned lexical errors from `source_records()` include absolute source coordinates, the generated
+or caller-supplied stream ID, and the unit index. Their `local_offset`,
+`local_line`, and `local_column` retain the original lexical position; the
+ordinary `offset`, `line`, and `column` describe the source. Translation uses the
+shared CRLF-aware location algorithm. Direct `tokenize()` errors remain local.
+
+This release implements the lexer, configurable streaming splitting, its MM2
+handoff, shared decoding/configuration helpers, and version-2 multi-stream
+bundles. Larger scale measurements remain in the
 [pipeline plan](../docs/dev_plans/stream_splitter_and_earley_pipeline.md).

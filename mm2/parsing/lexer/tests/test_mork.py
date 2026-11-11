@@ -1,8 +1,8 @@
 import os
 import subprocess
 
-from tokenizer import (BundleReader, SourcePiece, decode_lexeme, iter_mm2, load_spec,
-                       source_records, write_bundle)
+from tokenizer import (BundleReader, compile_split_spec, decode_lexeme, iter_mm2, load_spec,
+                       source_records, split_chunks, write_bundle)
 from tests.support import HERE, MORK, TempCase, envelope, spec
 
 
@@ -74,8 +74,11 @@ class MorkTests(TempCase):
 
     def test_source_order_and_independent_indexed_unit_loading(self):
         compiled = spec({"name": "x", "literal": "x", "kind": "X"})
-        records = source_records([SourcePiece("x", following="x"), SourcePiece("xx")],
-                                 compiled, namespace="demo", source_id="batch", max_units=2)
+        splitting = compile_split_spec({"version": 1, "separator": {"literal": ";"},
+                                        "retain": "gap", "max_unit_chars": 8})
+        records = source_records(split_chunks(["x;", "xx"], splitting),
+                                 compiled, namespace="demo", source_id="batch", max_units=2,
+                                 split_fingerprint=splitting.fingerprint)
         path = self.directory / "bundle"
         write_bundle(records, path)
         reader = BundleReader(path)

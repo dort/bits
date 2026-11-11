@@ -1,10 +1,12 @@
 from collections import namedtuple
+import io
 import json
 import subprocess
 import sys
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from tokenizer import RuntimeVersionError, compile_spec
+from tokenizer import BundleReader, RuntimeVersionError, compile_spec
 from tests.support import HERE, TempCase
 
 
@@ -59,3 +61,73 @@ class CliTests(TempCase):
         with patch("tokenizer.model.sys.version_info", version):
             with self.assertRaisesRegex(RuntimeVersionError, "requires Python 3.14"):
                 compile_spec({"version": 1, "rules": []})
+
+    def split_spec(self, **changes):
+        path = self.directory / "split.json"
+        path.write_text(json.dumps(dict(version=1, separator={"literal": "\n"},
+                                        max_unit_chars=32, **changes)))
+        return path
+
+    def test_split_cli_stdin_and_file(self):
+        text = b'x + 12\r\ny + 3\n'
+        source = self.directory / "input"
+        source.write_bytes(text)
+        split = self.split_spec()
+        outputs = []
+        for label in ["-", source]:
+            output = self.directory / ("stdin" if label == "-" else "file")
+            result = self.run_cli(*self.args(output, label), "--split-spec", split,
+                                  input=text if label == "-" else None)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            reader = BundleReader(output)
+            entries = list(reader.iter_entries())
+            self.assertEqual([e["stream_id"] for e in entries], ["s0_u0", "s0_u1"])
+            self.assertEqual([reader.read_stream(e).end.token_count for e in entries], [3, 3])
+            outputs.append((output / "tokens.mm2").read_bytes())
+        self.assertEqual(*outputs)
+
+    def test_split_cli_limits_drops_and_late_errors(self):
+        split = self.split_spec(retain="gap", empty_units="drop")
+        output = self.directory / "empty"
+        result = self.run_cli(*self.args(output), "--split-spec", split, input=b'\n\n')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest = json.loads((output / "manifest.json").read_text())
+        self.assertEqual((manifest["unit_count"], manifest["gap_count"], manifest["dropped_empty_count"]),
+                         (0, 2, 2))
+        for data, options in [(b'x\ny', ["--max-units", "1"]),
+                              (b'x\ny', ["--max-chars", "2"]),
+                              (b'x\ny', ["--max-bytes", "2"]),
+                              (b'x\ny@', []), (b'x\ny\xff', [])]:
+            output = self.directory / "failure"
+            result = self.run_cli(*self.args(output), "--split-spec", split, *options, input=data)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertNotIn(b'Traceback', result.stderr)
+            self.assertFalse(output.exists())
+            self.assertEqual(list(self.directory.glob(".failure.*")), [])
+
+    def test_bad_split_configuration_precedes_source_access(self):
+        split = self.directory / "bad-split.json"
+        split.write_text(json.dumps({"version": 1, "separator": {"pattern": "a(?=b)", "max_length": 1},
+                                     "max_unit_chars": 32}))
+        result = self.run_cli(*self.args(self.directory / "out", self.directory / "missing"),
+                              "--split-spec", split)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn(b'pattern', result.stderr)
+        self.assertNotIn(b'Traceback', result.stderr)
+
+    def test_split_and_unsplit_default_source_limits(self):
+        from tokenizer.__main__ import main
+
+        # Lower the finite-input defaults to exercise mode selection with a tiny
+        # real source. Split mode's default totals must remain unlimited.
+        for splitting, expected in [(False, 1), (True, 0)]:
+            output = self.directory / str(splitting)
+            args = list(map(str, self.args(output)))
+            if splitting:
+                args += ["--split-spec", str(self.split_spec())]
+            with (patch("tokenizer.__main__.DEFAULT_MAX_BYTES", 1),
+                  patch("tokenizer.__main__.DEFAULT_MAX_CHARS", 1),
+                  patch("sys.stdin", SimpleNamespace(buffer=io.BytesIO(b'x\ny'))),
+                  patch("sys.stdout", io.StringIO()), patch("sys.stderr", io.StringIO())):
+                self.assertEqual(main(args), expected)
+            self.assertEqual(output.exists(), splitting)

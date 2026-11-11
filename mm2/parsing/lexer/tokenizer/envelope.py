@@ -6,7 +6,7 @@ import unicodedata
 
 from .lexer import tokenize
 from .model import (BUNDLE_VERSION, DEFAULT_MAX_CHARS, DEFAULT_MAX_UNITS,
-                    ConfigurationError, DroppedEmpty, Gap, LimitError, OutputError,
+                    ConfigurationError, DroppedEmpty, Gap, LexerError, LimitError, OutputError,
                     Skipped, SourceEnd, SourceStart, Span, StreamEnd, StreamStart,
                     Token, UnitStart, advance_location, require_python314,
                     validate_identifier, validate_limit)
@@ -284,13 +284,22 @@ def _source_records(pieces, spec, start):
                 stream_id = piece.stream_id
             yield UnitStart(start.namespace, start.source_id, stream_id, units, pieces_seen,
                             span, piece.following)
-            for record in tokenize(piece.text, spec, namespace=start.namespace, stream_id=stream_id,
-                                   source=start.source, encoding=start.encoding, max_chars=start.max_unit_chars):
-                yield record
-                if isinstance(record, StreamEnd):
-                    tokens += record.token_count
-                elif isinstance(record, Skipped):
-                    skips += 1
+            try:
+                for record in tokenize(piece.text, spec, namespace=start.namespace, stream_id=stream_id,
+                                       source=start.source, encoding=start.encoding, max_chars=start.max_unit_chars):
+                    yield record
+                    if isinstance(record, StreamEnd):
+                        tokens += record.token_count
+                    elif isinstance(record, Skipped):
+                        skips += 1
+            except LexerError as error:
+                if error.offset is not None:
+                    error.local_offset, error.local_line, error.local_column = error.offset, error.line, error.column
+                    error.line, error.column = advance_location(
+                        piece.text, 0, error.local_offset, line, column, following=piece.following)
+                    error.offset += offset
+                    error.unit_index, error.stream_id = units, stream_id
+                raise
             units += 1
         else:
             if piece.stream_id is not None:

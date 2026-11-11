@@ -1,5 +1,10 @@
 # Implementation handoff for Claude
 
+**Current assignment (2026-11-11):** see the
+[parser benchmark handoff](claude_parser_benchmark_handoff.md). Codex owns the
+splitter and `lexer/`; Claude owns parser measurements under `earley/`. The
+entries below preserve the earlier implementation history.
+
 Updated 2026-11-10. This is a file-based handoff in the shared repository; creating
 it does not launch a Claude process or send a message to another service.
 

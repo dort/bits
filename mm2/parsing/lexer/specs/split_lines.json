@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "separator": {"literal": "\n"},
+  "retain": "end",
+  "empty_units": "keep",
+  "max_unit_chars": 65536
+}

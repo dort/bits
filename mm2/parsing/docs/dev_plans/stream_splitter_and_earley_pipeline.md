@@ -10,6 +10,12 @@ for the Earley milestones here. The initial shared-helper implementation and
 independent Claude assignments are recorded in the
 [implementation handoff](claude_implementation_handoff.md).
 
+Implementation update 2026-11-11: milestones 1–2 and the parser implementations
+are present. Codex has implemented milestone 3; Claude's parallel parser
+measurement assignment is in the
+[benchmark handoff](claude_parser_benchmark_handoff.md). Progress and verification
+for splitting are recorded in [the implementation report](splitter_implementation.md).
+
 ## Objective and inputs
 
 Process large text sources through configurable, bounded logical units, preserve
@@ -509,9 +515,9 @@ lexer/.venv/bin/python -m tokenizer \
   --output-dir lexer/output/expression_units
 
 lexer/.venv/bin/python -m grammarc parse \
-  --grammar earley/specs/expression_demo.json --grammar-id expr \
+  --grammar earley/tests/fixtures/grammar_expr_demo.json --grammar-id expr \
   --tokens lexer/output/expression_units \
-  --max-tokens 512 --max-rounds 4096 --timeout-seconds 30 \
+  --max-tokens 512 --max-sweeps 512 --timeout-seconds 30 \
   --output-dir earley/output/expression_units
 ```
 
@@ -520,7 +526,7 @@ run from `parsing/`. Do not scatter `sys.path` edits through modules. Keep the
 current `MORK` executable override. No command examples should depend on a
 particular working directory without naming it.
 
-Recognition-only loads `earley.mm2`; `--forest` loads `earley_forest.mm2`.
+Recognition-only loads `earley.mm2`; `--engine forest` loads `earley_forest.mm2`.
 Never load both into one space. `--max-trees` and `--max-depth` bound requested
 enumeration. Record the selected engine's digest in the result manifest.
 

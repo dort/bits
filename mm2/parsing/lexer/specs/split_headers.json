@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "boundary": {
+    "pattern": "^UNIT [0-9]{4}: ",
+    "max_length": 11,
+    "flags": ["MULTILINE"]
+  },
+  "preamble": "reject",
+  "empty_units": "keep",
+  "max_unit_chars": 65536
+}

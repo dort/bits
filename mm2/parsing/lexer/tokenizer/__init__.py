@@ -10,6 +10,8 @@ from .spec import compile_spec, load_spec, loads_spec
 from .serialize import decode_lexeme, encode_lexeme
 from .envelope import SourcePiece, source_records
 from .bundle import BundleReader, BundleStream, iter_jsonl, iter_mm2, write_bundle
+from .split_spec import compile_split_spec, load_split_spec, loads_split_spec
+from .splitter import split_chunks
 
 __all__ = [
     "tokenize", "compile_spec", "load_spec", "loads_spec", "read_source", "read_stream", "DecodedStream",
@@ -19,4 +21,5 @@ __all__ = [
     "encode_lexeme", "decode_lexeme", "iter_jsonl", "iter_mm2", "write_bundle",
     "SourcePiece", "source_records", "SourceStart", "SourceEnd", "UnitStart", "Gap",
     "DroppedEmpty", "BundleReader", "BundleStream",
+    "compile_split_spec", "load_split_spec", "loads_split_spec", "split_chunks",
 ]

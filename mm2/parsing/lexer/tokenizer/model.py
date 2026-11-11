@@ -39,6 +39,10 @@ class LexerError(Exception):
         self.column = column
         self.excerpt = excerpt
         self.pattern_offset = pattern_offset
+        # A source envelope translates lexical coordinates while retaining the
+        # original unit-local location. Direct tokenize() errors stay local.
+        self.local_offset = self.local_line = self.local_column = None
+        self.unit_index = self.stream_id = None
 
     def __str__(self):
         context = []
@@ -48,6 +52,10 @@ class LexerError(Exception):
             context.append(f"line {self.line}, column {self.column}")
         if self.offset is not None:
             context.append(f"offset {self.offset}")
+        if self.unit_index is not None:
+            context.append(f"unit {self.unit_index} ({escaped(self.stream_id, 32)})")
+        if self.local_offset is not None:
+            context.append(f"local line {self.local_line}, column {self.local_column}, offset {self.local_offset}")
         if self.rule is not None:
             context.append(f"rule {escaped(self.rule, 40)}")
         if self.field is not None:

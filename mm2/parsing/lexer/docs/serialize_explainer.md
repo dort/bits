@@ -446,7 +446,7 @@ and `manifest.json` through this sequence:
 7. Merge the source start/end metadata into a small summary manifest. Close all
    three data files, add their lengths/digests to the manifest, and write it.
 8. Rename the entire temporary directory to the requested destination using
-   `_publish_directory()`.
+   `publish_directory()`.
 9. Return the manifest mapping to the caller.
 
 The skipped-span count counts matches of skip rules, not skipped characters.
@@ -462,7 +462,7 @@ sentinel, which has no corresponding `split-unit` fact.
 ### Why the final rename has its own helper
 
 The early existence check provides a prompt error, but another process can create
-the destination during tokenization. `_publish_directory()` uses Linux
+the destination during tokenization. `publish_directory()` uses Linux
 `renameat2` with `RENAME_NOREPLACE`, asking the operating system to perform the
 rename only if the destination is still absent.
 
