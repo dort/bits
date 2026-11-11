@@ -158,6 +158,26 @@ require `--engine forest`; per unit it records the trees,
 `enumeration_complete` (true only when the graph is also closed), and keeps
 "not requested" (`null`) distinct from "attempted but incomplete" (`false`).
 
+## Benchmarks
+
+```bash
+cd mm2/parsing/earley
+PYTHONPATH=../lexer /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python \
+  -m benchmarks.parser
+```
+
+The quick parser scale measurements: every case runs in a fresh worker
+process under a supervisor timeout, builds a synthetic version-2 bundle from
+lazily generated units, recognizes it with the real binary, and streams one
+JSON row of fixed-size aggregates per case. The four dimensions are
+unit-count scaling (memory trend), tokens-per-unit scaling across grammar
+shapes including a long-token text, engine comparison with a recognition
+agreement check, and deliberate limit exhaustion. Larger workloads are
+explicit (`--units`, `--expr-tokens`, …); `--only` selects cases and
+`--list` prints their deterministic IDs. Results land under the ignored
+`output/benchmarks/`; the compact reproducible record with the measured
+numbers and their caveats is [benchmarks/REPORT.md](benchmarks/REPORT.md).
+
 ## Tests
 
 ```bash
@@ -165,7 +185,7 @@ cd mm2/parsing/earley
 /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python -m unittest discover -s tests -v
 ```
 
-Sixty tests: eleven engine tests against the real binary (a `MORK`
+Seventy-one tests: eleven engine tests against the real binary (a `MORK`
 environment variable overrides the binary path), eight compiler tests,
 twenty-four runner tests that build real version-2 bundles through the lexer
 pipeline and drive them through the runner and the command (including the
@@ -184,7 +204,10 @@ no duplicate emissions, the merged start root, explicit cycle truncation,
 count-limited partial enumeration, the graph JSON round trip, runner-level
 enumeration and graph publication including cyclic graphs, a recursion-first
 unit cycle under a 10,000 depth limit, and deadline cuts during
-construction, graph rendering, enumeration, and the final tree copy). The
+construction, graph rendering, enumeration, and the final tree copy), and
+eleven benchmark-harness tests (accounting over real tiny cases, incomplete-
+reason and worker failure/timeout classification, scratch cleanup after
+normal and killed workers, registry determinism). The
 engine tests cover: the `x + 12` worked example with its
 pinned grammar fingerprint and 13-item chart; wrong, truncated, and empty
 streams rejecting only after projection convergence; genuinely unproductive

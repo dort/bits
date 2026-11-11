@@ -157,6 +157,11 @@ class Runner:
         self.max_trees = max_trees
         self.max_depth = max_depth
         self.work_dir = Path(work_dir) if work_dir is not None else PROJECT / "output"
+        # Largest engine input and dump files staged by any run of this
+        # runner, in bytes. The staging directory is deleted per run, so
+        # these counters are the only record of its disk footprint.
+        self.peak_input_bytes = 0
+        self.peak_dump_bytes = 0
 
     def run_bundle(self, bundle_path, *, preflight=True):
         """Yield one UnitResult per unit, in index order.
@@ -296,6 +301,8 @@ class Runner:
             stdout_path = Path(directory) / "stdout"
             text = self.grammar_source + demand + round_table_facts(budget)
             input_path.write_bytes(text.encode("ascii") + stream.mm2)
+            self.peak_input_bytes = max(self.peak_input_bytes,
+                                        input_path.stat().st_size)
             command = [self.mork, "run", str(input_path), str(dump_path)]
             command += ["--aux-path", str(self.engine_path)]
             try:
@@ -306,6 +313,9 @@ class Runner:
             except subprocess.TimeoutExpired:
                 return None, (f"wall-time limit timeout_seconds="
                               f"{self.timeout_seconds} during {budget} sweeps")
+            if dump_path.exists():
+                self.peak_dump_bytes = max(self.peak_dump_bytes,
+                                           dump_path.stat().st_size)
             with stderr_path.open("rb") as captured:
                 stderr_head = captured.read(STDERR_DIAGNOSTIC_BYTES)
             stderr_head = stderr_head.decode("utf-8", "replace").strip()

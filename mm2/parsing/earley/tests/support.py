@@ -19,10 +19,14 @@ FIXTURES = HERE / "fixtures"
 OUTPUT = PROJECT / "output"
 
 # Repository-local import setup, in this one place: grammarc lives in this
-# project and imports the sibling lexer's tokenizer package.
-for path in (PROJECT, PROJECT.parent / "lexer"):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+# project and imports the sibling lexer's tokenizer package. This project
+# must precede the lexer, because both trees have top-level `benchmarks`
+# and `tests` packages and the names must resolve here.
+for path in (PROJECT.parent / "lexer", PROJECT):
+    entry = str(path)
+    if entry in sys.path:
+        sys.path.remove(entry)
+    sys.path.insert(0, entry)
 
 from grammarc.facts import (FOREST_HEADS, RECOGNITION_HEADS,  # noqa: E402
                             parse_facts, projection, render, select)
