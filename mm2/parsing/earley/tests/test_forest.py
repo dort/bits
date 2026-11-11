@@ -6,12 +6,14 @@ exactly what the production pipeline will hand it.
 """
 
 import json
+from unittest import mock
 
 from tests.support import EngineCase, FOREST, fixture
 from grammarc import (DeadlineExceeded, Forest, Runner, compile_grammar,
                       grammar_facts, load_grammar)
 from tests.support import FIXTURES, PROJECT
-from tests.test_runner import build_bundle, FakeDeadline, RunnerCase
+from tests.test_runner import (build_bundle, FakeDeadline, ManualDeadline,
+                               RunnerCase)
 
 
 def grammar_of(start, *productions):
@@ -204,6 +206,41 @@ class TraversalTests(ForestCase):
         trees, cut = forest.enumerate(1000, 50)
         self.assertFalse(cut)
         self.assertLess(len(trees), len(total))
+
+    def test_expiry_during_and_after_the_final_copy_withholds_completion(self):
+        import grammarc.forest as forest_module
+        real = forest_module._copy_tree
+        grammar = load_grammar(FIXTURES / "grammar_expr_demo.json")
+        facts, key = self.forest_facts(fixture("grammar_expr_demo.mm2"), "gexp",
+                                       "tokens_x_plus_12.mm2", "demo", "s0")
+
+        # Expiry while copying the only tree: the unfinished copy is dropped.
+        during = ManualDeadline()
+
+        def expire_then_copy(tree, deadline=None):
+            during.dead = True
+            return real(tree, deadline)
+
+        forest = Forest(grammar, facts, *key, deadline=during)
+        with mock.patch("grammarc.forest._copy_tree", expire_then_copy):
+            trees, complete = forest.enumerate(10, 10)
+        self.assertEqual(trees, [])
+        self.assertFalse(complete)
+
+        # Expiry after the copy, with no alternative left: the tree is kept
+        # but completion is not claimed past the budget.
+        after = ManualDeadline()
+
+        def copy_then_expire(tree, deadline=None):
+            copy = real(tree, deadline)
+            after.dead = True
+            return copy
+
+        forest = Forest(grammar, facts, *key, deadline=after)
+        with mock.patch("grammarc.forest._copy_tree", copy_then_expire):
+            trees, complete = forest.enumerate(10, 10)
+        self.assertEqual(len(trees), 1)
+        self.assertFalse(complete, "completion claimed after the deadline")
 
     def test_graph_json_round_trip_preserves_every_alternative(self):
         grammar = grammar_of("sss",

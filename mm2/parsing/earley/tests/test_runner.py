@@ -47,6 +47,23 @@ class FakeDeadline:
         return 10.0 if self.left > 0 else 0.0
 
 
+class ManualDeadline:
+    """Expires exactly when a test sets `dead`; never from the clock."""
+
+    def __init__(self):
+        self.dead = False
+
+    def expired(self):
+        return self.dead
+
+    def check(self):
+        if self.dead:
+            raise DeadlineExceeded("wall-time limit timeout_seconds=0 (test)")
+
+    def remaining(self):
+        return 0.0 if self.dead else 10.0
+
+
 class SlowSecondRun(Runner):
     """Returns one real engine run's facts, then burns the unit deadline.
 
@@ -205,6 +222,43 @@ class DeadlineTests(RunnerCase):
         self.assertEqual(unit.trees, ())
         self.assertIn("wall-time", unit.reason)
 
+    def test_completion_claim_is_validated_after_the_final_graph_sort(self):
+        from grammarc.forest import Forest
+
+        class DelayedGraph(Forest):
+            def graph(self):
+                rendered = super().graph()
+                time.sleep(1.2)  # the deadline passes after the last checkpoint
+                return rendered
+
+        runner = Runner(self.gexp, "gexp", engine="forest", timeout_seconds=1.0)
+        with mock.patch("grammarc.runner.Forest", DelayedGraph):
+            unit, = runner.run_bundle(self.single)
+        self.assertEqual(unit.recognition, "accepted")
+        self.assertTrue(unit.closure_complete)
+        self.assertFalse(unit.forest_complete,
+                         "completion claimed after the deadline expired")
+        self.assertIsNotNone(unit.graph)  # the fully built graph is kept
+        self.assertIn("wall-time", unit.reason)
+
+    def test_expiry_during_the_last_tree_copy_drops_only_that_tree(self):
+        import grammarc.forest as forest_module
+        real = forest_module._copy_tree
+
+        def slow_copy(tree, deadline=None):
+            time.sleep(1.2)
+            return real(tree, deadline)
+
+        runner = Runner(self.gexp, "gexp", engine="forest",
+                        max_trees=10, max_depth=20, timeout_seconds=1.0)
+        with mock.patch("grammarc.forest._copy_tree", slow_copy):
+            unit, = runner.run_bundle(self.single)
+        self.assertEqual(unit.recognition, "accepted")
+        self.assertTrue(unit.forest_complete)
+        self.assertFalse(unit.enumeration_complete)
+        self.assertEqual(unit.trees, ())
+        self.assertIn("wall-time", unit.reason)
+
 
 class ResourceLimitTests(RunnerCase):
     def fake_engine(self, name, body):
@@ -253,6 +307,57 @@ class ResourceLimitTests(RunnerCase):
                 list(runner.run_bundle(self.single))
             self.assertIn("exit 1", str(caught.exception))
             self.assertIn("unrelated failure", str(caught.exception))
+
+    def test_stderr_diagnostic_read_is_bounded(self):
+        import tracemalloc
+        script = self.fake_engine("noisy", (
+            "import sys\n"
+            "sys.stderr.write('x' * (8 * 1024 * 1024))\n"
+            "sys.exit(1)\n"))
+        runner = Runner(self.gexp, "gexp", mork=script,
+                        max_dump_bytes=16 * 1024 * 1024)
+        tracemalloc.start()
+        try:
+            with self.assertRaises(RuntimeError):
+                list(runner.run_bundle(self.single))
+            peak = tracemalloc.get_traced_memory()[1]
+        finally:
+            tracemalloc.stop()
+        self.assertLess(peak, 4 * 1024 * 1024,
+                        "the whole captured stderr file was read before slicing")
+
+    def test_exactly_full_write_with_unrelated_failure_stays_a_diagnostic(self):
+        script = self.fake_engine("fullwrite", (
+            "import sys\n"
+            "with open(sys.argv[3], 'wb') as dump:\n"
+            "    dump.write(b'x' * 1024)\n"
+            "sys.stderr.write('unrelated failure\\n')\n"
+            "sys.exit(1)\n"))
+        runner = Runner(self.gexp, "gexp", mork=script, max_dump_bytes=1024)
+        with self.assertRaises(RuntimeError) as caught:
+            list(runner.run_bundle(self.single))
+        self.assertIn("unrelated failure", str(caught.exception))
+
+    def test_stdout_write_limit_is_a_confirmed_resource_outcome(self):
+        script = self.fake_engine("stdoutflood", (
+            "import sys\n"
+            "sys.stdout.buffer.write(b'x' * 2_097_152)\n"
+            "sys.stdout.buffer.flush()\n"))
+        unit, = Runner(self.gexp, "gexp", mork=script,
+                       max_dump_bytes=1024).run_bundle(self.single)
+        self.assertEqual(unit.recognition, "incomplete")
+        self.assertIn("max_dump_bytes", unit.reason)
+        self.assertIn("stdout", unit.reason)
+
+    def test_stderr_flood_is_a_truncated_runtime_diagnostic(self):
+        script = self.fake_engine("stderrflood", (
+            "import sys\n"
+            "sys.stderr.write('x' * 2_097_152)\n"
+            "sys.exit(1)\n"))
+        runner = Runner(self.gexp, "gexp", mork=script, max_dump_bytes=1024)
+        with self.assertRaises(RuntimeError) as caught:
+            list(runner.run_bundle(self.single))
+        self.assertIn("stderr truncated", str(caught.exception))
 
 
 class CommandTests(RunnerCase):

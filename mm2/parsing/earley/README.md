@@ -101,19 +101,28 @@ binary path for the runner and the command alike.
 Resource limits are enforced while the work runs, not inspected afterwards.
 One absolute deadline per unit (`--timeout-seconds`, default 30 s) covers
 every engine rerun and all Python processing after it — dump parsing,
-projection, forest construction, tree enumeration; expiry preserves sound
-acceptance and any previously established closure but marks the unfinished
-output incomplete with the deadline named. The engine process runs under
-RLIMIT_FSIZE at `--max-dump-bytes`, so the OS stops an oversized dump while
-it is being written, and under RLIMIT_AS at `--max-process-bytes` (default
+projection, forest construction, tree copying, tree enumeration; expiry
+preserves sound acceptance and any closure established inside the budget but
+marks the unfinished output incomplete with the deadline named. A
+completion claim is only accepted while the deadline still holds, so work
+that crosses it after a stage's last checkpoint (a final sort, the last tree
+copy) downgrades that stage to incomplete; trees copied before expiry and a
+fully built graph are kept. The budget bounds the runner's work through
+enumeration — the command's serialization of the returned rows is outside
+it. The engine process runs under RLIMIT_FSIZE at `--max-dump-bytes`, which
+constrains the dump and both captured streams, so the OS stops an oversized
+writer at the bound, and under RLIMIT_AS at `--max-process-bytes` (default
 16 GiB: the release binary reserves just under 10 GiB of virtual address
 space at startup, so the ceiling bounds growth beyond that fixed
 reservation; it is address space, not resident memory). A limit outcome is
-reported only on evidence of that particular exhaustion — the runner's own
-timeout, the file-size signal or a dump at the ceiling, or an
-allocation-failure abort under the memory cap — and every other nonzero
-engine exit is a runtime diagnostic (exit 2) with a bounded stderr prefix,
-whether or not limits were installed.
+reported only on evidence of that particular exhaustion: the runner's own
+timeout; the file-size signal, or a write-failure diagnostic with a
+constrained file at the ceiling, naming the affected stream (a file merely
+at the ceiling is not evidence — a writer may fill it exactly and fail for
+an unrelated reason); or an allocation-failure abort under the memory cap.
+Every other nonzero engine exit is a runtime diagnostic (exit 2) carrying a
+bounded stderr prefix — read bounded, never sliced from a whole-file read —
+with a note when the captured stderr itself hit the ceiling.
 
 Results are staged in a sibling temporary directory and published to
 `--output-dir` in one no-replace rename (the lexer bundle writer's
@@ -156,23 +165,27 @@ cd mm2/parsing/earley
 /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python -m unittest discover -s tests -v
 ```
 
-Fifty-three tests: eleven engine tests against the real binary (a `MORK`
+Sixty tests: eleven engine tests against the real binary (a `MORK`
 environment variable overrides the binary path), eight compiler tests,
-eighteen runner tests that build real version-2 bundles through the lexer
+twenty-four runner tests that build real version-2 bundles through the lexer
 pipeline and drive them through the runner and the command (including the
 deadline carried through every Python stage with sound acceptance preserved,
-the oversized-dump writer stopped at the bound by the OS, real memory-limit
-exhaustion as a verified incomplete outcome, ordinary engine failures staying
-diagnostics with and without a memory cap, staged publication that survives
+completion claims validated after the final graph sort and the last tree
+copy, the oversized-dump writer stopped at the bound by the OS, real
+memory-limit exhaustion as a verified incomplete outcome, ordinary engine
+failures staying diagnostics with and without a memory cap, an exactly-full
+write with an unrelated failure staying a diagnostic, stdout write-limit
+failures as confirmed resource outcomes, a flooded stderr as a truncated
+diagnostic read under a memory bound, staged publication that survives
 missing bundles, interruption, and midway failures without blocking a retry,
-and the fixed forest-mode file set), and sixteen forest tests (the `x + 12`
-and Remy-oracle trees, the two- and four-tree sibling fixtures with no
-duplicate emissions, the merged start root, explicit cycle truncation,
+and the fixed forest-mode file set), and seventeen forest tests (the
+`x + 12` and Remy-oracle trees, the two- and four-tree sibling fixtures with
+no duplicate emissions, the merged start root, explicit cycle truncation,
 count-limited partial enumeration, the graph JSON round trip, runner-level
-enumeration and graph publication including cyclic graphs, a
-recursion-first unit cycle under a 10,000 depth limit, and deadline cuts
-during construction, graph rendering, and enumeration). The engine tests
-cover: the `x + 12` worked example with its
+enumeration and graph publication including cyclic graphs, a recursion-first
+unit cycle under a 10,000 depth limit, and deadline cuts during
+construction, graph rendering, enumeration, and the final tree copy). The
+engine tests cover: the `x + 12` worked example with its
 pinned grammar fingerprint and 13-item chart; wrong, truncated, and empty
 streams rejecting only after projection convergence; genuinely unproductive
 recursion as stable non-acceptance; the 31-production unit chain, where an

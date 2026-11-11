@@ -195,6 +195,12 @@ class Runner:
                         deadline.check()  # no forest work on an exhausted deadline
                         forest = Forest(self.grammar, facts, *key, deadline=deadline)
                         graph = forest.graph()
+                        if deadline.expired():
+                            # The final sorts in graph() follow its last
+                            # checkpoint; a completion claim must still be
+                            # inside the budget, and no enumeration starts
+                            # past it. The fully built graph is kept.
+                            raise DeadlineExceeded(wall_reason)
                         forest_done = closure
                         if self.max_trees is not None:
                             listed, exhausted = forest.enumerate(self.max_trees,
@@ -204,7 +210,6 @@ class Runner:
                             if not exhausted and deadline.expired():
                                 reason = reason or wall_reason
                     except DeadlineExceeded:
-                        graph = None
                         forest_done = False
                         reason = reason or wall_reason
             return UnitResult(
@@ -245,6 +250,12 @@ class Runner:
                 budgets.append(budget)
                 current = projection(facts, *key, self.heads, deadline=deadline)
             except DeadlineExceeded:
+                reason = wall_reason
+                break
+            if deadline.expired():
+                # The projection's final assembly may have crossed the
+                # deadline after its last checkpoint; closure is only
+                # declared when established inside the budget.
                 reason = wall_reason
                 break
             if previous is not None and current == previous:
@@ -295,25 +306,40 @@ class Runner:
             except subprocess.TimeoutExpired:
                 return None, (f"wall-time limit timeout_seconds="
                               f"{self.timeout_seconds} during {budget} sweeps")
-            stderr_head = stderr_path.read_bytes()[:STDERR_DIAGNOSTIC_BYTES]
+            with stderr_path.open("rb") as captured:
+                stderr_head = captured.read(STDERR_DIAGNOSTIC_BYTES)
             stderr_head = stderr_head.decode("utf-8", "replace").strip()
             if completed.returncode != 0:
-                # RLIMIT_FSIZE stopped the engine at the output ceiling: it
-                # dies by SIGXFSZ, or it handles the signal and fails on the
-                # truncated write, leaving the dump at the ceiling. Either
-                # way the truncated dump can still contain the budget marker,
-                # so it is never parsed.
-                dump_size = dump_path.stat().st_size if dump_path.exists() else 0
-                if completed.returncode == -signal.SIGXFSZ or dump_size >= dump_ceiling:
-                    return None, (f"dump-size limit max_dump_bytes={self.max_dump_bytes} "
-                                  f"enforced during {budget} sweeps")
+                # RLIMIT_FSIZE stopped the engine at the output ceiling only
+                # when there is evidence of an attempted oversized write: the
+                # limit signal (the process died by it), or a write-failure
+                # diagnostic with a constrained file sitting at the ceiling
+                # (a process that handles or ignores the signal fails on the
+                # truncated write instead). A file merely at the ceiling is
+                # not that evidence — a writer may fill it exactly and fail
+                # for an unrelated reason. A dump from a limit-stopped run
+                # can still contain the budget marker, so it is never parsed.
+                at_ceiling = [name for name, path in
+                              (("dump", dump_path), ("stdout", stdout_path),
+                               ("stderr", stderr_path))
+                              if path.exists() and path.stat().st_size >= dump_ceiling]
+                write_failed = ("File too large" in stderr_head
+                                or "[Errno 27]" in stderr_head)
+                if (completed.returncode == -signal.SIGXFSZ
+                        or (write_failed and at_ceiling)):
+                    streams = ", ".join(at_ceiling) or "output"
+                    return None, (f"output-size limit max_dump_bytes="
+                                  f"{self.max_dump_bytes} enforced on {streams} "
+                                  f"during {budget} sweeps")
                 if (memory_ceiling is not None
                         and completed.returncode == -signal.SIGABRT
                         and "memory allocation" in stderr_head):
                     return None, (f"memory limit max_process_bytes={memory_ceiling} "
                                   f"(allocation failed during {budget} sweeps)")
-                raise RuntimeError(f"mork failed (exit {completed.returncode}): "
-                                   f"{stderr_head}")
+                truncated = (" (stderr truncated at the max_dump_bytes ceiling)"
+                             if "stderr" in at_ceiling else "")
+                raise RuntimeError(f"mork failed (exit {completed.returncode})"
+                                   f"{truncated}: {stderr_head}")
             if dump_path.stat().st_size > self.max_dump_bytes:
                 return None, (f"dump-size limit max_dump_bytes={self.max_dump_bytes} "
                               f"at {budget} sweeps")

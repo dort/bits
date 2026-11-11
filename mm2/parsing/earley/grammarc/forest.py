@@ -27,16 +27,22 @@ the trees found before expiry are kept.
 from .facts import select
 
 
-def _copy_tree(tree):
+def _copy_tree(tree, deadline=None):
     """A structural copy of one finished tree, without recursion.
 
     Enumeration reuses its mutable skeleton nodes across alternatives, so an
-    emitted tree must not share them.
+    emitted tree must not share them. The copy itself is work under the
+    caller's deadline: on expiry it returns None and the unfinished copy is
+    discarded.
     """
     duplicate = dict(tree)
     duplicate["span"] = list(tree["span"])
     stack = [(tree, duplicate)]
+    count = 0
     while stack:
+        if deadline is not None and not count % 256 and deadline.expired():
+            return None
+        count += 1
         original, copy = stack.pop()
         if "children" not in original:
             continue
@@ -203,5 +209,13 @@ class Forest:
                 # The agenda is exhausted: holder[0] is one complete tree.
                 if len(trees) >= max_trees:
                     return trees, False
-                trees.append(_copy_tree(holder[0]))
+                copy = _copy_tree(holder[0], deadline)
+                if copy is None:
+                    return trees, False
+                trees.append(copy)
+        # A completion claim must still be inside the budget: work since the
+        # last periodic check (the final copy, exhausting the choice stack)
+        # may have crossed the deadline.
+        if deadline is not None and deadline.expired():
+            return trees, False
         return trees, not truncated

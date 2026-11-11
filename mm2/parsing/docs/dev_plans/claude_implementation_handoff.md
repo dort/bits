@@ -461,3 +461,49 @@ runner, 16 forest) and lexer 83, all passing against the real binary; the
 documented two-command pipeline was run end to end in forest mode with
 enumeration, publishing `results.jsonl`/`forests.jsonl`/`summary.json` with
 the review's 4-node/7-part `x + 12` graph. Nothing committed.
+
+### 2026-11-10 (Claude) — the three follow-up corrections implemented
+
+Codex's follow-up review of `5087e3e`
+([review_runner_corrections_5087e3e.md](review_runner_corrections_5087e3e.md))
+left three findings open; all are implemented with its acceptance checks as
+regressions.
+
+1. **Completion claims validated against the deadline (P1).** `_copy_tree`
+   consults the deadline every 256 nodes and returns None on expiry, so the
+   unfinished copy is discarded while earlier trees are kept; `enumerate`
+   re-tests the deadline before returning `complete=True`, covering the last
+   copy and the choice-stack unwind after it; the runner re-tests expiry
+   after `graph()` returns (its final sorts follow its last internal
+   checkpoint) and downgrades `forest_complete` with a wall-time reason
+   while keeping the fully built graph; and the budget loop re-tests expiry
+   after each projection before declaring closure. Sound acceptance and
+   closure established inside the budget are preserved throughout. Per the
+   review's audit note, the README now states explicitly that the per-unit
+   budget bounds the runner's work through enumeration and the command's
+   serialization of returned rows is outside it. Regressions: a delayed
+   final graph sort (complete graph kept, `forest_complete` false, wall-time
+   reason), a delayed last tree copy at runner level, and a deterministic
+   library-level pair driving a manual deadline during and directly after
+   the only tree's copy.
+2. **Bounded stderr read (P2).** The diagnostic prefix is now read with
+   `open().read(STDERR_DIAGNOSTIC_BYTES)`, never sliced from a whole-file
+   read. The regression runs a stand-in that writes 8 MiB of stderr under
+   `tracemalloc` and asserts peak traced allocation stays under 4 MiB.
+3. **Output-limit evidence (P2).** A nonzero exit is an output-size limit
+   outcome only on evidence of an attempted oversized write: death by
+   SIGXFSZ, or a write-failure diagnostic ("File too large" / errno 27) in
+   the bounded stderr prefix together with a constrained file at the
+   ceiling, and the reason names the affected stream(s). A file merely at
+   the ceiling is no longer treated as proof, so an exactly-full write plus
+   an unrelated failure stays a runtime diagnostic. All three constrained
+   streams are considered: a stdout write-limit failure is a confirmed
+   resource outcome naming stdout. A flooded stderr that hits the ceiling
+   without a legible write-failure message stays a runtime diagnostic — the
+   child's underlying failure is unknowable from truncated diagnostics —
+   with an explicit "(stderr truncated at the max_dump_bytes ceiling)" note,
+   matching the review's instruction to preserve uncertain failures as
+   diagnostics while reporting confirmed exhaustion as a resource outcome.
+
+Suites: earley 60 tests (11 engine, 8 compiler, 24 runner, 17 forest) and
+lexer 83, all passing against the real binary. Nothing committed.
