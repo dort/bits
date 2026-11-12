@@ -157,11 +157,17 @@ class Runner:
         self.max_trees = max_trees
         self.max_depth = max_depth
         self.work_dir = Path(work_dir) if work_dir is not None else PROJECT / "output"
-        # Largest engine input and dump files staged by any run of this
-        # runner, in bytes. The staging directory is deleted per run, so
-        # these counters are the only record of its disk footprint.
+        # Staging accounting, collected at each run's cleanup because the
+        # staging directory is deleted per run: largest single input and
+        # dump file, the largest simultaneous footprint (input, dump, and
+        # both captured streams together), and the number of engine
+        # processes started. Attempts count every process, including ones a
+        # timeout killed; `UnitResult.budgets` keeps its narrower meaning of
+        # runs that reached their completion marker.
         self.peak_input_bytes = 0
         self.peak_dump_bytes = 0
+        self.peak_staging_bytes = 0
+        self.engine_attempts = 0
 
     def run_bundle(self, bundle_path, *, preflight=True):
         """Yield one UnitResult per unit, in index order.
@@ -283,17 +289,6 @@ class Runner:
     def _execute(self, stream, demand, budget, deadline):
         """One fresh-space MORK run; returns (facts, None) or (None, reason)."""
         self.work_dir.mkdir(parents=True, exist_ok=True)
-        dump_ceiling = self.max_dump_bytes
-        memory_ceiling = self.max_process_bytes
-
-        def preexec():
-            # The OS stops the engine at the ceilings while it runs:
-            # RLIMIT_FSIZE bounds every file it writes (the dump and the
-            # captured streams), RLIMIT_AS bounds its address space.
-            resource.setrlimit(resource.RLIMIT_FSIZE, (dump_ceiling, dump_ceiling))
-            if memory_ceiling is not None:
-                resource.setrlimit(resource.RLIMIT_AS, (memory_ceiling, memory_ceiling))
-
         with tempfile.TemporaryDirectory(dir=self.work_dir) as directory:
             input_path = Path(directory) / "input.mm2"
             dump_path = Path(directory) / "dump.mm2"
@@ -305,55 +300,80 @@ class Runner:
                                         input_path.stat().st_size)
             command = [self.mork, "run", str(input_path), str(dump_path)]
             command += ["--aux-path", str(self.engine_path)]
+            self.engine_attempts += 1
             try:
-                with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
-                    completed = subprocess.run(command, stdout=out, stderr=err,
-                                               timeout=deadline.remaining(),
-                                               preexec_fn=preexec)
-            except subprocess.TimeoutExpired:
-                return None, (f"wall-time limit timeout_seconds="
-                              f"{self.timeout_seconds} during {budget} sweeps")
-            if dump_path.exists():
-                self.peak_dump_bytes = max(self.peak_dump_bytes,
-                                           dump_path.stat().st_size)
-            with stderr_path.open("rb") as captured:
-                stderr_head = captured.read(STDERR_DIAGNOSTIC_BYTES)
-            stderr_head = stderr_head.decode("utf-8", "replace").strip()
-            if completed.returncode != 0:
-                # RLIMIT_FSIZE stopped the engine at the output ceiling only
-                # when there is evidence of an attempted oversized write: the
-                # limit signal (the process died by it), or a write-failure
-                # diagnostic with a constrained file sitting at the ceiling
-                # (a process that handles or ignores the signal fails on the
-                # truncated write instead). A file merely at the ceiling is
-                # not that evidence — a writer may fill it exactly and fail
-                # for an unrelated reason. A dump from a limit-stopped run
-                # can still contain the budget marker, so it is never parsed.
-                at_ceiling = [name for name, path in
-                              (("dump", dump_path), ("stdout", stdout_path),
-                               ("stderr", stderr_path))
-                              if path.exists() and path.stat().st_size >= dump_ceiling]
-                write_failed = ("File too large" in stderr_head
-                                or "[Errno 27]" in stderr_head)
-                if (completed.returncode == -signal.SIGXFSZ
-                        or (write_failed and at_ceiling)):
-                    streams = ", ".join(at_ceiling) or "output"
-                    return None, (f"output-size limit max_dump_bytes="
-                                  f"{self.max_dump_bytes} enforced on {streams} "
-                                  f"during {budget} sweeps")
-                if (memory_ceiling is not None
-                        and completed.returncode == -signal.SIGABRT
-                        and "memory allocation" in stderr_head):
-                    return None, (f"memory limit max_process_bytes={memory_ceiling} "
-                                  f"(allocation failed during {budget} sweeps)")
-                truncated = (" (stderr truncated at the max_dump_bytes ceiling)"
-                             if "stderr" in at_ceiling else "")
-                raise RuntimeError(f"mork failed (exit {completed.returncode})"
-                                   f"{truncated}: {stderr_head}")
-            if dump_path.stat().st_size > self.max_dump_bytes:
-                return None, (f"dump-size limit max_dump_bytes={self.max_dump_bytes} "
-                              f"at {budget} sweeps")
-            facts = parse_facts(dump_path.read_text(), deadline=deadline)
+                return self._finish(command, deadline, budget, dump_path,
+                                    stdout_path, stderr_path)
+            finally:
+                # Final staging sizes on every exit path — success, failure,
+                # and timeout alike — before the directory is deleted.
+                sizes = [path.stat().st_size if path.exists() else 0
+                         for path in (dump_path, stdout_path, stderr_path)]
+                self.peak_dump_bytes = max(self.peak_dump_bytes, sizes[0])
+                self.peak_staging_bytes = max(
+                    self.peak_staging_bytes,
+                    input_path.stat().st_size + sum(sizes))
+
+    def _finish(self, command, deadline, budget, dump_path, stdout_path,
+                stderr_path):
+        """Run the staged engine command and classify its outcome."""
+        dump_ceiling = self.max_dump_bytes
+        memory_ceiling = self.max_process_bytes
+
+        def preexec():
+            # The OS stops the engine at the ceilings while it runs:
+            # RLIMIT_FSIZE bounds every file it writes (the dump and the
+            # captured streams), RLIMIT_AS bounds its address space.
+            resource.setrlimit(resource.RLIMIT_FSIZE, (dump_ceiling, dump_ceiling))
+            if memory_ceiling is not None:
+                resource.setrlimit(resource.RLIMIT_AS, (memory_ceiling, memory_ceiling))
+
+        try:
+            with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
+                completed = subprocess.run(command, stdout=out, stderr=err,
+                                           timeout=deadline.remaining(),
+                                           preexec_fn=preexec)
+        except subprocess.TimeoutExpired:
+            return None, (f"wall-time limit timeout_seconds="
+                          f"{self.timeout_seconds} during {budget} sweeps")
+        with stderr_path.open("rb") as captured:
+            stderr_head = captured.read(STDERR_DIAGNOSTIC_BYTES)
+        stderr_head = stderr_head.decode("utf-8", "replace").strip()
+        if completed.returncode != 0:
+            # RLIMIT_FSIZE stopped the engine at the output ceiling only
+            # when there is evidence of an attempted oversized write: the
+            # limit signal (the process died by it), or a write-failure
+            # diagnostic with a constrained file sitting at the ceiling
+            # (a process that handles or ignores the signal fails on the
+            # truncated write instead). A file merely at the ceiling is
+            # not that evidence — a writer may fill it exactly and fail
+            # for an unrelated reason. A dump from a limit-stopped run
+            # can still contain the budget marker, so it is never parsed.
+            at_ceiling = [name for name, path in
+                          (("dump", dump_path), ("stdout", stdout_path),
+                           ("stderr", stderr_path))
+                          if path.exists() and path.stat().st_size >= dump_ceiling]
+            write_failed = ("File too large" in stderr_head
+                            or "[Errno 27]" in stderr_head)
+            if (completed.returncode == -signal.SIGXFSZ
+                    or (write_failed and at_ceiling)):
+                streams = ", ".join(at_ceiling) or "output"
+                return None, (f"output-size limit max_dump_bytes="
+                              f"{self.max_dump_bytes} enforced on {streams} "
+                              f"during {budget} sweeps")
+            if (memory_ceiling is not None
+                    and completed.returncode == -signal.SIGABRT
+                    and "memory allocation" in stderr_head):
+                return None, (f"memory limit max_process_bytes={memory_ceiling} "
+                              f"(allocation failed during {budget} sweeps)")
+            truncated = (" (stderr truncated at the max_dump_bytes ceiling)"
+                         if "stderr" in at_ceiling else "")
+            raise RuntimeError(f"mork failed (exit {completed.returncode})"
+                               f"{truncated}: {stderr_head}")
+        if dump_path.stat().st_size > self.max_dump_bytes:
+            return None, (f"dump-size limit max_dump_bytes={self.max_dump_bytes} "
+                          f"at {budget} sweeps")
+        facts = parse_facts(dump_path.read_text(), deadline=deadline)
         if ("swept", f"b{budget:03d}") not in facts:
             return None, f"scheduled sweeps did not finish at budget {budget}"
         if select(facts, "exec"):

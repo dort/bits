@@ -168,11 +168,21 @@ PYTHONPATH=../lexer /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python \
 
 The quick parser scale measurements: every case runs in a fresh worker
 process under a supervisor timeout, builds a synthetic version-2 bundle from
-lazily generated units, recognizes it with the real binary, and streams one
-JSON row of fixed-size aggregates per case. The four dimensions are
-unit-count scaling (memory trend), tokens-per-unit scaling across grammar
-shapes including a long-token text, engine comparison with a recognition
-agreement check, and deliberate limit exhaustion. Larger workloads are
+lazily generated units, recognizes it with the real binary, writes and
+publishes the production result files through the shared
+`grammarc.results.ResultWriter` (serialization and publication timed
+separately from inference), and streams one JSON row of fixed-size
+aggregates per case. The four dimensions are unit-count scaling (memory
+trend), tokens-per-unit scaling across grammar shapes including a long-token
+text, engine comparison with a recognition agreement check, and deliberate
+limit exhaustion. Every row is validated against its case's known outcomes —
+expected recognition, the named limit, enumeration completion, exact
+distinct-tree counts — and the engine comparison requires every expected
+participant to report, complete, and agree; a contradiction is a
+machine-readable `validation-failed` row and a nonzero exit, so a
+performance run cannot succeed over an incorrect implementation.
+Interrupting the supervisor stops the live worker's process group, MORK
+children included, before its scratch is removed. Larger workloads are
 explicit (`--units`, `--expr-tokens`, …); `--only` selects cases and
 `--list` prints their deterministic IDs. Results land under the ignored
 `output/benchmarks/`; the compact reproducible record with the measured
@@ -185,7 +195,7 @@ cd mm2/parsing/earley
 /home/ni/repos/m/bits/mm2/parsing/lexer/.venv/bin/python -m unittest discover -s tests -v
 ```
 
-Seventy-one tests: eleven engine tests against the real binary (a `MORK`
+Eighty-five tests: eleven engine tests against the real binary (a `MORK`
 environment variable overrides the binary path), eight compiler tests,
 twenty-four runner tests that build real version-2 bundles through the lexer
 pipeline and drive them through the runner and the command (including the
@@ -205,9 +215,16 @@ count-limited partial enumeration, the graph JSON round trip, runner-level
 enumeration and graph publication including cyclic graphs, a recursion-first
 unit cycle under a 10,000 depth limit, and deadline cuts during
 construction, graph rendering, enumeration, and the final tree copy), and
-eleven benchmark-harness tests (accounting over real tiny cases, incomplete-
-reason and worker failure/timeout classification, scratch cleanup after
-normal and killed workers, registry determinism). The
+twenty-five benchmark-harness tests (accounting over real tiny cases with
+published result bundles, incomplete-reason and worker failure/timeout
+classification, a timed-out stand-in engine counted as one attempt with its
+partial dump, semantic validation of wrong verdicts/limits/enumeration and
+duplicate trees, engine-agreement failures for disagreeing, missing, and
+incomplete participants, the exact two-tree oracle for three-token
+concatenation read back from published results, scratch cleanup after
+normal, killed, and interrupted workers with the worker group stopped before
+removal, and registry determinism including the Catalan-derived enumeration
+expectations). The
 engine tests cover: the `x + 12` worked example with its
 pinned grammar fingerprint and 13-item chart; wrong, truncated, and empty
 streams rejecting only after projection convergence; genuinely unproductive

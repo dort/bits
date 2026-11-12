@@ -98,8 +98,26 @@ TEXTS = {"fixed": _fixed_text, "expr": _expr_text, "long": _long_text,
          "ints": _ints_text}
 
 
+def catalan(n):
+    """The number of binary trees over n+1 leaves."""
+    result = 1
+    for k in range(n):
+        result = result * 2 * (2 * k + 1) // (k + 2)
+    return result
+
+
 @dataclass
 class Case:
+    """One measured configuration and the outcome it must validate against.
+
+    The `expect_*` fields are known semantic outcomes, not measurements: a
+    row that contradicts them fails validation, so a performance run cannot
+    exit successfully over an incorrect implementation. `expect_reason` names
+    the limit an incomplete case must report; `expect_enumeration` and
+    `expect_trees` pin the completion flag and the exact distinct-tree count
+    of an enumeration case.
+    """
+
     case_id: str
     dimension: str              # units | tokens | engines | limits | control
     grammar: str                # GRAMMARS key
@@ -110,7 +128,10 @@ class Case:
     max_trees: int | None = None
     max_depth: int | None = None
     runner: dict = field(default_factory=dict)  # Runner keyword overrides
-    expect: str | None = None   # expected recognition, for the report only
+    expect: str | None = None            # expected recognition per unit
+    expect_reason: str | None = None     # expected incomplete-reason label
+    expect_enumeration: str | None = None  # "complete" | "incomplete"
+    expect_trees: int | None = None      # exact distinct enumerated trees
 
 
 def registry(*, units=(4, 16, 64), expr_tokens=(7, 15, 31),
@@ -140,22 +161,36 @@ def registry(*, units=(4, 16, 64), expr_tokens=(7, 15, 31),
         cases.append(Case(f"tokens-concat-n{tokens:04d}", "tokens", "concat",
                           "ints", tokens, expect="accepted"))
     tokens = max(concat_tokens)
+    # The exact tree count for n leaves under s -> s s | INT is the Catalan
+    # number; enumeration completes only when it fits under max_trees.
+    total_trees = catalan(tokens - 1)
+    exhausted = total_trees <= 512
     for suffix, engine, trees, depth in (("recognition", "recognition", None, None),
                                          ("forest", "forest", None, None),
                                          ("trees", "forest", 512, 40)):
-        cases.append(Case(f"engines-concat-n{tokens:04d}-{suffix}", "engines",
-                          "concat", "ints", tokens, engine=engine,
-                          max_trees=trees, max_depth=depth, expect="accepted"))
+        cases.append(Case(
+            f"engines-concat-n{tokens:04d}-{suffix}", "engines", "concat",
+            "ints", tokens, engine=engine, max_trees=trees, max_depth=depth,
+            expect="accepted",
+            expect_enumeration=(None if trees is None
+                                else "complete" if exhausted else "incomplete"),
+            expect_trees=(None if trees is None
+                          else total_trees if exhausted else 512)))
     cases += [
         Case("limits-sweeps", "limits", "chain", "ints", 1,
-             runner={"initial_rounds": 4, "max_sweeps": 4}, expect="incomplete"),
+             runner={"initial_rounds": 4, "max_sweeps": 4},
+             expect="incomplete", expect_reason="sweeps"),
         Case("limits-walltime", "limits", "expr", "expr", 31,
-             runner={"timeout_seconds": 0.05}, expect="incomplete"),
+             runner={"timeout_seconds": 0.05},
+             expect="incomplete", expect_reason="wall-time"),
         Case("limits-tokens", "limits", "expr", "expr", 31,
-             runner={"max_tokens": 8}, expect="incomplete"),
+             runner={"max_tokens": 8},
+             expect="incomplete", expect_reason="tokens"),
         Case("limits-trees", "limits", "concat", "ints", 8, engine="forest",
-             max_trees=2, max_depth=40, expect="accepted"),
+             max_trees=2, max_depth=40, expect="accepted",
+             expect_enumeration="incomplete", expect_trees=2),
         Case("limits-depth", "limits", "concat", "ints", 8, engine="forest",
-             max_trees=512, max_depth=2, expect="accepted"),
+             max_trees=512, max_depth=2, expect="accepted",
+             expect_enumeration="incomplete", expect_trees=0),
     ]
     return cases

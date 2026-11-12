@@ -5,7 +5,8 @@ compiled grammar into the `grm-*` facts the engines consume, plus the demand
 and round-table facts of the engine input contract; `facts` parses engine
 dumps and computes the canonical semantic projection; `runner` orchestrates
 per-unit recognition over version-2 token bundles with doubling sweep budgets
-and the accepted/rejected/incomplete contract.
+and the accepted/rejected/incomplete contract; `results` streams unit results
+to the published result-file set for the CLI and the benchmarks alike.
 """
 
 from .spec import CompiledGrammar, Production, compile_grammar, load_grammar
