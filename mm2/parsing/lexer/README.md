@@ -474,10 +474,67 @@ To run only the Python tests when MORK is unavailable:
 
 ```bash
 .venv/bin/python -m unittest tests.test_config tests.test_spec tests.test_lexer \
-  tests.test_sources tests.test_locations tests.test_serialization tests.test_bundles tests.test_cli -v
+  tests.test_sources tests.test_locations tests.test_serialization tests.test_bundles \
+  tests.test_cli tests.test_split_spec tests.test_splitter tests.test_split_pipeline \
+  tests.test_streaming_benchmarks -v
 ```
 
 ## Measurements
+
+### Streaming sources
+
+From `lexer/`, the default matrix runs six workloads at three unit counts and
+four stopping points: decoding, splitting, lexical records, and bundle writing.
+Each case runs in a fresh supervised process with lazily generated UTF-8 input.
+
+```bash
+.venv/bin/python -m benchmarks.streaming
+
+# Explicit larger run: fixed 4 KiB units, up to 256 MiB of source text.
+.venv/bin/python -m benchmarks.streaming --workloads long \
+  --units 1024 4096 16384 65536 --stages decode split lex bundle \
+  --timeout-seconds 600 --max-file-mib 2048
+
+# Isolate increasing unit count with very short units.
+.venv/bin/python -m benchmarks.streaming --workloads tiny gaps \
+  --units 1024 4096 16384 65536 --stages bundle
+```
+
+Workloads are `dense` (27 tokens in 64 characters), `long` (one long token in
+4,096 characters), `tiny` (one token in two characters), `headers` (bounded-regex
+unit headers), `unicode` (Unicode and CRLF), and `gaps` (separators preserved as
+gap records). Unit text is fixed within each workload; larger counts increase
+total source size without increasing the allowed unit size.
+
+Reports are `meta.json` and streamed `rows.jsonl` under a fresh directory in
+`output/streaming-benchmarks/`, or the new directory selected by `--out`. They
+record runtime/platform/source-code identity, specification fingerprints,
+counts, hashes, attributed stage times, whole-pipeline wall time, and Linux
+resident-memory peaks. Bundle cases observe the real staging files before
+atomic publication and validate the published archive afterward. Per-case
+scratch data is removed; its cleanup time is recorded.
+
+Nested iterator timers measure work only while each layer advances. Subtracting
+upstream totals attributes decoding, splitting, lexical/envelope work, and
+writer validation/serialization/indexing. These times include instrumentation
+overhead. Wall time also includes the benchmark's reconstruction/token oracle;
+the oracle and synthetic byte generation/hash times are reported separately.
+The synthetic reader does not measure input-disk throughput.
+
+The default qualification envelope is 64 MiB peak worker RSS, including archive
+verification. `--max-rss-mib` changes that assertion, not an operating-system
+limit. Workers also have a 512 MiB virtual-address ceiling, a 1 GiB per-file
+ceiling, and a 120-second supervisor timeout; change them with
+`--address-space-mib`, `--max-file-mib`, and `--timeout-seconds`. All limits are
+recorded. An incorrect result, failed qualification, failed worker, or timeout
+makes the command fail. Interruption exits 130 after terminating the worker
+group and removing scratch; completed report rows remain available.
+
+See the [source benchmark report](../docs/dev_plans/source_benchmark_implementation.md)
+for measured results and their scope. Large bundle runs can write substantially
+more bytes than the input; the report measures that expansion directly.
+
+### Earlier measurements
 
 ```bash
 .venv/bin/python -m benchmarks.measure
@@ -486,7 +543,7 @@ To run only the Python tests when MORK is unavailable:
 .venv/bin/python -m benchmarks.bundles --units 100 10000
 ```
 
-Each measurement runs in a fresh process with a timeout. Reports include the
+These measurements run in fresh processes with timeouts. Reports include the
 interpreter, build configuration, Unicode version, input sizes, rule counts,
 elapsed time, output size, and Linux peak resident memory. Serialization time
 uses prebuilt records; its memory includes those records. Bundle measurements
